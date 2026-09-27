@@ -1,0 +1,337 @@
+/* Catalog data: palettes, fonts, genre themes */
+'use strict';
+LM.data = (() => {
+  // [bg, text, accent, sub]
+  const P = (id, n, cat, c) => ({ id, n, cat, c });
+  const palettes = [
+    // モノクロ
+    P('ink', '墨 × 朱', 'mono', ['#0e0e10', '#f4f1ea', '#e63b2e', '#8a8a8a']),
+    P('paper', '紙 × 赤', 'mono', ['#f3eee3', '#1b1b1b', '#d7261e', '#9c9486']),
+    P('whiteout', 'ホワイト', 'mono', ['#fafafa', '#0f0f0f', '#6b6b6b', '#c9c9c9']),
+    P('blackout', 'ブラック', 'mono', ['#0a0a0a', '#f5f5f5', '#9a9a9a', '#3a3a3a']),
+    P('concrete', 'コンクリート', 'mono', ['#b9b6ae', '#1a1a1a', '#ffffff', '#6d6a64']),
+    P('silver', 'シルバー', 'mono', ['#2a2c30', '#eceff3', '#b8c0cc', '#5c6370']),
+    // ウォーム
+    P('ember', 'エンバー', 'warm', ['#1a0b06', '#ffe7cf', '#ff5a1f', '#ffb000']),
+    P('sunset', 'サンセット', 'warm', ['#2b0f2e', '#ffe9d6', '#ff7a59', '#ffc15e']),
+    P('terracotta', 'テラコッタ', 'warm', ['#e9d8c4', '#3b1f14', '#c4522d', '#8a6a4f']),
+    P('mustard', 'マスタード', 'warm', ['#f2c94c', '#1f1a10', '#c2410c', '#fff4d6']),
+    P('wine', 'ワイン', 'warm', ['#2a0a12', '#f6e7e0', '#e0475b', '#9b2335']),
+    P('peach', 'ピーチ', 'warm', ['#ffd9c2', '#4a1f1a', '#e8433f', '#fff3ea']),
+    // クール
+    P('cobalt', 'コバルト', 'cool', ['#0b1f4d', '#f1f5ff', '#3aa0ff', '#ffd23f']),
+    P('ice', 'アイス', 'cool', ['#e8f1f8', '#0d2436', '#1f6fd0', '#8fb8d6']),
+    P('deepsea', '深海', 'cool', ['#041c24', '#dff7f5', '#1ad1c1', '#0d6e7a']),
+    P('midnight', 'ミッドナイト', 'cool', ['#0a0f1f', '#e6ecff', '#7c8cff', '#2b3566']),
+    P('mint', 'ミント', 'cool', ['#d9f5ea', '#0c3326', '#0e8f68', '#ffffff']),
+    P('steel', 'スチール', 'cool', ['#1c232b', '#e4e9ee', '#6fb3d2', '#48535f']),
+    // パステル
+    P('rose', 'ローズ', 'pastel', ['#ffe3ea', '#4a1d2b', '#e8457a', '#b8a1ff']),
+    P('lavender', 'ラベンダー', 'pastel', ['#ece6ff', '#2a1f4d', '#7c4ddb', '#ff9ec7']),
+    P('sherbet', 'シャーベット', 'pastel', ['#fff4d9', '#3d2a1a', '#f0648a', '#7bd3c9']),
+    P('baby', 'ベビーブルー', 'pastel', ['#dff3ff', '#1d3557', '#f06b98', '#9ad0ec']),
+    P('cream', 'クリーム', 'pastel', ['#fbf6ec', '#4b3f35', '#d9786c', '#a5c9a1']),
+    P('cotton', 'コットンキャンディ', 'pastel', ['#f8e1f4', '#3b2346', '#3a9be0', '#ffd6a5']),
+    // ネオン
+    P('acid', 'アシッド', 'neon', ['#0b0b0b', '#f0ff3c', '#ff2bd6', '#27f5ff']),
+    P('cyber', 'サイバー', 'neon', ['#07061a', '#e8fbff', '#00f0ff', '#ff2e88']),
+    P('synth', 'シンセ', 'neon', ['#1a0633', '#ffe8fb', '#ff3cac', '#2bd2ff']),
+    P('toxic', 'トキシック', 'neon', ['#0c1208', '#d6ff3d', '#39ff14', '#ff4f00']),
+    P('laser', 'レーザー', 'neon', ['#000000', '#ffffff', '#ff003c', '#00e0ff']),
+    P('vapor', 'ヴェイパー', 'neon', ['#231942', '#f4f0ff', '#ff71ce', '#01cdfe']),
+    // レトロ
+    P('showa', '昭和', 'retro', ['#f0e2c4', '#2d2a26', '#d63d31', '#3b7a8f']),
+    P('citypop', 'シティポップ', 'retro', ['#1d1147', '#ffe9f0', '#ff5d73', '#3ec1d3']),
+    P('seventies', '70s', 'retro', ['#f4a259', '#3d2314', '#a33f45', '#5b8e7d']),
+    P('diner', 'ダイナー', 'retro', ['#fdf0d5', '#003049', '#c1121f', '#669bbc']),
+    P('arcade', 'アーケード', 'retro', ['#11001c', '#fefae0', '#ffbe0b', '#fb5607']),
+    P('riso', 'リソグラフ', 'retro', ['#f5f0e6', '#2b59c3', '#ff48b0', '#ffe800']),
+    // 和色
+    P('sakura', '桜', 'wa', ['#fbe7ec', '#3f2a33', '#c44d63', '#8e7c93']),
+    P('ai', '藍', 'wa', ['#11224d', '#f1ede4', '#c9a25b', '#5a6f9e']),
+    P('matcha', '抹茶', 'wa', ['#e3e8cf', '#23301c', '#557025', '#b45c3c']),
+    P('sumi', '墨', 'wa', ['#141414', '#ece6d8', '#b7282e', '#6e6a5e']),
+    P('kincha', '金茶', 'wa', ['#1d1610', '#f3e6c8', '#d4a24c', '#8e3b2e']),
+    P('fuji', '藤', 'wa', ['#e8e2f2', '#2e2440', '#7a55a3', '#d6a6b8']),
+    // アース
+    P('forest', 'フォレスト', 'earth', ['#1f2a1f', '#eef0e2', '#9cc26b', '#c98f4a']),
+    P('sand', 'サンド', 'earth', ['#e9dcc5', '#3b3129', '#a8692f', '#6c7a5e']),
+    P('clay', 'クレイ', 'earth', ['#c9a38a', '#2a1e18', '#fff6ea', '#7a4a33']),
+    P('moss', 'モス', 'earth', ['#384232', '#f0ecd9', '#d9b44a', '#8aa06b']),
+    P('dune', 'デューン', 'earth', ['#f2e6d0', '#40352b', '#c8642f', '#7e8c7c']),
+    P('olive', 'オリーブ', 'earth', ['#5b5d3a', '#f7f3e3', '#f2b134', '#2d2e1c']),
+    // シネマ
+    P('tealorange', 'ティール＆オレンジ', 'cinema', ['#0b1d21', '#f1efe8', '#ff8a3d', '#1f8a8a']),
+    P('bleach', '銀残し', 'cinema', ['#d5d3cc', '#1c1c1c', '#8a3324', '#6b7270']),
+    P('dusk', 'ダスク', 'cinema', ['#1a1423', '#efe6dd', '#e2a76f', '#6d5a8c']),
+    P('neonoir', 'ネオノワール', 'cinema', ['#0d0d12', '#e9e4f0', '#ff4365', '#3a3e5c']),
+    P('golden', 'ゴールデンアワー', 'cinema', ['#241a0e', '#fff3d9', '#ffc861', '#7d5a2c']),
+    P('monofilm', 'モノクロフィルム', 'cinema', ['#121212', '#dcd7cd', '#ffffff', '#5a5a5a']),
+    // ポップ
+    P('popart', 'ポップアート', 'pop', ['#ffe600', '#111111', '#e0144c', '#08d9d6']),
+    P('candy', 'キャンディ', 'pop', ['#ff66c4', '#ffffff', '#fff200', '#5b2cff']),
+    P('tomato', 'トマト', 'pop', ['#ff4b3e', '#fff8e7', '#ffd23f', '#1b1b3a']),
+    P('eblue', 'エレクトリックブルー', 'pop', ['#2d5bff', '#ffffff', '#ffde00', '#ff4f79']),
+    P('lime', 'ライム', 'pop', ['#c5f82a', '#111111', '#6a1fe0', '#ffffff']),
+    P('mondrian', 'モンドリアン', 'pop', ['#f7f4ea', '#111111', '#e3242b', '#1d4ed8']),
+  ];
+  const palCats = { mono: 'モノクロ', warm: 'ウォーム', cool: 'クール', pastel: 'パステル', neon: 'ネオン', retro: 'レトロ', wa: '和色', earth: 'アース', cinema: 'シネマ', pop: 'ポップ' };
+  const palById = Object.fromEntries(palettes.map((p) => [p.id, p]));
+  // legacy auto-color series ids → categories
+  const seriesMap = { mono: 'mono', warm: 'warm', cool: 'cool', pastel: 'pastel', earth: 'earth', electric: 'neon', neon: 'neon', retro: 'retro', wa: 'wa', cinema: 'cinema', pop: 'pop' };
+
+  // fonts: g = Google family spec, fam = CSS family, w = default weight, cat
+  const F = (id, n, fam, g, w, cat, ws) => ({ id, n, fam, g, w, cat, ws: ws || [w] });
+  const JPF = '"Noto Sans JP","Hiragino Sans","Yu Gothic","Meiryo","Noto Sans KR","Apple SD Gothic Neo","Malgun Gothic",sans-serif';
+  const fonts = [
+    F('sans', 'Noto Sans JP', 'Noto Sans JP', 'Noto+Sans+JP:wght@400;700;900', 900, 'ゴシック', [400, 700, 900]),
+    F('gothic', 'Zen Kaku Gothic New', 'Zen Kaku Gothic New', 'Zen+Kaku+Gothic+New:wght@400;700;900', 900, 'ゴシック', [400, 700, 900]),
+    F('mplus', 'M PLUS 1p', 'M PLUS 1p', 'M+PLUS+1p:wght@400;800;900', 900, 'ゴシック', [400, 800, 900]),
+    F('murecho', 'Murecho', 'Murecho', 'Murecho:wght@400;700;900', 900, 'ゴシック', [400, 700, 900]),
+    F('bizud', 'BIZ UDPゴシック', 'BIZ UDPGothic', 'BIZ+UDPGothic:wght@400;700', 700, 'ゴシック', [400, 700]),
+    F('serif', 'Noto Serif JP', 'Noto Serif JP', 'Noto+Serif+JP:wght@400;700;900', 700, '明朝', [400, 700, 900]),
+    F('mincho', 'しっぽり明朝', 'Shippori Mincho', 'Shippori+Mincho:wght@500;800', 800, '明朝', [500, 800]),
+    F('zenold', 'Zen Old Mincho', 'Zen Old Mincho', 'Zen+Old+Mincho:wght@400;700;900', 900, '明朝', [400, 700, 900]),
+    F('shippoB1', 'しっぽりアンチック', 'Shippori Antique B1', 'Shippori+Antique+B1', 400, '明朝'),
+    F('antique', 'Zen Antique', 'Zen Antique', 'Zen+Antique', 400, '明朝'),
+    F('kaisei', 'Kaisei Decol', 'Kaisei Decol', 'Kaisei+Decol:wght@400;700', 700, '明朝', [400, 700]),
+    F('rounded', 'Zen Maru Gothic', 'Zen Maru Gothic', 'Zen+Maru+Gothic:wght@500;700;900', 900, '丸ゴシック', [500, 700, 900]),
+    F('mplusr', 'M PLUS Rounded 1c', 'M PLUS Rounded 1c', 'M+PLUS+Rounded+1c:wght@400;800;900', 900, '丸ゴシック', [400, 800, 900]),
+    F('kiwi', 'Kiwi Maru', 'Kiwi Maru', 'Kiwi+Maru:wght@400;500', 500, '丸ゴシック', [400, 500]),
+    F('kosugi', '小杉丸', 'Kosugi Maru', 'Kosugi+Maru', 400, '丸ゴシック'),
+    F('impact', 'Dela Gothic One（極太）', 'Dela Gothic One', 'Dela+Gothic+One', 400, 'ディスプレイ'),
+    F('rocknroll', 'RocknRoll One', 'RocknRoll One', 'RocknRoll+One', 400, 'ディスプレイ'),
+    F('reggae', 'Reggae One', 'Reggae One', 'Reggae+One', 400, 'ディスプレイ'),
+    F('rampart', 'Rampart One（立体）', 'Rampart One', 'Rampart+One', 400, 'ディスプレイ'),
+    F('train', 'Train One', 'Train One', 'Train+One', 400, 'ディスプレイ'),
+    F('mochiy', 'Mochiy Pop One', 'Mochiy Pop One', 'Mochiy+Pop+One', 400, 'ディスプレイ'),
+    F('potta', 'Potta One（筆）', 'Potta One', 'Potta+One', 400, 'ディスプレイ'),
+    F('stick', 'Stick', 'Stick', 'Stick', 400, 'ディスプレイ'),
+    F('mono', 'DotGothic16（ドット）', 'DotGothic16', 'DotGothic16', 400, 'ディスプレイ'),
+    F('script', 'Yuji Syuku（楷書）', 'Yuji Syuku', 'Yuji+Syuku', 400, '手書き・筆'),
+    F('kurenaido', 'Zen Kurenaido（筆ペン）', 'Zen Kurenaido', 'Zen+Kurenaido', 400, '手書き・筆'),
+    F('yusei', 'Yusei Magic（マジック）', 'Yusei Magic', 'Yusei+Magic', 400, '手書き・筆'),
+    F('hachimaru', 'はちまるポップ', 'Hachi Maru Pop', 'Hachi+Maru+Pop', 400, '手書き・筆'),
+    F('klee', 'Klee One（教科書体）', 'Klee One', 'Klee+One:wght@400;600', 600, '手書き・筆', [400, 600]),
+    F('yomogi', 'よもぎ', 'Yomogi', 'Yomogi', 400, '手書き・筆'),
+    F('bebas', 'Bebas Neue（英字）', 'Bebas Neue', 'Bebas+Neue', 400, '英字ディスプレイ'),
+    F('anton', 'Anton（英字）', 'Anton', 'Anton', 400, '英字ディスプレイ'),
+    F('archivo', 'Archivo Black（英字）', 'Archivo Black', 'Archivo+Black', 400, '英字ディスプレイ'),
+    F('playfair', 'Playfair Display（英字）', 'Playfair Display', 'Playfair+Display:ital,wght@0,900;1,900', 900, '英字ディスプレイ'),
+    F('syne', 'Syne（英字）', 'Syne', 'Syne:wght@800', 800, '英字ディスプレイ'),
+    F('unbounded', 'Unbounded（英字）', 'Unbounded', 'Unbounded:wght@900', 900, '英字ディスプレイ'),
+    F('bungee', 'Bungee（英字）', 'Bungee', 'Bungee', 400, '英字ディスプレイ'),
+    F('marker', 'Permanent Marker（英字）', 'Permanent Marker', 'Permanent+Marker', 400, '英字ディスプレイ'),
+    F('monoton', 'Monoton（英字ネオン）', 'Monoton', 'Monoton', 400, '英字ディスプレイ'),
+    F('jbmono', 'JetBrains Mono（英字）', 'JetBrains Mono', 'JetBrains+Mono:wght@800', 800, '英字ディスプレイ'),
+    // --- 英字サンセリフ
+    F('inter', 'Inter', 'Inter', 'Inter:wght@400;600;800;900', 800, '英字サンセリフ', [400, 600, 800, 900]),
+    F('montserrat', 'Montserrat', 'Montserrat', 'Montserrat:wght@400;600;800;900', 800, '英字サンセリフ', [400, 600, 800, 900]),
+    F('poppins', 'Poppins', 'Poppins', 'Poppins:wght@400;600;800;900', 800, '英字サンセリフ', [400, 600, 800, 900]),
+    F('outfit', 'Outfit', 'Outfit', 'Outfit:wght@400;700;900', 800, '英字サンセリフ', [400, 700, 900]),
+    F('spacegrotesk', 'Space Grotesk', 'Space Grotesk', 'Space+Grotesk:wght@400;700', 700, '英字サンセリフ', [400, 700]),
+    F('nunito', 'Nunito（丸）', 'Nunito', 'Nunito:wght@400;700;900', 900, '英字サンセリフ', [400, 700, 900]),
+    F('oswald', 'Oswald（コンデンス）', 'Oswald', 'Oswald:wght@400;700', 700, '英字サンセリフ', [400, 700]),
+    F('barlowc', 'Barlow Condensed', 'Barlow Condensed', 'Barlow+Condensed:wght@500;800', 800, '英字サンセリフ', [500, 800]),
+    F('bigshoulders', 'Big Shoulders Display', 'Big Shoulders Display', 'Big+Shoulders+Display:wght@900', 900, '英字サンセリフ'),
+    F('teko', 'Teko', 'Teko', 'Teko:wght@600', 600, '英字サンセリフ'),
+    F('staatliches', 'Staatliches', 'Staatliches', 'Staatliches', 400, '英字サンセリフ'),
+    // --- 英字セリフ
+    F('dmserif', 'DM Serif Display', 'DM Serif Display', 'DM+Serif+Display', 400, '英字セリフ'),
+    F('cormorant', 'Cormorant Garamond', 'Cormorant Garamond', 'Cormorant+Garamond:wght@500;700', 700, '英字セリフ', [500, 700]),
+    F('fraunces', 'Fraunces', 'Fraunces', 'Fraunces:wght@400;900', 900, '英字セリフ', [400, 900]),
+    F('instrument', 'Instrument Serif', 'Instrument Serif', 'Instrument+Serif', 400, '英字セリフ'),
+    F('abril', 'Abril Fatface', 'Abril Fatface', 'Abril+Fatface', 400, '英字セリフ'),
+    F('alfaslab', 'Alfa Slab One', 'Alfa Slab One', 'Alfa+Slab+One', 400, '英字セリフ'),
+    // --- 英字スクリプト・手書き
+    F('pacifico', 'Pacifico', 'Pacifico', 'Pacifico', 400, '英字スクリプト'),
+    F('lobster', 'Lobster', 'Lobster', 'Lobster', 400, '英字スクリプト'),
+    F('shrikhand', 'Shrikhand', 'Shrikhand', 'Shrikhand', 400, '英字スクリプト'),
+    F('caveat', 'Caveat（手書き）', 'Caveat', 'Caveat:wght@700', 700, '英字スクリプト'),
+    F('dancing', 'Dancing Script', 'Dancing Script', 'Dancing+Script:wght@700', 700, '英字スクリプト'),
+    F('greatvibes', 'Great Vibes', 'Great Vibes', 'Great+Vibes', 400, '英字スクリプト'),
+    // --- 英字テック・レトロ
+    F('orbitron', 'Orbitron', 'Orbitron', 'Orbitron:wght@900', 900, '英字テック・レトロ'),
+    F('audiowide', 'Audiowide', 'Audiowide', 'Audiowide', 400, '英字テック・レトロ'),
+    F('russo', 'Russo One', 'Russo One', 'Russo+One', 400, '英字テック・レトロ'),
+    F('righteous', 'Righteous', 'Righteous', 'Righteous', 400, '英字テック・レトロ'),
+    F('rubikmono', 'Rubik Mono One', 'Rubik Mono One', 'Rubik+Mono+One', 400, '英字テック・レトロ'),
+    F('syncopate', 'Syncopate', 'Syncopate', 'Syncopate:wght@700', 700, '英字テック・レトロ'),
+    F('blackops', 'Black Ops One', 'Black Ops One', 'Black+Ops+One', 400, '英字テック・レトロ'),
+    F('rubikglitch', 'Rubik Glitch', 'Rubik Glitch', 'Rubik+Glitch', 400, '英字テック・レトロ'),
+    F('spacemono', 'Space Mono', 'Space Mono', 'Space+Mono:wght@700', 700, '英字テック・レトロ'),
+    F('plexmono', 'IBM Plex Mono', 'IBM Plex Mono', 'IBM+Plex+Mono:wght@600', 600, '英字テック・レトロ'),
+    F('pressstart', 'Press Start 2P（ドット）', 'Press Start 2P', 'Press+Start+2P', 400, '英字テック・レトロ'),
+    F('vt323', 'VT323（端末）', 'VT323', 'VT323', 400, '英字テック・レトロ'),
+    // --- 한글 (Korean)
+    F('kr_sans', 'Noto Sans KR', 'Noto Sans KR', 'Noto+Sans+KR:wght@400;700;900', 900, '韓国語ゴシック', [400, 700, 900]),
+    F('kr_gothica1', 'Gothic A1', 'Gothic A1', 'Gothic+A1:wght@400;700;900', 900, '韓国語ゴシック', [400, 700, 900]),
+    F('kr_plex', 'IBM Plex Sans KR', 'IBM Plex Sans KR', 'IBM+Plex+Sans+KR:wght@400;700', 700, '韓国語ゴシック', [400, 700]),
+    F('kr_nanumg', 'Nanum Gothic', 'Nanum Gothic', 'Nanum+Gothic:wght@400;800', 800, '韓国語ゴシック', [400, 800]),
+    F('kr_sunflower', 'Sunflower', 'Sunflower', 'Sunflower:wght@300;500;700', 700, '韓国語ゴシック', [300, 500, 700]),
+    F('kr_dodum', 'Gowun Dodum', 'Gowun Dodum', 'Gowun+Dodum', 400, '韓国語ゴシック'),
+    F('kr_serif', 'Noto Serif KR', 'Noto Serif KR', 'Noto+Serif+KR:wght@400;700;900', 900, '韓国語明朝', [400, 700, 900]),
+    F('kr_nanumm', 'Nanum Myeongjo', 'Nanum Myeongjo', 'Nanum+Myeongjo:wght@400;800', 800, '韓国語明朝', [400, 800]),
+    F('kr_batang', 'Gowun Batang', 'Gowun Batang', 'Gowun+Batang:wght@400;700', 700, '韓国語明朝', [400, 700]),
+    F('kr_songmyung', 'Song Myung', 'Song Myung', 'Song+Myung', 400, '韓国語明朝'),
+    F('kr_blackhan', 'Black Han Sans', 'Black Han Sans', 'Black+Han+Sans', 400, '韓国語ディスプレイ'),
+    F('kr_dohyeon', 'Do Hyeon', 'Do Hyeon', 'Do+Hyeon', 400, '韓国語ディスプレイ'),
+    F('kr_jua', 'Jua', 'Jua', 'Jua', 400, '韓国語ディスプレイ'),
+    F('kr_bagel', 'Bagel Fat One', 'Bagel Fat One', 'Bagel+Fat+One', 400, '韓国語ディスプレイ'),
+    F('kr_gugi', 'Gugi', 'Gugi', 'Gugi', 400, '韓国語ディスプレイ'),
+    F('kr_orbit', 'Orbit', 'Orbit', 'Orbit', 400, '韓国語ディスプレイ'),
+    F('kr_pen', 'Nanum Pen Script', 'Nanum Pen Script', 'Nanum+Pen+Script', 400, '韓国語手書き'),
+    F('kr_gaegu', 'Gaegu', 'Gaegu', 'Gaegu:wght@400;700', 700, '韓国語手書き', [400, 700]),
+    F('kr_himelody', 'Hi Melody', 'Hi Melody', 'Hi+Melody', 400, '韓国語手書き'),
+    F('kr_gamja', 'Gamja Flower', 'Gamja Flower', 'Gamja+Flower', 400, '韓国語手書き'),
+  ];
+  const fontById = Object.fromEntries(fonts.map((f) => [f.id, f]));
+  // 欧文コンパニオン：和文書体に合わせて組み合わせる英字書体（おまかせ）
+  const LATIN_PAIR = { sans: 'inter', gothic: 'inter', mplus: 'montserrat', murecho: 'montserrat', bizud: 'inter', serif: 'cormorant', mincho: 'cormorant', zenold: 'dmserif', antique: 'cormorant', kaisei: 'cormorant',
+    rounded: 'nunito', mplusr: 'nunito', kiwi: 'nunito', kosugi: 'nunito', impact: 'oswald', rocknroll: 'poppins', reggae: 'poppins', rampart: 'poppins', train: 'poppins', mochiy: 'nunito', potta: 'poppins', stick: 'poppins', mono: 'spacemono',
+    script: 'caveat', kurenaido: 'caveat', yusei: 'caveat', hachimaru: 'caveat', klee: 'caveat', yomogi: 'caveat' };
+
+  // ハングル・コンパニオン：メイン書体に合わせる韓国語書体（おまかせ）
+  const KOR_PAIR = (f) => {
+    if (!f) return 'kr_sans';
+    if (/^韓国語/.test(f.cat || '')) return null;
+    const c = f.cat || '';
+    if (/明朝|セリフ/.test(c)) return f.w >= 800 ? 'kr_nanumm' : 'kr_serif';
+    if (/手書き|スクリプト/.test(c)) return 'kr_gaegu';
+    if (/丸/.test(c) || /nunito|rounded|mplusr|kiwi|mochiy/.test(f.id)) return 'kr_jua';
+    if (/ディスプレイ|テック/.test(c)) return f.w >= 800 || f.w === 400 ? 'kr_blackhan' : 'kr_dohyeon';
+    return 'kr_sans';
+  };
+
+  /* Genre themes for おまかせ — keep a consistent tone & manner */
+  const T = (o) => o;
+  const themes = [
+    T({ id: 'jpop', n: 'J-POP / アイドル', d: '明るく弾む。ポップな配色と丸み', emoji: '✦', pals: ['popart', 'candy', 'baby', 'rose', 'sherbet', 'cotton', 'eblue'], fonts: ['rounded', 'mochiy', 'mplusr'],
+      layouts: { center: 3, poster: 3, stack: 3, bigsmall: 2, grid: 1.5, labels: 2, orbit: 1, wavePath: 1.5, ribbon: 1 },
+      enter: { pop: 3, wordPop: 3, bounce: 2, stagger: 2, elastic: 2, cascade: 1.5, rubberChars: 1, zipper: 1, squash: 1 },
+      hold: { float: 2, wave: 1.5, beatPump: 3, jelly: 1, none: 1, karaoke: 1.5 },
+      exit: { fadeOut: 2, riseOut: 2, shrinkOut: 1.5, dropOut: 1, flipOut: 1 },
+      filters: { confetti: 2, sparkle: 3, dots: 1.5, markerText: 1.5, longShadow: 1.5, flash: 1, bloom: 1, dottedRing: 1, extrude: 1.5 },
+      post: [], bg: ['gradient', 'solid', 'mesh'], camera: { still: 2, push: 2, punch: 2 }, fx: 0.6, maxFx: 2, speed: 1.1, keyColor: true, beat: true }),
+    T({ id: 'rock', n: 'ロック', d: '荒々しく力強い。極太・シェイク・赤黒', emoji: '⚡', pals: ['ink', 'sumi', 'laser', 'wine', 'blackout', 'tomato'], fonts: ['impact', 'rocknroll', 'gothic'],
+      layouts: { poster: 4, stack: 3, diagonal: 2, outline: 2, bigsmall: 2, echo: 1, split: 1.5, corner: 1 },
+      enter: { slam: 3, stamp: 3, whip: 2, glitch: 1, drop: 1.5, zoomOut: 2, smear: 1.5, magnet: 1 },
+      hold: { jitter: 3, pulse: 2, none: 1, beatPump: 1 },
+      exit: { cut: 3, slideOut: 1.5, collapseOut: 1.5, zoomThrough: 2, explodeOut: 1 },
+      filters: { shake: 3, filmScratch: 2, speedLines: 2, halftone: 1, rgb: 1.5, flash: 2, stripes: 1, invert: 1 },
+      post: ['noise'], bg: ['solid', 'solid', 'radial'], camera: { shake: 3, punch: 3, still: 1 }, fx: 0.75, maxFx: 2, speed: 1.3, keyColor: true, beat: true }),
+    T({ id: 'edm', n: 'EDM / エレクトロ', d: 'ネオン発光・ビート同期・ストロボ', emoji: '◉', pals: ['cyber', 'acid', 'synth', 'vapor', 'laser', 'toxic'], fonts: ['impact', 'unbounded', 'syne', 'gothic'],
+      layouts: { poster: 3, center: 2, orbit: 2, depth: 2, burst: 2, marquee: 2, echo: 1.5, grid: 1 },
+      enter: { tunnel: 2, zoomOut: 2, crtOn: 1.5, glitch: 2, tracking: 2, slam: 2, iris: 1, shutter: 1 },
+      hold: { pulse: 3, beatPump: 3, flicker: 1.5, zoomSlow: 1 },
+      exit: { zoomThrough: 3, tvOff: 1.5, glitchOut: 2, trackingOut: 1.5 },
+      filters: { neonText: 3, bloom: 3, rgb: 2, rays: 1.5, particles: 1.5, flash: 2, zoomBlur: 1.5, audioBars: 1, dottedRing: 1 },
+      post: ['bloom'], bg: ['radial', 'grid3d', 'mesh'], camera: { punch: 3, push: 1, still: 1 }, fx: 0.8, maxFx: 2, speed: 1.2, keyColor: true, beat: true }),
+    T({ id: 'hiphop', n: 'ヒップホップ', d: 'ストリート感。スタンプ・網点・黄黒', emoji: '▲', pals: ['mustard', 'popart', 'lime', 'ink', 'concrete', 'tomato'], fonts: ['impact', 'archivo', 'anton', 'gothic'],
+      layouts: { stack: 4, labels: 2, poster: 3, bigsmall: 2, scatter: 2, split: 1.5, corner: 1.5 },
+      enter: { stamp: 3, wordPop: 3, slam: 2, whip: 2, stopMotion: 1.5, typewriter: 1 },
+      hold: { beatPump: 3, jitter: 1, none: 2, wordHighlight: 2 },
+      exit: { cut: 3, slideOut: 2, dropOut: 1 },
+      filters: { halftone: 2, markerText: 2, longShadow: 2, barcode: 1, shake: 1.5, paper: 1, stripes: 1, twoFrame: 1.5 },
+      post: ['noise'], bg: ['solid'], camera: { punch: 3, still: 2 }, fx: 0.6, maxFx: 2, speed: 1.2, keyColor: true, beat: true }),
+    T({ id: 'ballad', n: 'バラード', d: '静かで叙情的。明朝・ぼかし・光', emoji: '❍', pals: ['dusk', 'golden', 'midnight', 'cream', 'sakura', 'monofilm'], fonts: ['mincho', 'serif', 'zenold'],
+      layouts: { center: 4, vertical: 3, mirror: 2, spotlight: 2, subtitle: 1, editorial: 1, corner: 1 },
+      enter: { blurIn: 3, fade: 3, focusPull: 2, lineReveal: 2, rise: 2, tracking: 1 },
+      hold: { drift: 2, zoomSlow: 3, breathe: 2, float: 1, karaoke: 1 },
+      exit: { blurOut: 3, fadeOut: 3, riseOut: 1 },
+      filters: { lightLeak: 2, bloom: 2, bokeh: 2, particles: 1.5, dust: 1.5, vignette: 1 },
+      post: ['vignette'], bg: ['radial', 'mesh', 'gradient'], camera: { push: 3, drift: 2, still: 1 }, fx: 0.5, maxFx: 1, speed: 0.8, keyColor: false, beat: false }),
+    T({ id: 'lofi', n: 'Lo-fi / チル', d: 'ゆるく懐かしい。VHS・粒子・タイプ', emoji: '☾', pals: ['cream', 'lavender', 'sand', 'dusk', 'showa', 'mint'], fonts: ['klee', 'rounded', 'mono', 'yomogi'],
+      layouts: { center: 3, corner: 3, subtitle: 2, labels: 1.5, frame: 2, vertical: 1 },
+      enter: { typewriter: 3, fade: 2, stopMotion: 1.5, blurIn: 1.5, rise: 1.5 },
+      hold: { float: 2, drift: 2, none: 1, wobble3d: 1 },
+      exit: { backspaceOut: 2, fadeOut: 3, blurOut: 1 },
+      filters: { vhs: 2.5, scanlines: 1.5, paper: 1.5, dust: 2, twoFrame: 1.5, filmScratch: 1, snow: 0.5 },
+      post: ['noise', 'vignette'], bg: ['gradient', 'solid'], camera: { drift: 3, still: 2 }, fx: 0.55, maxFx: 1, speed: 0.9, keyColor: false, beat: false }),
+    T({ id: 'citypop', n: 'シティポップ / 80s', d: '夕焼けと都会の夜。レトロなグラデ', emoji: '◐', pals: ['citypop', 'sunset', 'vapor', 'synth', 'peach', 'diner'], fonts: ['bebas', 'mplus', 'playfair', 'gothic'],
+      layouts: { center: 3, ribbon: 2, poster: 2, labels: 2, wavePath: 2, split: 1.5, marquee: 1 },
+      enter: { skew: 3, slide: 2, wipeRight: 2, fade: 1, rise: 2, riseLine: 2 },
+      hold: { drift: 2, float: 1.5, shimmer: 2, none: 1 },
+      exit: { slideOut: 2, fadeOut: 2, wipeOut: 2 },
+      filters: { stripes: 2, longShadow: 2, lightLeak: 1.5, scanlines: 1, sunflare: 1.5, stars: 1, gradientText: 2 },
+      post: [], bg: ['sunset', 'grid3d', 'gradient'], camera: { drift: 2, still: 2, push: 1 }, fx: 0.6, maxFx: 2, speed: 1, keyColor: true, beat: true }),
+    T({ id: 'vocaloid', n: 'ボカロ / 電波', d: 'ハイテンポ高密度。グリッチと記号的構成', emoji: '#', pals: ['cyber', 'acid', 'laser', 'lime', 'riso', 'candy'], fonts: ['mono', 'impact', 'mplus', 'jbmono'],
+      layouts: { grid: 3, wordwall: 2, stack: 2, scatter: 2, marquee: 2, diagonal: 2, poster: 1.5, orbit: 1 },
+      enter: { scramble: 3, glitch: 3, slot: 2, blinkIn: 2, glitchSlice: 2, charFlip: 1.5, typewriter: 1 },
+      hold: { glitchHold: 3, jitter: 2, beatPump: 2, flicker: 1 },
+      exit: { glitchOut: 3, scrambleOut: 2, cut: 2, dissolve: 2 },
+      filters: { blockGlitch: 2.5, rgb: 2, pixel: 1.5, barcode: 1.5, reticle: 1.5, timeRgb: 1.5, checker: 1, mosaic: 1 },
+      post: ['scanlines'], bg: ['solid', 'solid', 'radial'], camera: { punch: 2, shake: 1.5, still: 1 }, fx: 0.8, maxFx: 2, speed: 1.4, keyColor: true, beat: true }),
+    T({ id: 'anison', n: 'アニソン / エモ', d: '疾走感と熱量。集中線・斜め帯・閃光', emoji: '✧', pals: ['eblue', 'tomato', 'cobalt', 'ember', 'ink', 'candy'], fonts: ['impact', 'reggae', 'mplus', 'potta'],
+      layouts: { diagonal: 3, poster: 3, bigsmall: 2, stack: 2, burst: 2, split: 1.5, echo: 1 },
+      enter: { slam: 3, whip: 2, zoomOut: 2, spin: 1.5, magnet: 1.5, splitJoin: 1.5, wipeDiagonal: 1.5 },
+      hold: { pulse: 2, beatPump: 2, jitter: 1, zoomSlow: 1 },
+      exit: { zoomThrough: 2, slideOut: 2, explodeOut: 1.5, splitOut: 1.5 },
+      filters: { speedLines: 3, flash: 2, extrude: 2, sparkle: 1.5, lightning: 1, diagonalWipe: 1, zoomBlur: 1.5 },
+      post: ['bloom'], bg: ['radial', 'solid'], camera: { punch: 3, shake: 1, push: 1 }, fx: 0.75, maxFx: 2, speed: 1.3, keyColor: true, beat: true }),
+    T({ id: 'cinematic', n: 'シネマティック', d: '映画のタイトルバック。余白と字間', emoji: '▭', pals: ['tealorange', 'monofilm', 'neonoir', 'golden', 'bleach', 'midnight'], fonts: ['serif', 'mincho', 'bebas', 'playfair'],
+      layouts: { center: 4, subtitle: 2, spotlight: 2, editorial: 1.5, frame: 1, vertical: 1 },
+      enter: { tracking: 3, blurIn: 2, fade: 2, focusPull: 2, mask: 2, expand: 1.5 },
+      hold: { zoomSlow: 3, drift: 2, trackBreathe: 1.5 },
+      exit: { fadeOut: 3, trackingOut: 2, blurOut: 1.5 },
+      filters: { letterbox: 3, filmScratch: 1, dust: 1.5, lightLeak: 1, sunflare: 1 },
+      post: ['noise', 'vignette'], bg: ['radial', 'solid'], camera: { push: 3, drift: 1 }, fx: 0.5, maxFx: 1, speed: 0.85, keyColor: false, beat: false }),
+    T({ id: 'wa', n: '和風', d: '縦組み・筆・余白。朱と墨', emoji: '和', pals: ['sumi', 'ai', 'sakura', 'matcha', 'kincha', 'paper', 'fuji'], fonts: ['script', 'mincho', 'kurenaido', 'antique'],
+      layouts: { vertical: 5, center: 2, frame: 1.5, corner: 1, bigsmall: 1 },
+      enter: { strokeDraw: 2.5, blurIn: 2, lineReveal: 2, fade: 2, wipeDown: 2, rise: 1 },
+      hold: { drift: 2, zoomSlow: 2, none: 1, float: 1 },
+      exit: { fadeOut: 3, blurOut: 2, lineMaskOut: 1 },
+      filters: { paper: 3, sparkle: 0.5, dust: 1, vignette: 1, bokeh: 1 },
+      post: ['vignette'], bg: ['solid', 'radial'], camera: { push: 2, still: 2 }, fx: 0.5, maxFx: 1, speed: 0.85, keyColor: true, beat: false }),
+    T({ id: 'metal', n: 'メタル / ハードコア', d: '攻撃的。崩壊・稲妻・高コントラスト', emoji: '✕', pals: ['blackout', 'laser', 'wine', 'ink', 'monofilm'], fonts: ['impact', 'train', 'antique', 'archivo'],
+      layouts: { poster: 4, stack: 3, outline: 2, diagonal: 1.5, echo: 1.5, split: 1 },
+      enter: { slam: 3, stamp: 2, glitch: 2, zoomOut: 2, smear: 1.5, rainIn: 1 },
+      hold: { jitter: 3, pulse: 2, glitchHold: 1 },
+      exit: { collapseOut: 2, explodeOut: 2, cut: 2, glitchOut: 1 },
+      filters: { lightning: 2, shake: 3, filmScratch: 1.5, rgb: 1.5, halftone: 1, flash: 1.5, speedLines: 1 },
+      post: ['noise', 'vignette'], bg: ['solid', 'radial'], camera: { shake: 3, punch: 2 }, fx: 0.8, maxFx: 2, speed: 1.4, keyColor: true, beat: true }),
+    T({ id: 'acoustic', n: 'アコースティック / フォーク', d: '温かく素朴。手書き・紙・アース', emoji: '♧', pals: ['sand', 'cream', 'forest', 'dune', 'matcha', 'clay'], fonts: ['klee', 'yusei', 'kaisei', 'serif'],
+      layouts: { center: 3, editorial: 2, labels: 1.5, corner: 2, stack: 1.5, vertical: 1 },
+      enter: { strokeDraw: 2, fade: 2, rise: 2, stagger: 2, typewriter: 1.5, stopMotion: 1 },
+      hold: { float: 2, drift: 2, none: 2, wobble3d: 1 },
+      exit: { fadeOut: 3, riseOut: 1.5, dropOut: 1 },
+      filters: { paper: 3, dust: 1.5, markerText: 1.5, lightLeak: 1, bokeh: 1 },
+      post: ['vignette'], bg: ['solid', 'gradient'], camera: { drift: 2, still: 2 }, fx: 0.5, maxFx: 1, speed: 0.95, keyColor: true, beat: false }),
+    T({ id: 'ambient', n: 'アンビエント / ポストロック', d: '広い余白。ゆっくりした字間と光', emoji: '∿', pals: ['ice', 'deepsea', 'midnight', 'silver', 'whiteout', 'steel'], fonts: ['gothic', 'sans', 'serif', 'murecho'],
+      layouts: { center: 3, corner: 2, subtitle: 1.5, spotlight: 2, mirror: 1.5, vertical: 1, orbit: 1 },
+      enter: { tracking: 3, blurIn: 2, fade: 3, kernIn: 1.5, lineReveal: 1 },
+      hold: { drift: 3, trackBreathe: 2, zoomSlow: 2 },
+      exit: { trackingOut: 2, fadeOut: 3, blurOut: 2 },
+      filters: { particles: 2, bokeh: 2, bloom: 1.5, waveLines: 1.5, stars: 1, dust: 1 },
+      post: ['noise'], bg: ['mesh', 'aurora', 'radial'], camera: { drift: 3, push: 1 }, fx: 0.6, maxFx: 1, speed: 0.75, keyColor: false, beat: false }),
+    T({ id: 'minimal', n: 'ミニマル', d: '装飾を削ぎ落とした白黒の構成', emoji: '—', pals: ['whiteout', 'blackout', 'paper', 'ink', 'concrete'], fonts: ['sans', 'gothic', 'bizud'],
+      layouts: { center: 3, editorial: 2, stack: 2, corner: 2, columns: 1.5, poster: 1.5 },
+      enter: { mask: 3, lineReveal: 2, fade: 2, riseLine: 2, wipeRight: 1 },
+      hold: { none: 3, drift: 1 },
+      exit: { lineMaskOut: 2, fadeOut: 2, cut: 1.5 },
+      filters: { markerText: 0.5, reticle: 0.5 },
+      post: [], bg: ['solid'], camera: { still: 3, push: 1 }, fx: 0.15, maxFx: 1, speed: 1, keyColor: true, beat: false }),
+    T({ id: 'dream', n: 'ドリーム / シューゲイザー', d: '夢の中。にじみ・残像・パステル', emoji: '☁', pals: ['lavender', 'cotton', 'baby', 'fuji', 'vapor', 'rose'], fonts: ['rounded', 'serif', 'kiwi'],
+      layouts: { center: 3, echo: 2, mirror: 2, depth: 1.5, wavePath: 1.5, spotlight: 1 },
+      enter: { blurIn: 3, focusPull: 2, float: 0, fade: 2, orbitChars: 1.5, spiral: 1 },
+      hold: { float: 3, wave: 1.5, breathe: 2, shimmer: 1 },
+      exit: { blurOut: 3, fadeOut: 2, spiralOut: 1 },
+      filters: { bloom: 3, echo: 2, bokeh: 2, lightLeak: 1.5, sparkle: 1.5, particles: 1 },
+      post: ['bloom'], bg: ['mesh', 'aurora'], camera: { drift: 2, push: 2 }, fx: 0.65, maxFx: 2, speed: 0.85, keyColor: false, beat: false }),
+  ];
+  const themeById = Object.fromEntries(themes.map((t) => [t.id, t]));
+  // legacy style → theme
+  const styleMap = { minimal: 'minimal', emotional: 'ballad', neon: 'edm', cinematic: 'cinematic', editorial: 'minimal', popart: 'jpop', noir: 'cinematic', dream: 'dream', brutal: 'rock', retro: 'citypop' };
+
+  const aspects = {
+    '16:9': [1920, 1080], '9:16': [1080, 1920], '1:1': [1080, 1080], '4:5': [1080, 1350],
+    '4:3': [1440, 1080], '3:4': [1080, 1440], '21:9': [2520, 1080],
+  };
+  const aspectHint = { '16:9': 'YouTube', '9:16': 'TikTok / Reels / Shorts', '1:1': 'Instagram', '4:5': 'Instagramフィード', '4:3': 'レトロ', '3:4': '縦長', '21:9': 'シネスコ' };
+
+  const bgTypes = { solid: '単色', gradient: 'グラデーション', radial: '放射グラデ', mesh: 'メッシュ（動く光）', aurora: 'オーロラ', sunset: 'サンセット（80s）', grid3d: 'レトログリッド', image: '画像' };
+  const patterns = { none: 'なし', rings: '同心円', grid: 'グリッド', cross: '十字', rules: '罫線', dots: 'ドット', stripes: 'ストライプ', halftone: 'ハーフトーン', geo: '幾何学図形' };
+  const cameras = { still: '固定', push: 'ゆっくり寄る', pull: 'ゆっくり引く', drift: '横に流れる', tilt: '傾く', shake: '手ブレ', punch: 'ビートでズーム' };
+
+  return { palettes, palCats, palById, seriesMap, fonts, fontById, LATIN_PAIR, KOR_PAIR, JPF, themes, themeById, styleMap, aspects, aspectHint, bgTypes, patterns, cameras };
+})();

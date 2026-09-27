@@ -1,0 +1,710 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Lyric Motion Studio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&family=Inter:wght@400;500;600;700&display=swap">
+<style>
+:root{
+  --bg:#f3f3f1;--panel:#ffffff;--panel2:#f6f6f4;--sunk:#ececea;--line:#dfdfdb;--line2:#cfcfca;
+  --text:#18191b;--dim:#6b6e73;--faint:#9a9da2;--acc:#e8492b;--acc-ink:#ffffff;--acc-soft:rgba(232,73,43,.1);
+  --ok:#1f9d63;--warn:#c98a00;--bad:#d23a3a;--stage:#e4e4e1;--shadow:0 8px 30px rgba(0,0,0,.12);
+  --r:10px;--r2:6px;--ui:"Inter","Noto Sans JP",system-ui,sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0e0f11;--panel:#16181b;--panel2:#1c1e22;--sunk:#111215;--line:#272a30;--line2:#353941;
+  --text:#ecedef;--dim:#9ba0a8;--faint:#6c717a;--acc:#ff5b3a;--acc-ink:#ffffff;--acc-soft:rgba(255,91,58,.14);
+  --ok:#3ccf8e;--warn:#f0b43c;--bad:#ff6363;--stage:#08090a;--shadow:0 12px 40px rgba(0,0,0,.5);color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#0e0f11;--panel:#16181b;--panel2:#1c1e22;--sunk:#111215;--line:#272a30;--line2:#353941;
+  --text:#ecedef;--dim:#9ba0a8;--faint:#6c717a;--acc:#ff5b3a;--acc-ink:#ffffff;--acc-soft:rgba(255,91,58,.14);
+  --ok:#3ccf8e;--warn:#f0b43c;--bad:#ff6363;--stage:#08090a;--shadow:0 12px 40px rgba(0,0,0,.5);color-scheme:dark;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font:13px/1.45 var(--ui);-webkit-font-smoothing:antialiased}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+::-webkit-scrollbar{width:10px;height:10px}::-webkit-scrollbar-thumb{background:var(--line2);border-radius:10px;border:3px solid transparent;background-clip:content-box}
+.app{display:grid;grid-template-rows:52px 1fr auto;height:100%;min-height:560px}
+/* top bar */
+.top{display:flex;align-items:center;gap:10px;padding:0 12px;border-bottom:1px solid var(--line);background:var(--panel)}
+.brand{display:flex;align-items:center;gap:8px;font-weight:700;letter-spacing:.02em;white-space:nowrap}
+.brand i{width:22px;height:22px;border-radius:6px;background:conic-gradient(from 200deg,var(--acc),#ffb03a,#7c5cff,var(--acc));display:block}
+.brand small{color:var(--faint);font-weight:500}
+.ttl{flex:1;min-width:80px;max-width:360px;background:transparent;border:1px solid transparent;border-radius:var(--r2);padding:6px 8px;font-weight:600}
+.ttl:hover{border-color:var(--line)}.ttl:focus{outline:none;border-color:var(--acc);background:var(--panel2)}
+.sp{flex:1}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:32px;padding:0 12px;border-radius:var(--r2);border:1px solid var(--line);background:var(--panel2);white-space:nowrap;transition:background .12s,border-color .12s}
+.btn:hover{border-color:var(--line2);background:var(--sunk)}
+.btn.sm{height:26px;padding:0 9px;font-size:12px}
+.lang{display:inline-flex;align-items:center;gap:4px;height:32px;padding:0 4px 0 8px;border:1px solid var(--line);border-radius:var(--r2);background:var(--panel2)}.lang svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.8;opacity:.8}.lang select{background:transparent;border:0;color:inherit;height:30px;font:inherit;cursor:pointer}.lang select option{background:var(--panel2)}
+.drvscale{display:flex;justify-content:space-between;font-size:10.5px;color:var(--faint);margin:-4px 0 6px 92px}.drvscale span:nth-child(2){color:var(--dim)}
+.feels{display:grid;grid-template-columns:repeat(4,1fr);gap:5px}.feels button{border:1px solid var(--line);background:var(--panel2);color:var(--text);border-radius:8px;padding:6px 4px 5px;font:inherit;font-size:11.5px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px;line-height:1.2;text-align:center}.feels button b{font-size:15px;font-weight:400}.feels button small{font-size:9.5px;color:var(--faint)}.feels button.on{border-color:var(--acc);background:var(--acc-soft);color:var(--text)}
+.imgs .im .vd{position:absolute;right:3px;bottom:3px;font-size:9.5px;background:rgba(0,0,0,.65);color:#fff;border-radius:4px;padding:0 4px;font-variant-numeric:tabular-nums}
+.vidopts{margin:6px 0 4px;display:flex;flex-direction:column;gap:6px}.vidopts .vo{border:1px solid var(--line);border-radius:8px;padding:6px 8px;background:var(--panel2)}.vidopts .vt{display:flex;justify-content:space-between;gap:6px;font-size:12px;margin-bottom:2px}.vidopts .vt b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.aprog{display:flex;align-items:center;gap:8px;margin:8px 0 2px;font-size:11.5px;color:var(--dim)}.aprog .bar{flex:1;height:6px;border-radius:3px;background:var(--panel2);overflow:hidden}.aprog .bar i{display:block;height:100%;width:0;background:var(--acc);transition:width .2s}
+.cue.low{box-shadow:inset 3px 0 0 #f0b400}.cue.low .x{color:#c98a00}
+#kernSec .val{min-width:54px;white-space:nowrap;font-size:11px;text-align:right}#kernSec input[type=range],#ibody input#iTrack,#ibody input#iWsp{flex:1;min-width:0}
+.btn.sm.ic.kn{width:22px;height:22px;min-width:22px;font-size:13px;line-height:1}
+.btn.ic{width:32px;padding:0}.btn.sm.ic{width:26px}
+.btn.pri{background:var(--acc);border-color:var(--acc);color:var(--acc-ink);font-weight:600}
+.btn.pri:hover{filter:brightness(1.07)}
+.btn.on{background:var(--acc-soft);border-color:var(--acc);color:var(--acc)}
+.btn:disabled{opacity:.45;cursor:default}
+.btn svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.menu{position:relative}
+.dd{position:absolute;right:0;top:36px;min-width:250px;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);padding:6px;z-index:50;display:none}
+.dd.open{display:block}
+.dd button{display:flex;width:100%;text-align:left;border:0;background:none;padding:8px 10px;border-radius:6px;gap:8px;align-items:center}
+.dd button:hover{background:var(--panel2)}
+.dd hr{border:0;border-top:1px solid var(--line);margin:5px 0}
+.dd .k{margin-left:auto;color:var(--faint);font-size:11px}
+/* main grid */
+.work{display:grid;grid-template-columns:340px 1fr 330px;min-height:0}
+.side,.insp{background:var(--panel);display:flex;flex-direction:column;min-height:0}
+.side{border-right:1px solid var(--line)}.insp{border-left:1px solid var(--line)}
+.tabs{display:flex;padding:6px;gap:2px;border-bottom:1px solid var(--line)}
+.tabs button{flex:1;border:0;background:none;padding:7px 0;white-space:nowrap;letter-spacing:-.02em;border-radius:6px;color:var(--dim);font-weight:500;font-size:12px}
+.tabs button.on{background:var(--panel2);color:var(--text);font-weight:600;box-shadow:inset 0 -2px 0 var(--acc)}
+.pane{overflow:auto;flex:1;padding:14px 16px 30px;display:none}
+.pane.on{display:block}
+.sec{margin-bottom:20px}
+.sec h3{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--faint);margin:0 0 8px;font-weight:600;display:flex;align-items:center;gap:6px}
+.sec h3 .sp{flex:1}
+.row{display:flex;gap:8px;align-items:center;margin-bottom:8px}
+.row>label{color:var(--dim);min-width:84px;font-size:12px}
+.col{display:flex;flex-direction:column;gap:6px}
+.hint{color:var(--faint);font-size:11.5px;line-height:1.5}
+.hint b{color:var(--dim)}
+input[type=text],input[type=number],select,textarea{background:var(--panel2);border:1px solid var(--line);border-radius:var(--r2);padding:6px 8px;min-width:0}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--acc)}
+select{padding-right:4px}
+textarea{width:100%;resize:vertical;font-family:"Noto Sans JP",var(--ui);line-height:1.6}
+input[type=range]{flex:1;accent-color:var(--acc);min-width:60px}
+input[type=color]{width:30px;height:28px;padding:0;border:1px solid var(--line);border-radius:6px;background:none;cursor:pointer}
+.num{width:64px;text-align:right;font-variant-numeric:tabular-nums}
+.val{width:44px;text-align:right;color:var(--dim);font-variant-numeric:tabular-nums;font-size:12px}
+.tg{display:inline-flex;align-items:center;gap:8px;cursor:pointer;user-select:none;font-size:12.5px}
+.tg input{display:none}
+.tg i{width:30px;height:18px;border-radius:9px;background:var(--line2);position:relative;transition:.15s;flex:none}
+.tg i:after{content:"";position:absolute;left:2px;top:2px;width:14px;height:14px;border-radius:50%;background:#fff;transition:.15s}
+.tg input:checked+i{background:var(--acc)}.tg input:checked+i:after{left:14px}
+/* drop */
+.drop{display:block;border:1.5px dashed var(--line2);border-radius:var(--r);padding:16px;text-align:center;color:var(--dim);cursor:pointer;transition:.15s;background:var(--panel2)}
+.drop:hover,.drop.over{border-color:var(--acc);color:var(--text);background:var(--acc-soft)}
+.drop b{display:block;color:var(--text);font-size:13px;margin-bottom:2px}
+.ainfo{display:flex;gap:10px;align-items:center;padding:10px;border:1px solid var(--line);border-radius:var(--r);margin-top:8px;background:var(--panel2)}
+.ainfo .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}
+.pill{display:inline-flex;align-items:center;gap:4px;padding:2px 7px;border-radius:20px;background:var(--sunk);color:var(--dim);font-size:11px;white-space:nowrap}
+/* theme cards */
+.themes{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.theme{border:1px solid var(--line);border-radius:var(--r);padding:0;background:var(--panel2);text-align:left;overflow:hidden;transition:.12s;position:relative}
+.theme:hover{border-color:var(--line2);transform:translateY(-1px)}
+.theme.on{border-color:var(--acc);box-shadow:0 0 0 1px var(--acc)}
+.theme .sw{height:46px;display:flex;align-items:center;justify-content:center;font-size:19px;font-weight:900;position:relative;overflow:hidden}
+.theme .sw span{position:relative;z-index:1}
+.theme .tx{padding:7px 9px 8px}
+.theme .tx b{display:block;font-size:12.5px}
+.theme .tx small{color:var(--faint);font-size:11px;line-height:1.35;display:block}
+/* palettes */
+.chips{display:flex;flex-wrap:wrap;gap:5px}
+.chip{border:1px solid var(--line);background:var(--panel2);border-radius:20px;padding:3px 10px;font-size:12px;color:var(--dim);display:inline-flex;align-items:center;gap:5px}
+.chip:hover{border-color:var(--line2);color:var(--text)}
+.chip.on{border-color:var(--acc);color:var(--acc);background:var(--acc-soft)}
+.pals{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:8px}
+.pal{border:1px solid var(--line);border-radius:8px;padding:0;overflow:hidden;background:none;text-align:left}
+.pal.on{border-color:var(--acc);box-shadow:0 0 0 1px var(--acc)}
+.pal .pv{height:38px;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:15px;position:relative}
+.pal .pv i{position:absolute;right:5px;bottom:5px;width:9px;height:9px;border-radius:50%}
+.pal small{display:block;padding:3px 6px;font-size:10.5px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;background:var(--panel2)}
+.cust{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.cust label{display:flex;flex-direction:column;gap:3px;font-size:11px;color:var(--faint)}
+.cust .cc{display:flex;gap:3px;align-items:center}
+.cust input[type=text]{width:100%;font-size:11px;padding:4px 5px;font-family:ui-monospace,monospace}
+/* fonts */
+.fonts{max-height:260px;overflow:auto;border:1px solid var(--line);border-radius:var(--r);background:var(--panel2)}
+.fonts .grp{font-size:10.5px;color:var(--faint);padding:6px 10px 3px;letter-spacing:.06em;position:sticky;top:0;background:var(--panel2)}
+.fonts button{display:flex;width:100%;border:0;background:none;padding:6px 10px;align-items:baseline;gap:8px;text-align:left}
+.fonts button:hover{background:var(--sunk)}.fonts button.on{background:var(--acc-soft)}
+.fonts button span{font-size:17px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1}
+.fonts button small{color:var(--faint);font-size:10.5px;white-space:nowrap}
+/* fx chips */
+.fxg{margin-bottom:14px}
+.fxg h4{margin:0 0 6px;font-size:12px;color:var(--dim);font-weight:600}
+.fxc{display:flex;flex-wrap:wrap;gap:5px}
+.fxc .chip{position:relative}
+.fxamt{display:grid;grid-template-columns:1fr auto;gap:4px 8px;margin-top:6px;align-items:center}
+.fxamt span{font-size:11.5px;color:var(--dim)}
+/* stage */
+.stage{display:flex;flex-direction:column;min-width:0;min-height:0;background:var(--stage)}
+.view{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;padding:18px;position:relative}
+.frame{position:relative;box-shadow:0 10px 50px rgba(0,0,0,.35);background:
+  conic-gradient(#888 25%,#aaa 0 50%,#888 0 75%,#aaa 0) 0 0/16px 16px}
+.frame canvas{display:block;width:100%;height:100%}
+.guides{position:absolute;inset:0;pointer-events:none;display:none}
+.guides.on{display:block}
+.guides:before{content:"";position:absolute;inset:7.5% 7.5%;border:1px dashed rgba(255,255,255,.35)}
+.guides:after{content:"";position:absolute;left:50%;top:50%;width:16px;height:16px;margin:-8px;border:1px solid rgba(255,255,255,.35);border-radius:50%}
+.prompter{position:absolute;left:0;right:0;bottom:0;padding:14px 16px;background:linear-gradient(transparent,rgba(0,0,0,.75));color:#fff;display:none;gap:12px;align-items:flex-end}
+.prompter.on{display:flex}
+.prompter .cur{font-size:20px;font-weight:700;font-family:"Noto Sans JP"}
+.prompter .pw{display:flex;flex-wrap:wrap;gap:4px 6px;margin:4px 0;font-family:"Noto Sans JP";font-size:15px}
+.prompter .pw span{padding:1px 6px;border-radius:6px;background:rgba(255,255,255,.12);opacity:.55}
+.prompter .pw span.done{opacity:.95;background:rgba(255,255,255,.22)}
+.prompter .pw span.next{opacity:1;background:#ff5b3a;color:#fff;font-weight:700}
+.snaps{display:flex;flex-direction:column;gap:6px}
+.snaps .sn{display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:10px;padding:8px 10px;background:var(--panel2)}
+.snaps .sn b{font-size:13px}.snaps .sn small{color:var(--faint);font-size:11px;display:block}
+.snaps .sn .sp{flex:1}
+.imgdrop{border:1.5px dashed var(--line);border-radius:10px;padding:10px;text-align:center;font-size:12px;color:var(--faint);margin-bottom:8px}
+.imgdrop.over{border-color:var(--acc);color:var(--acc)}
+.imgs{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:8px}
+.imgs .im{position:relative;aspect-ratio:16/10;border-radius:8px;overflow:hidden;border:2px solid transparent;background:var(--panel2) center/cover no-repeat;cursor:pointer}
+.imgs .im.on{border-color:var(--acc)}
+.imgs .im.off{opacity:.35;filter:grayscale(1)}
+.imgs .im .ix{position:absolute;right:3px;top:3px;width:18px;height:18px;border-radius:50%;border:0;background:rgba(0,0,0,.55);color:#fff;font-size:11px;line-height:18px;padding:0}
+.imgs .im .mv{position:absolute;bottom:3px;display:flex;gap:2px;left:3px}
+.imgs .im .mv button{border:0;background:rgba(0,0,0,.55);color:#fff;font-size:10px;border-radius:4px;padding:1px 5px}
+.imgs .im .no{position:absolute;left:4px;top:3px;font-size:10px;color:#fff;text-shadow:0 1px 2px #000;font-weight:700}
+.gapbox{margin-top:12px;padding:10px;border:1px solid var(--line);border-radius:10px;background:var(--panel2)}
+.gapbox h4{margin:0 0 8px;font-size:12.5px}
+.seclist{display:flex;flex-direction:column;gap:4px;margin:8px 0}
+.seclist .si{display:flex;align-items:center;gap:6px;font-size:12.5px}
+.seclist .si i{width:10px;height:10px;border-radius:3px;flex:none}
+.seclist .si select{flex:1}
+.seclist .si .t{font-variant-numeric:tabular-nums;color:var(--dim);width:64px;cursor:pointer}
+.looks{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:6px}
+.looks .lk{position:relative;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--panel2);cursor:pointer;text-align:left;padding:0;color:var(--text)}
+.looks .lk .sw{height:34px;display:flex;align-items:center;padding:0 8px;font-weight:800;font-size:15px}
+.looks .lk small{display:block;padding:4px 8px 6px;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.looks .lk .x{position:absolute;right:3px;top:3px;width:18px;height:18px;border-radius:50%;border:0;background:rgba(0,0,0,.45);color:#fff;font-size:11px;line-height:18px;padding:0;display:none}
+.looks .lk:hover .x{display:block}
+.wchips{display:flex;flex-wrap:wrap;gap:5px}
+.wchips button{border:1px solid var(--line);background:var(--panel2);color:var(--text);border-radius:8px;padding:3px 7px;font:inherit;font-size:12px;display:flex;flex-direction:column;align-items:flex-start;cursor:pointer;line-height:1.25}
+.wchips button small{font-size:10px;color:var(--faint);font-variant-numeric:tabular-nums}
+.wchips button.set{border-color:var(--acc)}
+.wchips button.set small{color:var(--acc)}
+.multi{background:var(--acc);color:var(--acc-ink);border-radius:10px;padding:8px 10px;margin-bottom:10px;font-size:12.5px;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.multi .btn{background:rgba(255,255,255,.18);border-color:transparent;color:inherit}
+.cue.msel{box-shadow:inset 3px 0 0 var(--acc);background:color-mix(in srgb,var(--acc) 10%,transparent)}
+.frame.dragtf{cursor:move}
+.frame .tfhint{position:absolute;left:8px;top:8px;background:rgba(0,0,0,.6);color:#fff;font-size:11px;padding:3px 8px;border-radius:6px;pointer-events:none;display:none}
+.frame.dragtf .tfhint{display:block}
+.prompter .nx{font-size:13px;opacity:.6;font-family:"Noto Sans JP"}
+.prompter .tap{margin-left:auto;width:74px;height:74px;border-radius:50%;border:2px solid #fff;background:rgba(255,91,58,.85);color:#fff;font-weight:700;flex:none;touch-action:none}
+.prompter .tap.dn{transform:scale(.94);background:#fff;color:#e8492b}
+.transport{display:flex;align-items:center;gap:6px;padding:8px 12px;border-top:1px solid var(--line);background:var(--panel);flex-wrap:wrap}
+.tc{font-variant-numeric:tabular-nums;font-family:ui-monospace,"SF Mono",Menlo,monospace;font-size:12.5px;padding:0 6px;white-space:nowrap}
+.tc b{font-weight:600}.tc span{color:var(--faint)}
+.btn.ic.play{width:38px;height:38px;min-width:38px;flex:0 0 38px;padding:0;border-radius:50%;aspect-ratio:1}.btn.ic.play svg{width:16px;height:16px}
+/* inspector */
+.ihead{display:flex;align-items:center;gap:6px;padding:10px 12px;border-bottom:1px solid var(--line)}
+.ihead b{flex:1}
+.ibody{overflow:auto;flex:1;padding:12px 12px 30px}
+.empty{color:var(--faint);text-align:center;padding:40px 16px;line-height:1.7}
+.tr3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px}
+.mbtn{display:flex;flex-direction:column;align-items:flex-start;gap:1px;padding:7px 8px;border:1px solid var(--line);background:var(--panel2);border-radius:8px;text-align:left;min-width:0}
+.mbtn:hover{border-color:var(--acc)}
+.mbtn small{font-size:10px;color:var(--faint);letter-spacing:.05em}
+.mbtn span{font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.lbtn{width:100%;display:flex;align-items:center;gap:10px;padding:6px;border:1px solid var(--line);background:var(--panel2);border-radius:8px;text-align:left}
+.lbtn:hover{border-color:var(--acc)}
+.lbtn canvas{width:84px;height:48px;border-radius:4px;flex:none;background:#000}
+.time2{display:grid;grid-template-columns:auto 1fr auto;gap:6px;align-items:center}
+.time2 input{width:100%;font-variant-numeric:tabular-nums}
+.nud{display:flex;gap:4px}
+.sw4{display:flex;gap:4px;align-items:center}
+.warn{padding:8px 10px;border-radius:8px;background:rgba(240,180,60,.12);color:var(--warn);font-size:12px;margin-bottom:10px}
+/* cue list */
+.cues{border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.cue{display:grid;grid-template-columns:22px 78px 1fr auto auto;gap:6px;align-items:center;padding:6px 8px;border-bottom:1px solid var(--line);cursor:pointer;background:var(--panel)}
+.cue:last-child{border-bottom:0}
+.cue:hover{background:var(--panel2)}
+.cue.on{background:var(--acc-soft)}
+.cue.over{box-shadow:inset 3px 0 0 var(--warn)}.cue.over .t{color:var(--warn)}
+.cue.now{box-shadow:inset 3px 0 0 var(--ok)}
+.cue.now .n{color:var(--ok);font-weight:700}
+.cue .rip{height:24px;padding:0 8px;font-size:11.5px}
+.cue .rip:hover{background:var(--acc);border-color:var(--acc);color:var(--acc-ink)}
+.cue.bad{box-shadow:inset 3px 0 0 var(--bad)}
+.cue .n{color:var(--faint);font-size:11px;text-align:right}
+.cue .t{font-family:ui-monospace,monospace;font-size:11px;color:var(--dim)}
+.cue .x{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-family:"Noto Sans JP"}
+.cue .lk{color:var(--acc);font-size:11px}
+/* timeline */
+.tl{border-top:1px solid var(--line);background:var(--panel);display:flex;flex-direction:column}
+.tlbar{display:flex;align-items:center;gap:6px;padding:6px 10px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.tlwrap{position:relative;height:150px}
+.tlwrap canvas{position:absolute;inset:0;width:100%;height:100%;touch-action:none}
+.resizer{height:5px;cursor:ns-resize;background:transparent;margin-top:-3px;position:relative;z-index:2}
+/* modals */
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;z-index:100;padding:20px}
+.modal.open{display:flex}
+.mbox{background:var(--panel);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);width:min(980px,100%);max-height:calc(100vh - 40px);display:flex;flex-direction:column;overflow:hidden}
+.mhead{display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--line)}
+.mhead b{font-size:15px}
+.mbody{overflow:auto;padding:14px 16px}
+.mfoot{display:flex;gap:8px;align-items:center;padding:12px 16px;border-top:1px solid var(--line)}
+.grid-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px}
+.card{border:1px solid var(--line);border-radius:10px;background:var(--panel2);padding:0;overflow:hidden;text-align:left}
+.card:hover{border-color:var(--line2)}
+.card.on{border-color:var(--acc);box-shadow:0 0 0 1px var(--acc)}
+.card canvas{display:block;width:100%;aspect-ratio:16/9;background:#000}
+.card div{padding:6px 8px;font-size:12px;display:flex;justify-content:space-between;gap:6px}
+.card div small{color:var(--faint)}
+.fmt{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px}
+.fmt button{border:1px solid var(--line);background:var(--panel2);border-radius:10px;padding:10px 12px;text-align:left}
+.fmt button b{display:block;font-size:13px}
+.fmt button small{color:var(--faint);font-size:11.5px;line-height:1.4;display:block;margin-top:2px}
+.fmt button.on{border-color:var(--acc);box-shadow:0 0 0 1px var(--acc);background:var(--acc-soft)}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;flex-wrap:wrap}
+.seg button{border:0;background:var(--panel2);padding:6px 11px;font-size:12px;border-right:1px solid var(--line)}
+.seg button:last-child{border-right:0}
+.seg button.on{background:var(--acc);color:var(--acc-ink)}
+.prog{height:8px;border-radius:8px;background:var(--sunk);overflow:hidden;flex:1}
+.prog i{display:block;height:100%;width:0;background:var(--acc);transition:width .1s}
+.exgrid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(20px);background:var(--text);color:var(--bg);padding:10px 16px;border-radius:10px;font-size:13px;opacity:0;transition:.2s;z-index:200;max-width:min(560px,90vw);pointer-events:none}
+.toast.show{opacity:1;transform:translateX(-50%)}
+.toast.err{background:var(--bad);color:#fff}
+.kbd{font-family:ui-monospace,monospace;font-size:11px;border:1px solid var(--line2);border-bottom-width:2px;border-radius:4px;padding:0 5px;color:var(--dim)}
+.shortcuts{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;font-size:12.5px}
+#inspToggle{display:none}
+@media (max-width:1180px){#inspToggle{display:inline-flex}.work{grid-template-columns:300px 1fr}.insp{display:none}.insp.float{display:flex;position:fixed;right:0;top:52px;bottom:0;width:330px;z-index:40;box-shadow:var(--shadow)}}
+@media (max-width:760px){
+  .app{grid-template-rows:auto 1fr auto;height:auto}
+  .top{flex-wrap:wrap;padding:8px 16px;gap:6px}.ttl{order:5;max-width:none;flex-basis:100%}
+  .work{grid-template-columns:1fr}.side{order:2;border-right:0;max-height:none}.stage{order:1;min-height:52vh}
+  .pane{max-height:none}.exgrid{grid-template-columns:1fr}.view{padding:10px}
+  .insp.float{width:100%}
+  .transport,.tlbar{padding:6px 16px}
+}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <header class="top">
+    <div class="brand"><i></i>Lyric Motion <small>Studio</small></div>
+    <input class="ttl" id="pTitleTop" placeholder="無題のプロジェクト" aria-label="プロジェクト名">
+    <div class="sp"></div>
+    <button class="btn ic" id="undo" title="元に戻す (Ctrl+Z)"><svg viewBox="0 0 24 24"><path d="M9 14 4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/></svg></button>
+    <button class="btn ic" id="redo" title="やり直す (Ctrl+Shift+Z)"><svg viewBox="0 0 24 24"><path d="m15 14 5-5-5-5"/><path d="M20 9H10a6 6 0 0 0 0 12h3"/></svg></button>
+    <label class="lang" data-noi18n title="Language"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg><select id="langSel" aria-label="Language"></select></label>
+    <button class="btn" id="manualBtn" title="取扱説明書"><svg viewBox="0 0 24 24"><path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2z"/><path d="M4 21V5"/><path d="M9 7h6M9 11h6"/></svg>使い方</button>
+    <div class="menu">
+      <button class="btn" id="fileBtn"><svg viewBox="0 0 24 24"><path d="M4 4h6l2 2h8v14H4z"/></svg>ファイル</button>
+      <div class="dd" id="fileMenu">
+        <button data-act="new">新規プロジェクト</button>
+        <button data-act="open">開く（JSON / .lmz）<span class="k">Ctrl+O</span></button>
+        <hr>
+        <button data-act="saveJson">プロジェクトを保存（JSON）<span class="k">Ctrl+S</span></button>
+        <button data-act="savePkg">音源込みで保存（.lmz）</button>
+        <button data-act="snapSave">スナップショットを保存…</button>
+        <button data-act="snapList">スナップショットから復元…</button>
+        <hr>
+        <button data-act="srt">字幕を書き出し：SRT</button>
+        <button data-act="vtt">字幕を書き出し：WebVTT</button>
+        <button data-act="lrc">歌詞タイミング：LRC</button>
+        <button data-act="chapters">YouTube用チャプター（曲構成）</button>
+        <button data-act="importSub">LRC / SRT を読み込む</button>
+        <hr>
+        <button data-act="still">今のフレームをPNG保存</button>
+        <button data-act="manual">取扱説明書</button>
+        <button data-act="help">ショートカット一覧</button>
+        <button data-act="theme">表示：ライト／ダーク切替</button>
+        <hr>
+        <button data-act="clearData">このブラウザーの保存データを削除…</button>
+      </div>
+    </div>
+    <button class="btn pri" id="exportBtn"><svg viewBox="0 0 24 24"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>書き出し</button>
+  </header>
+
+  <main class="work">
+    <aside class="side">
+      <nav class="tabs" id="tabs">
+        <button data-tab="source" class="on">素材</button>
+        <button data-tab="auto">おまかせ</button>
+        <button data-tab="design">デザイン</button>
+        <button data-tab="fx">エフェクト</button>
+        <button data-tab="list">フレーズ</button>
+      </nav>
+
+      <section class="pane on" data-pane="source">
+        <div class="sec">
+          <h3>音源</h3>
+          <label class="drop" id="audioDrop"><input type="file" id="audioFile" accept="audio/*,.mp3,.wav,.m4a,.aac,.ogg,.flac" hidden>
+            <b>音源をドロップ または クリックして選択</b>MP3 / WAV / M4A / FLAC など（200MBまで・端末内で処理）</label>
+          <div class="ainfo" id="audioInfo" hidden>
+            <svg viewBox="0 0 24 24" width="18" height="18" style="stroke:var(--acc);fill:none;stroke-width:2"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+            <div class="nm" id="audioName"></div><span class="pill" id="audioDur"></span><span class="pill" id="audioBpm" title="簡易解析による推定値">BPM –</span>
+          </div>
+          <div class="row" id="durRow" style="margin-top:8px"><label>曲の長さ</label><input type="number" id="durInput" class="num" min="1" max="1200" step="1"> <span class="hint">秒（音源なしで作る場合）</span></div>
+        </div>
+        <div class="sec">
+          <h3>歌詞 <span class="sp"></span><label class="btn sm" title="UTF-8のテキストファイル"><input type="file" id="lyricsFile" accept=".txt,.lrc,.srt,text/plain" hidden>TXT / LRC / SRT</label></h3>
+          <textarea id="lyrics" rows="10" placeholder="1行 = 1フレーズ&#10;*強調したい語* は拡大・強調色に&#10;/ で行内の改行位置を指定"></textarea>
+          <div class="row" style="margin-top:8px;flex-wrap:wrap">
+            <button class="btn pri" id="vocalPlace" title="音源の歌声を解析して、行と単語のタイミングを合わせます">🎤 歌声に合わせて自動配置</button>
+            <button class="btn" id="autoPlace" title="文字数と音量からの仮のタイミングで配置します">仮配置</button>
+            <button class="btn" id="applyText" title="行数が同じなら、タイミングと演出を保ったまま文字だけ差し替えます">文字だけ反映</button>
+            <label class="tg" title="解析したビート位置に開始をそろえます"><input type="checkbox" id="snapBeat"><i></i>ビートに吸着</label>
+          </div>
+          <div class="aprog" id="alignProg" hidden><div class="bar"><i></i></div><span></span></div>
+          <p class="hint"><b>歌声に合わせて自動配置</b>は、音源の中央に定位したボーカルを解析し、各行の歌い出し・歌い終わりと単語のタイミングを推定します（すべてブラウザー内で処理）。イントロのリード楽器などを歌と取り違えたときは、その行を選んで歌い出しで <b>ここから</b> を押し、<b>以降の行を歌声に合わせ直す</b> を使うと後ろがそろいます。🔒の行は固定したまま合わせます。<b>仮配置</b>は文字数と音量からのおおまかな割り当てです。</p>
+        </div>
+        <div class="sec">
+          <h3>クレジット</h3>
+          <div class="row"><label>タイトル</label><input type="text" id="pTitle" maxlength="100" style="flex:1"></div>
+          <div class="row"><label>アーティスト</label><input type="text" id="pArtist" maxlength="100" style="flex:1"></div>
+          <div class="row"><label class="tg"><input type="checkbox" id="showCredits"><i></i>映像に表示</label><span class="sp"></span>
+            <select id="creditPos"><option value="bl">左下</option><option value="bc">中央下</option><option value="br">右下</option><option value="tl">左上</option></select></div>
+        </div>
+      </section>
+
+      <section class="pane" data-pane="auto">
+        <div class="sec">
+          <h3>曲のジャンル・テーマ</h3>
+          <div class="themes" id="themes"></div>
+          <p class="hint" style="margin-top:8px">テーマごとに、配色・書体・レイアウト・動き・エフェクトの候補を絞り込み、曲全体のトーン＆マナーをそろえます。音源を解析済みなら、盛り上がる区間ほど強めの演出を選びます。</p>
+        </div>
+        <div class="sec" id="motionSec">
+          <h3>動きの調整 <span class="sp"></span><button class="btn sm" id="motionReset" title="激しさ・動きの付け方・変化の多さをテーマの標準に戻す">テーマ標準に戻す</button></h3>
+          <div class="row"><label>激しさ</label><input type="range" id="drive" min="0" max="100" step="1"><span class="val" id="driveV"></span></div>
+          <div class="drvscale"><span>穏やか</span><span id="driveTh"></span><span>激しい</span></div>
+          <div class="row"><label>変化の多さ</label><input type="range" id="variety" min="0" max="100" step="1"><span class="val" id="varietyV"></span></div>
+          <div class="drvscale"><span>統一感</span><span></span><span>バリエーション</span></div>
+          <div class="hint" style="margin:8px 0 4px">動きの付け方</div>
+          <div class="feels" id="feels"></div>
+          <div class="row" style="margin-top:8px"><label class="tg"><input type="checkbox" id="motionLive"><i></i>変更をすぐ反映（🔒の行はそのまま）</label></div>
+          <p class="hint">ジャンル・テーマで全体のトーンを決めたうえで、動きの激しさと付け方だけを調整できます。激しさは登場・退場・カメラ・トランジション・エフェクトの選び方と、動きの大きさ・速さにまとめて効きます。サビなど盛り上がる区間は、設定した激しさより少し強めになります。</p>
+        </div>
+        <div class="sec">
+          <h3>曲構成（セクション）<span class="sp"></span><span class="hint" id="secInfo"></span></h3>
+          <div class="row" style="flex-wrap:wrap"><button class="btn sm" id="secEst">音源から推定</button><button class="btn sm" id="secAdd">再生位置に追加 (M)</button><button class="btn sm" id="secClear">すべて消す</button></div>
+          <div class="seclist" id="secList"></div>
+          <p class="hint">イントロ／Aメロ／Bメロ／サビ などを指定すると、おまかせ演出がセクション単位でトンマナを切り替え、サビで最大の見せ場を作ります。タイムライン上段の帯でも編集できます（ダブルクリック：追加／クリック：種類切替／ドラッグ：移動／右クリック：削除）。推定は音量の変化からの目安です。</p>
+        </div>
+        <div class="sec">
+          <h3>生成</h3>
+          <div class="row"><label>シード</label><input type="number" id="seed" class="num" style="width:110px" min="0" max="2147483647"><button class="btn ic sm" id="dice" title="別のシード">🎲</button></div>
+          <div class="row"><label class="tg"><input type="checkbox" id="autoColors"><i></i>配色もおまかせ（テーマ内で循環）</label></div>
+          <div class="row"><label class="tg"><input type="checkbox" id="autoFilters"><i></i>エフェクトもおまかせ（0〜2個/行）</label></div>
+          <div class="row"><label class="tg"><input type="checkbox" id="autoTrans"><i></i>フレーズ間のトランジションもおまかせ</label></div>
+          <div class="row"><label class="tg"><input type="checkbox" id="autoGfx"><i></i>アクセントグラフィックもおまかせ</label></div>
+          <button class="btn pri" id="generate" style="width:100%;height:38px">おまかせで演出を生成</button>
+          <div class="row" style="margin-top:10px;justify-content:space-between">
+            <button class="btn sm" id="planPrev">◀ 前の案</button><span class="hint" id="planInfo">案 –</span><button class="btn sm" id="planNext">次の案 ▶</button>
+          </div>
+          <p class="hint">🔒 固定した行は再生成されません。同じシード・同じ歌詞なら同じ結果になります。</p>
+        </div>
+      </section>
+
+      <section class="pane" data-pane="design">
+        <div class="sec">
+          <h3>ルック（見た目のプリセット） <span class="sp"></span><button class="btn sm" id="lookSave">＋ 今の見た目を保存</button></h3>
+          <div class="looks" id="looks"></div>
+          <div class="row" style="margin-top:6px"><button class="btn sm" id="lookExport">書き出し</button><label class="btn sm"><input type="file" id="lookImport" accept=".json" hidden>読み込み</label><span class="sp"></span></div>
+          <p class="hint">配色・書体・背景・背景モーション・フィルター・動きの強さ/速さをまとめて保存します。案件やアーティストごとのトンマナを一発で呼び出せます（このブラウザーに保存）。</p>
+        </div>
+        <div class="sec">
+          <h3>画面比率</h3>
+          <div class="chips" id="aspects"></div>
+        </div>
+        <div class="sec">
+          <h3>配色 <span class="sp"></span><span class="hint" id="palNote"></span></h3>
+          <div class="chips" id="palCats"></div>
+          <div class="pals" id="pals"></div>
+          <div style="margin-top:12px" class="col">
+            <label class="tg"><input type="checkbox" id="useCustom"><i></i>カスタム配色を全体に使う</label>
+            <div class="cust" id="custColors"></div>
+          </div>
+          <label class="tg" style="margin-top:10px"><input type="checkbox" id="keyColor"><i></i>キーワードを強調色で表示（*…* 指定は常に強調）</label>
+        </div>
+        <div class="sec">
+          <h3>書体 <span class="sp"></span><label class="btn sm" title="TTF / OTF / WOFF（この端末内でのみ使用）"><input type="file" id="fontFile" accept=".ttf,.otf,.woff,.woff2" hidden>＋ フォント追加</label></h3>
+          <div class="fonts" id="fonts"></div>
+          <div class="row" style="margin-top:8px"><label>太さ</label><select id="fontWeight" style="flex:1"></select></div>
+          <div class="row"><label>欧文書体</label><select id="latinFont" style="flex:1"></select></div>
+          <div class="row"><label>ハングル書体</label><select id="koreanFont" style="flex:1"></select></div>
+          <div class="row"><label>欧文サイズ</label><input type="range" id="latinScale" min="85" max="125" step="1"><span class="val" id="latinScaleV"></span></div>
+          <p class="hint">書体はGoogle Fontsから読み込みます（オフライン時は端末の日本語フォントで代替）。「テーマに任せる」ではシーンごとにテーマの書体を使います。</p>
+        </div>
+        <div class="sec" id="kernSec">
+          <h3>字間・スペース <span class="sp"></span><button class="btn sm" id="kernReset" title="字間・英字の字間・単語間・和欧間・約物の詰めを標準に戻す">標準に戻す</button></h3>
+          <div class="row"><label title="文字と文字のあいだ（和文・全体）">字間</label><button class="btn sm ic kn" data-k="tracking" data-d="-1" title="詰める">−</button><input type="range" id="tracking" min="-15" max="50" step="1"><button class="btn sm ic kn" data-k="tracking" data-d="1" title="広げる">＋</button><span class="val" id="trackingV"></span></div>
+          <div class="row"><label title="英単語の中の文字間">英字の字間</label><button class="btn sm ic kn" data-k="latinTrack" data-d="-1" title="詰める">−</button><input type="range" id="latinTrack" min="-10" max="30" step="1"><button class="btn sm ic kn" data-k="latinTrack" data-d="1" title="広げる">＋</button><span class="val" id="latinTrackV"></span></div>
+          <div class="row"><label title="英単語と英単語のあいだ（半角スペース）">単語間</label><button class="btn sm ic kn" data-k="wordSpace" data-d="-5" title="詰める">−</button><input type="range" id="wordSpace" min="40" max="250" step="5"><button class="btn sm ic kn" data-k="wordSpace" data-d="5" title="広げる">＋</button><span class="val" id="wordSpaceV"></span></div>
+          <div class="row"><label title="和文と英字・数字のあいだ（スペースを入れていない所）">和欧間</label><button class="btn sm ic kn" data-k="wakanGap" data-d="-5" title="詰める">−</button><input type="range" id="wakanGap" min="0" max="60" step="5"><button class="btn sm ic kn" data-k="wakanGap" data-d="5" title="広げる">＋</button><span class="val" id="wakanGapV"></span></div>
+          <div class="row"><label title="「」、。などの約物の前後の空き">約物の詰め</label><button class="btn sm ic kn" data-k="yakuAmt" data-d="-10" title="ゆるく">−</button><input type="range" id="yakuAmt" min="0" max="100" step="10"><button class="btn sm ic kn" data-k="yakuAmt" data-d="10" title="きつく">＋</button><span class="val" id="yakuAmtV"></span></div>
+          <p class="hint">左へ動かすと詰まり、右へ動かすと広がります。フレーズごとの微調整は、右の詳細パネル「字間」「単語間」か、行を選んで <span class="kbd">[</span> / <span class="kbd">]</span>（字間・<span class="kbd">Shift</span> で大きく）、<span class="kbd">Alt</span>＋<span class="kbd">[</span> / <span class="kbd">]</span>（単語間）。</p>
+        </div>
+        <div class="sec">
+          <h3>文字と動き</h3>
+          <div class="row"><label>文字サイズ</label><input type="range" id="textScale" min="50" max="150" step="1"><span class="val" id="textScaleV"></span></div>
+          <div class="row"><label class="tg"><input type="checkbox" id="rubyOn"><i></i>ルビを表示（記法：漢字《かんじ》）</label></div>
+          <div class="row"><label>動きの強さ</label><input type="range" id="intensity" min="20" max="200" step="5"><span class="val" id="intensityV"></span></div>
+          <div class="row"><label>テンポ感</label><select id="tempoSel" style="flex:1"></select></div>
+          <div class="row"><label>動きの速さ</label><input type="range" id="speed" min="50" max="200" step="5"><span class="val" id="speedV"></span></div>
+          <div class="row"><label class="tg"><input type="checkbox" id="tempoSync"><i></i>曲のBPMに動きの長さを合わせる</label></div>
+          <p class="hint">オンにすると、登場・退場の長さを 1/4〜3拍 のいちばん近い長さにそろえ、揺れや跳ねの周期も曲のテンポに合わせます。</p>
+        </div>
+        <div class="sec">
+          <h3>背景モーション</h3>
+          <label class="tg" style="margin-bottom:8px"><input type="checkbox" id="autoBgm"><i></i>おまかせ（テーマに合わせてセクションごとに選ぶ）</label>
+          <button class="btn" id="bgmPick" style="width:100%;justify-content:space-between"><span>背景モーションを選ぶ</span><span class="hint" id="bgmCur" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:60%"></span></button>
+          <div class="row" style="margin-top:8px"><label>強さ</label><input type="range" id="bgmAmt" min="0" max="200" step="5"><span class="val" id="bgmAmtV"></span></div>
+          <div class="row"><label>速さ</label><input type="range" id="bgmSpeed" min="25" max="300" step="5"><span class="val" id="bgmSpeedV"></span></div>
+          <div class="row"><label>暗くする</label><input type="range" id="bgmDim" min="0" max="80" step="1"><span class="val" id="bgmDimV"></span></div>
+          <div class="gapbox">
+            <h4>歌詞のない区間（イントロ・間奏・アウトロ）</h4>
+            <div class="row"><label>背景</label><select id="gapFill" style="flex:1"><option value="auto">おまかせ（小節ごとにシーンを切替えて盛り上げる）</option><option value="continue">直前の背景をそのまま続ける</option><option value="off">動かさない</option></select></div>
+            <button class="btn sm" id="gapBgmPick" style="width:100%;justify-content:space-between;margin:4px 0"><span>インスト区間の背景を指定…</span><span class="hint" id="gapBgmCur"></span></button>
+            <div class="row"><label>前景</label><select id="gapVisStyle" style="flex:1"><option value="auto">テーマに合わせる</option><option value="spectrum">音に反応する円形スペクトラム</option><option value="marquee">タイトルが流れるマーキー</option><option value="title">タイトル／アーティスト表示</option><option value="none">なし（背景だけ）</option></select></div>
+            <label class="tg"><input type="checkbox" id="gapLabel"><i></i>区間名（INTRO・INTERLUDE・OUTRO など）を表示</label>
+            <label class="tg"><input type="checkbox" id="gapCountdown"><i></i>歌い出し前にカウントダウン（●●● と次の歌詞）</label>
+            <div class="row"><label>対象</label><select id="gapMin" style="flex:1"><option value="0.8">0.8秒以上の空き</option><option value="1.2">1.2秒以上の空き</option><option value="2">2秒以上の空き</option><option value="4">4秒以上の空き</option></select></div>
+            <p class="hint">歌詞が表示されていない区間を自動で見つけ、テーマのトーンに合った背景モーションを小節ごとに切り替え、カメラのズームとビートの揺れを加えます（タイムラインでは斜線の帯で表示）。曲構成で「間奏」「イントロ」を指定すると表示ラベルにも反映されます。</p>
+          </div>
+          <p class="hint">GPUシェーダー（トンネル・万華鏡・レイマーチ空間・メッシュグラデ・ホログラム等）27種＋粒子・天気・水・炎・光・グリッチ・画面分割など66種、計93種類。「暗くする」で文字の読みやすさを調整できます。複数を重ねがけできます。行ごとの指定は右の詳細パネルから。</p>
+        </div>
+        <div class="sec" id="imgSec">
+          <h3>背景画像・動画 <span class="sp"></span><label class="btn sm"><input type="file" id="imgFiles" accept="image/*,video/mp4,video/webm,video/quicktime,.mp4,.m4v,.mov,.webm" multiple hidden>＋ 画像・動画を追加</label></h3>
+          <div class="imgdrop" id="imgDrop">ここに画像・動画をドロップ（複数可・JPG / PNG / WebP / MP4 / WebM）</div>
+          <div class="imgs" id="imgList"></div>
+          <div class="vidopts" id="vidOpts" hidden></div>
+          <div class="row"><label class="tg"><input type="checkbox" id="imgOn"><i></i>背景画像・動画を使う</label><span class="sp"></span><span class="hint" id="imgCount"></span></div>
+          <div class="row"><label>切り替え</label><select id="imgChange" style="flex:1"><option value="auto">おまかせ（曲構成・フレーズに合わせる）</option><option value="phrase">フレーズごと</option><option value="bars">小節ごと</option><option value="manual">手動（フレーズごとに指定）</option></select></div>
+          <div class="row" id="imgEveryRow"><label>間隔</label><select id="imgEvery" style="flex:1"><option value="1">1</option><option value="2">2</option><option value="4">4</option><option value="8">8</option></select><span class="hint" id="imgEveryU" style="width:70px">フレーズ</span></div>
+          <div class="row"><label>順番</label><div class="seg" id="imgOrder"><button data-v="order">並び順</button><button data-v="shuffle">シャッフル</button></div></div>
+          <div class="row"><label>トランジション</label><button class="btn sm" id="imgTransPick" style="flex:1;justify-content:space-between"><span id="imgTransCur">おまかせ</span><span class="hint">選ぶ…</span></button></div>
+          <div class="row"><label>切替の長さ</label><input type="range" id="imgTransDur" min="0" max="200" step="5"><span class="val" id="imgTransDurV"></span></div>
+          <div class="row"><label>質感</label><select id="imgLook" style="flex:1"><option value="natural">そのまま</option><option value="vivid">ビビッド</option><option value="fade">フェード（淡く）</option><option value="mono">モノクロ</option><option value="duo">デュオトーン（配色に合わせる）</option><option value="tint">配色でカラーグレーディング</option></select></div>
+          <div class="row"><label title="文字が読みやすいよう、画像を背景色に寄せて沈めます">なじませ</label><input type="range" id="imgDim" min="0" max="95"><span class="val" id="imgDimV"></span></div>
+          <div class="row"><label>ぼかし</label><input type="range" id="imgBlur" min="0" max="40"><span class="val" id="imgBlurV"></span></div>
+          <label class="tg"><input type="checkbox" id="imgKB"><i></i>ゆっくりズーム＆パン（ケン・バーンズ）</label>
+          <label class="tg"><input type="checkbox" id="imgBeat"><i></i>ビートに合わせてわずかに脈動</label>
+          <label class="tg"><input type="checkbox" id="imgBgmFull"><i></i>全面の背景モーション（シェーダー等）を画像の上に重ねる</label>
+          <p class="hint">サムネイルをクリックでオン／オフ、◀ ▶ で並べ替え、ダブルクリックで表示位置（中心）を調整。行ごとに画像を指定するには右の詳細パネル「背景画像」から。画像はこのブラウザーに保存され、.lmz（音源込み保存）にも含まれます。動画（MP4 / WebM）も同じように並べて使え、書き出しではフレーム単位で正確に合成します（音声は使いません）。</p>
+        </div>
+        <div class="sec">
+          <h3>背景</h3>
+          <div class="row"><label>種類</label><select id="bgType" style="flex:1"></select></div>
+          <div id="bgImgRow" class="col" hidden>
+            <label class="btn sm"><input type="file" id="bgFile" accept="image/*" hidden>画像を選ぶ</label>
+            <div class="row"><label>暗さ</label><input type="range" id="bgDim" min="0" max="95"><span class="val" id="bgDimV"></span></div>
+            <div class="row"><label>ぼかし</label><input type="range" id="bgBlur" min="0" max="40"><span class="val" id="bgBlurV"></span></div>
+          </div>
+          <div class="row"><label>模様</label><select id="pattern" style="flex:1"></select></div>
+          <div class="row"><label>カメラ</label><select id="camera" style="flex:1"></select></div>
+        </div>
+      </section>
+
+      <section class="pane" data-pane="fx">
+        <div class="sec">
+          <h3>全体の強さ</h3>
+          <div class="row"><input type="range" id="fxInt" min="0" max="200" step="5"><span class="val" id="fxIntV"></span></div>
+        </div>
+        <div class="sec">
+          <h3>ビート同期</h3>
+          <div class="row"><label class="tg"><input type="checkbox" id="beatSync"><i></i>ビートに合わせて脈動・フラッシュ</label></div>
+          <div class="row"><label>BPM</label><input type="number" id="bpm" class="num" min="0" max="300" step="0.1" placeholder="自動"><button class="btn sm" id="tapTempo" title="拍に合わせて数回クリック">タップで計測</button></div>
+          <div class="row"><label>拍のずれ（秒）</label><input type="number" id="beatOffset" class="num" step="0.01"></div>
+          <p class="hint">空欄なら音源の簡易解析結果を使います（目安）。合わない場合はBPMを手入力してください。</p>
+        </div>
+        <div class="sec">
+          <h3>トランジション</h3>
+          <label class="tg"><input type="checkbox" id="transOn"><i></i>フレーズ間のトランジションを使う</label>
+          <p class="hint">カラーブロック・図形ワイプ・ホイップ（モーションブラー）・ズームスルー・スピン・グリッチカットなど30種。曲のBPMに合わせて半拍で切り替えます。行ごとの指定は右の詳細パネル「カット・グラフィック」から。</p>
+        </div>
+        <div class="sec">
+          <h3>全体に適用するエフェクト <span class="sp"></span><button class="btn sm" id="fxClear">すべて外す</button></h3>
+          <div id="fxGlobal"></div>
+          <p class="hint">フレーズごとのエフェクトは右の詳細パネルで追加できます（全体＋フレーズ別の合計が適用されます）。</p>
+        </div>
+      </section>
+
+      <section class="pane" data-pane="list">
+        <div class="sec" id="fineSec">
+          <h3>タイミング微調整</h3>
+          <div class="row"><label>タップ遅れ補正</label><input type="range" id="tapLat" min="0" max="400" step="5"><span class="val" id="tapLatV"></span></div>
+          <div class="row" style="flex-wrap:wrap"><button class="btn sm" id="calBtn">遅れを測定する</button><span class="hint">打刻（ここから・タップ打刻・I/O キー）の時刻をこの秒数だけ早めて記録します</span></div>
+          <div class="row" style="flex-wrap:wrap;margin-top:6px"><label>まとめてずらす</label>
+            <div class="seg" id="shiftTarget"><button data-v="all" class="on">全行</button><button data-v="after">選択行以降</button></div>
+          </div>
+          <div class="row nud" style="margin-left:92px"><button class="btn sm" data-sh="-0.1">−0.1s</button><button class="btn sm" data-sh="-0.033">−1f</button><button class="btn sm" data-sh="0.033">+1f</button><button class="btn sm" data-sh="0.1">+0.1s</button></div>
+          <div style="border-top:1px solid var(--line);margin:12px 0 10px"></div>
+          <div class="row"><label>ビートに<br>クオンタイズ</label><div class="seg" id="qGrid"><button data-v="1">1拍</button><button data-v="2">1/2拍</button><button data-v="4">1/4拍</button><button data-v="0.25">小節頭</button></div></div>
+          <div class="row"><label>強さ</label><input type="range" id="qStr" min="10" max="100" step="5"><span class="val" id="qStrV"></span></div>
+          <div class="row"><label>対象</label><div class="seg" id="qTarget"><button data-v="all" class="on">全行</button><button data-v="after">選択行以降</button><button data-v="one">選択行</button></div></div>
+          <div class="row"><label class="tg"><input type="checkbox" id="qEnd"><i></i>終了もビートにそろえる</label></div>
+          <div class="row"><label class="tg"><input type="checkbox" id="autoQ"><i></i>打刻した瞬間に自動でクオンタイズ</label></div>
+          <button class="btn pri" id="qRun" style="width:100%">クオンタイズする</button>
+          <p class="hint" id="qInfo" style="margin-top:6px"></p>
+        </div>
+        <div class="sec">
+          <h3>フレーズ一覧 <span class="sp"></span><span class="hint" id="cueCount"></span></h3>
+          <p class="hint" style="margin:0 0 8px">再生しながら、歌い出した瞬間にその行の <b>ここから</b> を押すと、開始をその位置に合わせて以降の行も同じだけずらします。緑の線が今鳴っている行です。</p>
+          <div class="row" style="flex-wrap:wrap">
+            <button class="btn sm" id="validate">タイミング検証</button>
+            <button class="btn sm" id="repair">終了時刻を修復</button>
+            <button class="btn sm" id="lockAll">全て固定</button>
+            <button class="btn sm" id="unlockAll">固定解除</button>
+            <button class="btn sm" id="addTitle" title="曲頭の空きにタイトル／アーティストのカードを入れます">＋ タイトルカード</button>
+          </div>
+          <p class="hint" style="margin:6px 0 0">Shift＋クリックで範囲選択、Ctrl（⌘）＋クリックで複数選択。複数選択中はモーション・レイアウト等の変更と「スタイル貼り付け」がまとめて適用されます。</p>
+          <div id="issues"></div>
+          <div class="cues" id="cueList"></div>
+        </div>
+      </section>
+    </aside>
+
+    <section class="stage">
+      <div class="view" id="viewBox">
+        <div class="frame" id="frame"><canvas id="view"></canvas><div class="guides" id="guides"></div><div class="tfhint" id="tfHint">ドラッグで文字位置を移動（Shift：水平/垂直固定・ダブルクリックで中央へ）</div>
+          <div class="prompter" id="prompter"><div><div class="nx" id="pPrev" data-noi18n></div><div class="cur" id="pCur" data-noi18n></div><div class="pw" id="pWords" data-noi18n></div><div class="nx" id="pNext" data-noi18n></div></div><button class="tap" id="tapBtn">TAP<br><small>Enter</small></button></div>
+        </div>
+      </div>
+      <div class="transport">
+        <button class="btn ic" id="toStart" title="先頭へ (Home)"><svg viewBox="0 0 24 24"><path d="M6 5v14"/><path d="m18 5-9 7 9 7z"/></svg></button>
+        <button class="btn ic" id="prevCue" title="前のフレーズ (↑)"><svg viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></svg></button>
+        <button class="btn pri ic play" id="play" title="再生 / 停止 (Space)"><svg viewBox="0 0 24 24" id="playIco"><path d="M7 4v16l13-8z" fill="currentColor"/></svg></button>
+        <button class="btn ic" id="nextCue" title="次のフレーズ (↓)"><svg viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg></button>
+        <div class="tc"><b id="tNow">0:00.00</b> <span>/ <span id="tDur">0:00</span></span></div>
+        <input type="text" id="seekTo" placeholder="秒 or 分:秒" style="width:96px" title="時間を指定して移動（Enter）">
+        <button class="btn sm" id="loopCue" title="選択中のフレーズを繰り返し再生">⟲ ループ</button>
+        <div class="sp"></div>
+        <select id="aspectQuick" title="画面比率"></select>
+        <select id="pvQ" title="プレビュー画質"><option value="auto">プレビュー：自動（滑らかさ優先）</option><option value="0.35">プレビュー：軽量</option><option value="0.5">プレビュー：標準</option><option value="1">プレビュー：高精細</option></select>
+        <button class="btn sm" id="guidesBtn" title="セーフエリア">セーフエリア</button>
+        <button class="btn sm" id="inspToggle" title="詳細パネル">詳細</button>
+      </div>
+    </section>
+
+    <aside class="insp" id="insp">
+      <div class="ihead"><b id="iTitle">フレーズ詳細</b>
+        <button class="btn sm ic" id="iLock" title="固定（おまかせ・再抽選から除外）">🔓</button>
+        <button class="btn sm" id="iReroll" title="この行だけ再抽選 (R)">🎲 再抽選</button>
+      </div>
+      <div class="ibody" id="ibody"></div>
+    </aside>
+  </main>
+
+  <footer class="tl">
+    <div class="resizer" id="tlResize"></div>
+    <div class="tlbar">
+      <button class="btn sm" id="tapMode" title="再生しながら Enter を押す→離すで、開始→終了を打刻">● タップ打刻</button>
+      <label class="tg" title="1回のタップで1単語ずつ打刻（カラオケ・ワード同期用）"><input type="checkbox" id="tapWord"><i></i>単語ごと</label>
+      <span class="hint" id="tapHint"><span class="kbd">Enter</span> 押下＝開始 ／ 離す＝終了（以降の行も一緒にずれる）・<span class="kbd">↑↓</span> で行を戻す</span>
+      <div class="sp"></div>
+      <button class="btn sm" id="addCue" title="再生位置にフレーズを追加">＋ 追加</button>
+      <button class="btn sm" id="splitCue" title="再生位置で分割">✂ 分割</button>
+      <button class="btn sm" id="delCue" title="選択フレーズを削除 (Delete)">削除</button>
+      <label class="tg" title="ドラッグ時にビート・他の行端に吸着"><input type="checkbox" id="snap" checked><i></i>吸着</label>
+      <span class="hint">拡大</span><input type="range" id="tlZoom" min="5" max="400" style="width:120px;flex:none">
+    </div>
+    <div class="tlwrap" id="tlWrap"><canvas id="tl"></canvas></div>
+  </footer>
+</div>
+
+<audio id="au" preload="auto"></audio>
+
+<div class="modal" id="pickModal"><div class="mbox">
+  <div class="mhead"><b id="pickTitle">モーションを選ぶ</b><div class="sp"></div><input type="text" id="pickSearch" placeholder="検索" style="width:180px"><button class="btn sm" data-close>閉じる</button></div>
+  <div class="mbody"><div class="chips" id="pickCats" style="margin-bottom:12px"></div><div class="grid-cards" id="pickGrid"></div></div>
+  <div class="mfoot"><span class="hint" id="pickHint">カードにマウスを乗せると動きを確認できます</span><div class="sp"></div><label class="tg" id="pickAllWrap"><input type="checkbox" id="pickAll"><i></i>全フレーズに適用</label></div>
+</div></div>
+
+<div class="modal" id="exModal"><div class="mbox" style="width:min(900px,100%)">
+  <div class="mhead"><b>書き出し</b><div class="sp"></div><button class="btn sm" data-close>閉じる</button></div>
+  <div class="mbody">
+    <div class="sec"><h3>形式</h3><div class="fmt" id="exFmt"></div></div>
+    <div class="exgrid">
+      <div>
+        <div class="sec"><h3>背景（別アプリでの合成用）</h3>
+          <div class="seg" id="exBg"><button data-v="normal" class="on">通常</button><button data-v="alpha">透過</button><button data-v="green">グリーンバック</button><button data-v="blue">ブルーバック</button><button data-v="custom">任意色</button></div>
+          <div class="row" style="margin-top:8px" id="exKeyRow" hidden><label>キー色</label><input type="color" id="exKey" value="#ff00ff"></div>
+          <p class="hint" id="exBgHint" style="margin-top:6px"></p>
+          <label class="tg" id="exOverWrap" style="margin-top:4px"><input type="checkbox" id="exOver" checked><i></i>粒子・光などの装飾エフェクトも含める</label>
+        </div>
+        <div class="sec"><h3>範囲</h3>
+          <div class="seg" id="exRange"><button data-v="all" class="on">曲全体</button><button data-v="cue">選択フレーズ</button><button data-v="custom">指定</button></div>
+          <div class="row" style="margin-top:8px" id="exRangeRow" hidden><input type="text" id="exT0" style="width:80px" placeholder="開始"> 〜 <input type="text" id="exT1" style="width:80px" placeholder="終了"></div>
+        </div>
+      </div>
+      <div>
+        <div class="sec"><h3>画質</h3>
+          <div class="row"><label>解像度</label><select id="exRes" style="flex:1"></select></div>
+          <div class="row"><label>fps</label><div class="seg" id="exFps"><button data-v="23.976">23.976</button><button data-v="24">24</button><button data-v="25">25</button><button data-v="29.97">29.97</button><button data-v="30" class="on">30</button><button data-v="50">50</button><button data-v="59.94">59.94</button><button data-v="60">60</button></div></div>
+          <div class="row"><label>品質</label><div class="seg" id="exQ"><button data-v="low">標準</button><button data-v="high" class="on">高</button><button data-v="max">最高</button></div></div>
+          <div class="row"><label>モーションブラー</label><div class="seg" id="exMb"><button data-v="0" class="on">なし</button><button data-v="4">弱</button><button data-v="8">標準</button><button data-v="16">強</button></div></div>
+          <p class="hint" style="margin:-2px 0 6px">1フレームを複数の瞬間から合成する本物のシャッターブラー（180°）。速い動きが映像らしくなります。書き出し時間はサンプル数倍になります。</p>
+          <div class="row"><label class="tg"><input type="checkbox" id="exAudio" checked><i></i>音声を含める</label></div>
+          <div class="row" id="exStreamRow"><label class="tg" title="長尺・4Kでもメモリーを使い切らずに書き出せます"><input type="checkbox" id="exStream"><i></i>ディスクへ直接書き込む（長尺・4K向け）</label></div>
+        </div>
+        <div class="sec"><h3>比率違いも同時に書き出す</h3>
+          <div class="chips" id="exBatch"></div>
+          <p class="hint">YouTube（16:9）・ショート／リール（9:16）・フィード（1:1 / 4:5）など、同じ演出を比率ごとに自動でレイアウトし直して連続で書き出します。</p>
+        </div>
+      </div>
+    </div>
+    <div class="warn" id="exWarn" hidden></div>
+  </div>
+  <div class="mfoot"><div class="prog"><i id="exBar"></i></div><span class="hint" id="exMsg" style="min-width:140px">準備完了</span><button class="btn" id="exCancel" disabled>中止</button><button class="btn pri" id="exGo">書き出す</button></div>
+</div></div>
+
+<div class="modal" id="manualModal"><div class="mbox" style="width:min(1080px,100%);height:min(820px,100%)">
+  <div class="mhead"><b>取扱説明書</b><div class="sp"></div><button class="btn sm" id="manualSave">HTMLで保存</button><button class="btn sm" data-close>閉じる</button></div>
+  <div class="man"><nav id="manNav"></nav><article id="manBody"></article></div>
+</div></div>
+<div class="modal" id="snapModal"><div class="mbox" style="width:min(620px,100%)">
+  <div class="mhead"><b>スナップショット（版の保存と復元）</b><div class="sp"></div><button class="btn sm" id="snapNew">＋ 今の状態を保存</button><button class="btn sm" data-close>閉じる</button></div>
+  <div class="mbody"><p class="hint" style="margin-top:0">演出・タイミング・デザインをまるごと保存します（音源は含みません・このブラウザー内）。自動配置や演出の再生成の直前にも自動で保存されます。最大40件。</p><div id="snapList" class="snaps"></div></div>
+</div></div>
+<div class="modal" id="helpModal"><div class="mbox" style="width:min(560px,100%)">
+  <div class="mhead"><b>ショートカット</b><div class="sp"></div><button class="btn sm" data-close>閉じる</button></div>
+  <div class="mbody"><div class="shortcuts">
+    <span class="kbd">Space</span><span>再生 / 停止</span>
+    <span class="kbd">← →</span><span>1秒移動（Shift：5秒 / Alt：1フレーム）</span>
+    <span class="kbd">↑ ↓</span><span>前 / 次のフレーズへ</span>
+    <span class="kbd">I</span><span>選択フレーズの開始を再生位置に（⌖）</span>
+    <span class="kbd">Shift+I</span><span>選択フレーズを再生位置から開始し、以降の行もずらす</span>
+    <span class="kbd">O</span><span>選択フレーズの終了を再生位置に</span>
+    <span class="kbd">Enter</span><span>タップ打刻モード中：押す＝開始 / 離す＝終了</span>
+    <span class="kbd">Enter（単語ごと）</span><span>1回ごとに次の単語の歌い出しを打刻</span>
+    <span class="kbd">W</span><span>選択フレーズの次の単語を再生位置で打刻</span>
+    <span class="kbd">M</span><span>再生位置に曲構成マーカーを追加</span>
+    <span class="kbd">Ctrl+Shift+C / V</span><span>スタイルをコピー / 選択中の行に貼り付け</span>
+    <span class="kbd">Ctrl+A</span><span>全フレーズを選択</span>
+    <span class="kbd">R</span><span>選択フレーズを再抽選</span>
+    <span class="kbd">L</span><span>選択フレーズを固定 / 解除</span>
+    <span class="kbd">Delete</span><span>選択フレーズを削除</span>
+    <span class="kbd">Ctrl+Z / Ctrl+Shift+Z</span><span>元に戻す / やり直す</span>
+    <span class="kbd">Ctrl+S</span><span>プロジェクト保存（JSON）</span>
+    <span class="kbd">Ctrl+ホイール</span><span>タイムライン拡大縮小</span>
+  </div></div>
+</div></div>
+
+<div class="modal" id="calModal"><div class="mbox" style="width:min(460px,100%)">
+  <div class="mhead"><b>タップの遅れを測定</b><div class="sp"></div><button class="btn sm" id="calClose">閉じる</button></div>
+  <div class="mbody" style="text-align:center">
+    <p class="hint" style="text-align:left">「開始」を押すとクリック音が鳴ります。音に合わせて <span class="kbd">Space</span> かボタンを<b>10回以上</b>タップしてください。最初の2回は数えません。</p>
+    <button class="tap" id="calTap" style="width:120px;height:120px;border-radius:50%;border:0;background:var(--acc);color:var(--acc-ink);font-weight:700;font-size:18px;margin:14px auto;display:block;touch-action:none">TAP</button>
+    <div id="calOut" style="font-size:15px;font-weight:600;min-height:44px"></div>
+  </div>
+  <div class="mfoot"><button class="btn" id="calStart">開始</button><div class="sp"></div><button class="btn pri" id="calUse" disabled>この値を使う</button></div>
+</div></div>
+<div class="modal" id="askModal"><div class="mbox" style="width:min(440px,100%)">
+  <div class="mbody"><p id="askMsg" style="margin:4px 0 12px;line-height:1.6"></p><input type="text" id="askInput" style="width:100%" hidden></div>
+  <div class="mfoot"><div class="sp"></div><button class="btn" id="askCancel">キャンセル</button><button class="btn pri" id="askOk">OK</button></div>
+</div></div>
+<input type="file" id="openFile" accept=".json,.lmz,.zip,application/json" hidden>
+<input type="file" id="subFile" accept=".lrc,.srt,.txt" hidden>
+<div class="toast" id="toast"></div>
+<!--SCRIPTS-->
+</body>
+</html>

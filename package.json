@@ -1,0 +1,23 @@
+{
+  "name": "lyric-motion-studio",
+  "version": "1.0.0",
+  "description": "Browser-only kinetic-typography lyric video maker / ブラウザーだけで作る歌詞動画ツール",
+  "license": "MIT",
+  "author": "ΛNTRΞC",
+  "private": true,
+  "homepage": "https://reekoby.github.io/lyric-motion-studio/",
+  "scripts": {
+    "build": "node build.mjs"
+  },
+  "dependencies": {
+    "gifenc": "1.0.3",
+    "mediabunny": "1.60.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/reekoby/lyric-motion-studio.git"
+  },
+  "bugs": {
+    "url": "https://github.com/reekoby/lyric-motion-studio/issues"
+  }
+}
