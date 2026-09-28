@@ -460,14 +460,29 @@ input[type=color]{width:30px;height:28px;padding:0;border:1px solid var(--line);
           <div class="row" style="margin-top:8px"><label>強さ</label><input type="range" id="bgmAmt" min="0" max="200" step="5"><span class="val" id="bgmAmtV"></span></div>
           <div class="row"><label>速さ</label><input type="range" id="bgmSpeed" min="25" max="300" step="5"><span class="val" id="bgmSpeedV"></span></div>
           <div class="row"><label>暗くする</label><input type="range" id="bgmDim" min="0" max="80" step="1"><span class="val" id="bgmDimV"></span></div>
-          <div class="gapbox">
+          <div class="row"><label title="背景モーションの濃さ。下げると背景画像・背景がよく見えます">不透明度</label><input type="range" class="bgmOp" id="bgmOpacity" min="0" max="100" step="1"><span class="val" id="bgmOpacityV"></span></div>
+          <div class="row"><label title="背景モーションを下の画像・背景にどう重ねるか">描画モード</label><select class="bgmBl" id="bgmBlend" style="flex:1"><option value="normal">通常</option><option value="screen">スクリーン（明るく重ねる）</option><option value="lighter">加算（光らせる）</option><option value="lighten">比較（明）</option><option value="color-dodge">覆い焼きカラー</option><option value="overlay">オーバーレイ</option><option value="soft-light">ソフトライト</option><option value="hard-light">ハードライト</option><option value="multiply">乗算（暗く重ねる）</option><option value="darken">比較（暗）</option><option value="difference">差の絶対値</option><option value="exclusion">除外</option><option value="luminosity">輝度（明度だけ重ねる）</option><option value="color">カラー（色だけ重ねる）</option></select></div>
+          <div class="gapbox" id="gapBox">
             <h4>歌詞のない区間（イントロ・間奏・アウトロ）</h4>
+            <div class="row"><label>設定する区間</label><select id="gapTarget" style="flex:1"></select></div>
+            <p class="hint" id="gapTargetHint" hidden>この区間だけの設定です。変えていない項目は「すべての区間」の設定に従います。タイムラインの斜線の帯をクリックしても選べます。</p>
             <div class="row"><label>背景</label><select id="gapFill" style="flex:1"><option value="auto">おまかせ（小節ごとにシーンを切替えて盛り上げる）</option><option value="continue">直前の背景をそのまま続ける</option><option value="off">動かさない</option></select></div>
             <button class="btn sm" id="gapBgmPick" style="width:100%;justify-content:space-between;margin:4px 0"><span>インスト区間の背景を指定…</span><span class="hint" id="gapBgmCur"></span></button>
+            <div class="row"><label>背景の強さ</label><input type="range" class="gk" data-k="amt" data-m="100" min="0" max="300" step="5"><span class="val"></span></div>
+            <div class="row"><label>背景の速さ</label><input type="range" class="gk" data-k="speed" data-m="100" min="25" max="300" step="5"><span class="val"></span></div>
+            <div class="row"><label>不透明度</label><input type="range" class="gk" data-k="opacity" data-m="100" min="0" max="100" step="1"><span class="val"></span><button class="btn sm ic" id="gapOpInherit" title="全体の「不透明度」に合わせる">↺</button></div>
+            <div class="row"><label>描画モード</label><select class="gk" data-k="blend" style="flex:1"><option value="">全体の設定に合わせる</option><option value="normal">通常</option><option value="screen">スクリーン（明るく重ねる）</option><option value="lighter">加算（光らせる）</option><option value="lighten">比較（明）</option><option value="color-dodge">覆い焼きカラー</option><option value="overlay">オーバーレイ</option><option value="soft-light">ソフトライト</option><option value="hard-light">ハードライト</option><option value="multiply">乗算（暗く重ねる）</option><option value="darken">比較（暗）</option><option value="difference">差の絶対値</option><option value="exclusion">除外</option><option value="luminosity">輝度（明度だけ重ねる）</option><option value="color">カラー（色だけ重ねる）</option></select></div>
+            <div class="row"><label title="背景のゆっくりしたズームとビートでの揺れ">カメラの動き</label><input type="range" class="gk" data-k="cam" data-m="100" min="0" max="300" step="10"><span class="val"></span></div>
+            <div class="row"><label>シーン切替</label><select class="gk" data-k="every" style="flex:1"><option value="auto">おまかせ（2〜4小節ごと）</option><option value="1">1小節ごと</option><option value="2">2小節ごと</option><option value="4">4小節ごと</option><option value="8">8小節ごと</option><option value="0">切り替えない</option></select></div>
+            <div class="row"><label>切替のフラッシュ</label><input type="range" class="gk" data-k="flash" data-m="100" min="0" max="200" step="10"><span class="val"></span></div>
             <div class="row"><label>前景</label><select id="gapVisStyle" style="flex:1"><option value="auto">テーマに合わせる</option><option value="spectrum">音に反応する円形スペクトラム</option><option value="marquee">タイトルが流れるマーキー</option><option value="title">タイトル／アーティスト表示</option><option value="none">なし（背景だけ）</option></select></div>
+            <div class="row"><label>前景の濃さ</label><input type="range" class="gk" data-k="visAmt" data-m="100" min="0" max="100" step="5"><span class="val"></span></div>
             <label class="tg"><input type="checkbox" id="gapLabel"><i></i>区間名（INTRO・INTERLUDE・OUTRO など）を表示</label>
+            <div class="row" id="gapLabelTextRow"><label>区間名</label><input type="text" id="gapLabelText" maxlength="40" placeholder="例：GUITAR SOLO（空欄なら自動）" style="flex:1"></div>
+            <label class="tg"><input type="checkbox" id="gapProgress"><i></i>進み具合のバーを表示</label>
             <label class="tg"><input type="checkbox" id="gapCountdown"><i></i>歌い出し前にカウントダウン（●●● と次の歌詞）</label>
-            <div class="row"><label>対象</label><select id="gapMin" style="flex:1"><option value="0.8">0.8秒以上の空き</option><option value="1.2">1.2秒以上の空き</option><option value="2">2秒以上の空き</option><option value="4">4秒以上の空き</option></select></div>
+            <div class="row" id="gapMinRow"><label>対象</label><select id="gapMin" style="flex:1"><option value="0.8">0.8秒以上の空き</option><option value="1.2">1.2秒以上の空き</option><option value="2">2秒以上の空き</option><option value="4">4秒以上の空き</option></select></div>
+            <button class="btn sm" id="gapReset" style="width:100%;margin-top:6px" hidden>この区間の設定を「すべての区間」に戻す</button>
             <p class="hint">歌詞が表示されていない区間を自動で見つけ、テーマのトーンに合った背景モーションを小節ごとに切り替え、カメラのズームとビートの揺れを加えます（タイムラインでは斜線の帯で表示）。曲構成で「間奏」「イントロ」を指定すると表示ラベルにも反映されます。</p>
           </div>
           <p class="hint">GPUシェーダー（トンネル・万華鏡・レイマーチ空間・メッシュグラデ・ホログラム等）27種＋粒子・天気・水・炎・光・グリッチ・画面分割など66種、計93種類。「暗くする」で文字の読みやすさを調整できます。複数を重ねがけできます。行ごとの指定は右の詳細パネルから。</p>
@@ -488,6 +503,9 @@ input[type=color]{width:30px;height:28px;padding:0;border:1px solid var(--line);
           <div class="row"><label>ぼかし</label><input type="range" id="imgBlur" min="0" max="40"><span class="val" id="imgBlurV"></span></div>
           <label class="tg"><input type="checkbox" id="imgKB"><i></i>ゆっくりズーム＆パン（ケン・バーンズ）</label>
           <label class="tg"><input type="checkbox" id="imgBeat"><i></i>ビートに合わせてわずかに脈動</label>
+          <div class="hint" style="margin:8px 0 2px">背景モーションの重ね方</div>
+          <div class="row"><label title="背景モーションの濃さ。下げると背景画像・背景がよく見えます">不透明度</label><input type="range" class="bgmOp" id="bgmOpacity2" min="0" max="100" step="1"><span class="val" id="bgmOpacity2V"></span></div>
+          <div class="row"><label title="背景モーションを下の画像・背景にどう重ねるか">描画モード</label><select class="bgmBl" id="bgmBlend2" style="flex:1"><option value="normal">通常</option><option value="screen">スクリーン（明るく重ねる）</option><option value="lighter">加算（光らせる）</option><option value="lighten">比較（明）</option><option value="color-dodge">覆い焼きカラー</option><option value="overlay">オーバーレイ</option><option value="soft-light">ソフトライト</option><option value="hard-light">ハードライト</option><option value="multiply">乗算（暗く重ねる）</option><option value="darken">比較（暗）</option><option value="difference">差の絶対値</option><option value="exclusion">除外</option><option value="luminosity">輝度（明度だけ重ねる）</option><option value="color">カラー（色だけ重ねる）</option></select></div>
           <label class="tg"><input type="checkbox" id="imgBgmFull"><i></i>全面の背景モーション（シェーダー等）を画像の上に重ねる</label>
           <p class="hint">サムネイルをクリックでオン／オフ、◀ ▶ で並べ替え、ダブルクリックで表示位置（中心）を調整。行ごとに画像を指定するには右の詳細パネル「背景画像」から。画像はこのブラウザーに保存され、.lmz（音源込み保存）にも含まれます。動画（MP4 / WebM）も同じように並べて使え、書き出しではフレーム単位で正確に合成します（音声は使いません）。</p>
         </div>

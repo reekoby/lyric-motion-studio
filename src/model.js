@@ -12,7 +12,7 @@ LM.model = (() => {
       font: null, fontWeight: null, textScale: 1, tracking: 0, intensity: 1, speed: 1,
       filters: [], filterAmt: {}, filterIntensity: 0.6,
       bg: { type: 'gradient', image: null, dim: 0.45, blur: 0 }, pattern: 'none', camera: null,
-      beatSync: true, bpm: null, beatOffset: 0, tapLatency: 0.12, tempoSync: true, autoBgm: true, autoTrans: true, autoGfx: true, transOff: false, bgmDim: 0.22, bgm: [], bgmAmt: 1, bgmSpeed: 1, qGrid: 1, qStrength: 1, qEnd: false, autoQuantize: false, keyColor: true, bgCrossfade: true, ruby: true, mblur: 0, sections: [], images: [], imgMode: 'auto', imgChange: 'auto', imgEvery: 2, imgOrder: 'order', imgTrans: 'auto', imgTransDur: 0, imgKB: true, imgLook: 'natural', imgBeat: true, imgBgmFull: false, drive: null, feel: 'auto', variety: null, latinFont: 'auto', koreanFont: 'auto', latinTrack: 0, wordSpace: 1, wakanGap: 25, yakuAmt: 1, latinScale: 1, wakan: true, yakumono: true, gapFill: 'auto', gapVisual: true, gapLabel: true, gapVisStyle: 'auto', gapCountdown: false, gapMin: 1.2, gapBgm: [],
+      beatSync: true, bpm: null, beatOffset: 0, tapLatency: 0.12, tempoSync: true, autoBgm: true, autoTrans: true, autoGfx: true, transOff: false, bgmDim: 0.22, bgm: [], bgmAmt: 1, bgmSpeed: 1, qGrid: 1, qStrength: 1, qEnd: false, autoQuantize: false, keyColor: true, bgCrossfade: true, ruby: true, mblur: 0, sections: [], images: [], imgMode: 'auto', imgChange: 'auto', imgEvery: 2, imgOrder: 'order', imgTrans: 'auto', imgTransDur: 0, imgKB: true, imgLook: 'natural', imgBeat: true, imgBgmFull: false, bgmOpacity: 1, bgmBlend: 'normal', bgmMixSet: false, gapOpacity: null, gapBlend: null, gapAmt: 1.2, gapSpeed: 1.12, gapCam: 1, gapEvery: 'auto', gapFlash: 1, gapVisAmt: 1, gapProgress: true, gapOv: {}, drive: null, feel: 'auto', variety: null, latinFont: 'auto', koreanFont: 'auto', latinTrack: 0, wordSpace: 1, wakanGap: 25, yakuAmt: 1, latinScale: 1, wakan: true, yakumono: true, gapFill: 'auto', gapVisual: true, gapLabel: true, gapVisStyle: 'auto', gapCountdown: false, gapMin: 1.2, gapBgm: [],
       cues: [], audioName: null,
     };
   }
@@ -32,6 +32,25 @@ LM.model = (() => {
   const num = (v, d, lo = -Infinity, hi = Infinity) => (typeof v === 'number' && isFinite(v) ? U.clamp(v, lo, hi) : d);
   const strIn = (v, ok, d) => (typeof v === 'string' && ok(v) ? v : d);
   const strArr = (v, ok, max = 12) => (Array.isArray(v) ? v.filter((x) => typeof x === 'string' && ok(x)).slice(0, max) : []);
+  // instrumental-section settings (global p.gap* fields when !full, or one section's override object when full)
+  const GAP_VIS = ['auto', 'spectrum', 'marquee', 'title', 'none'], GAP_EVERY = ['auto', '0', '1', '2', '4', '8'];
+  function sanitizeGap(src, full) {
+    const o = {}, g = src && typeof src === 'object' ? src : {};
+    const get = (k) => (full ? g[k] : g['gap' + k[0].toUpperCase() + k.slice(1)]);
+    const B = (LM.Renderer && LM.Renderer.BLEND) || {};
+    const op = get('opacity'); if (typeof op === 'number' && isFinite(op)) o.opacity = U.clamp(op, 0, 1);
+    const bl = get('blend'); if (typeof bl === 'string' && B[bl]) o.blend = bl;
+    [['amt', 0, 3], ['speed', 0.25, 3], ['cam', 0, 3], ['flash', 0, 2], ['visAmt', 0, 1]].forEach(([k, lo, hi]) => { const v = get(k); if (typeof v === 'number' && isFinite(v)) o[k] = U.clamp(v, lo, hi); });
+    const ev = get('every'); if (ev != null && GAP_EVERY.includes(String(ev))) o.every = String(ev);
+    if (full) {
+      if (['auto', 'continue', 'off'].includes(g.fill)) o.fill = g.fill;
+      if (Array.isArray(g.bgm)) o.bgm = strArr(g.bgm, (x) => !!(LM.bgm && LM.bgm.lib[x]), 6);
+      if (GAP_VIS.includes(g.vis)) o.vis = g.vis;
+      ['label', 'countdown', 'progress'].forEach((k) => { if (typeof g[k] === 'boolean') o[k] = g[k]; });
+      if (typeof g.labelText === 'string' && g.labelText.trim()) o.labelText = g.labelText.slice(0, 40);
+    }
+    return o;
+  }
   function normalize(raw) {
     raw = safeClone(raw || {});
     const base = newProject();
@@ -68,6 +87,11 @@ LM.model = (() => {
     p.bgm = strArr(p.bgm, (x) => !!(LM.bgm && LM.bgm.lib[x]), 4); p.gapBgm = strArr(p.gapBgm, (x) => !!(LM.bgm && LM.bgm.lib[x]), 4);
     if (!(typeof p.latinFont === 'string' && (p.latinFont === 'auto' || p.latinFont === 'same' || D.fontById[p.latinFont]))) p.latinFont = 'auto';
     if (!(typeof p.koreanFont === 'string' && (p.koreanFont === 'auto' || D.fontById[p.koreanFont]))) p.koreanFont = 'auto';
+    p.bgmOpacity = num(p.bgmOpacity, 1, 0, 1); if (!(LM.Renderer && LM.Renderer.BLEND && LM.Renderer.BLEND[p.bgmBlend])) p.bgmBlend = 'normal';
+    const G = sanitizeGap(p); Object.assign(p, { gapOpacity: G.opacity ?? null, gapBlend: G.blend ?? null, gapAmt: G.amt ?? 1.2, gapSpeed: G.speed ?? 1.12, gapCam: G.cam ?? 1, gapEvery: G.every ?? 'auto', gapFlash: G.flash ?? 1, gapVisAmt: G.visAmt ?? 1, gapProgress: p.gapProgress !== false });
+    const ov = {};
+    if (p.gapOv && typeof p.gapOv === 'object' && !Array.isArray(p.gapOv)) for (const k of Object.keys(p.gapOv).slice(0, 200)) if (/^(n:[\w-]{1,40}|end)$/.test(k)) { const o = sanitizeGap(p.gapOv[k], true); if (Object.keys(o).length) ov[k] = o; }
+    p.gapOv = ov;
     p.latinTrack = num(p.latinTrack, 0, -0.2, 0.5); p.wordSpace = num(p.wordSpace, 1, 0.3, 3); p.wakanGap = num(p.wakanGap, 25, 0, 80); p.yakuAmt = num(p.yakuAmt, 1, 0, 1);
     p.drive = p.drive == null ? null : num(p.drive, null, 0, 1); p.variety = p.variety == null ? null : num(p.variety, null, 0, 1);
     p.cues = (p.cues || []).map((c, i) => normalizeCue(c, i)).sort((a, b) => a.start - b.start);
@@ -104,6 +128,8 @@ LM.model = (() => {
     if (c.kind != null && c.kind !== 'title') delete c.kind;
     c.locked = c.locked === true;
     ['textScale', 'filterAmt', 'ed', 'xd'].forEach((k) => { if (c[k] != null && !(typeof c[k] === 'number' && isFinite(c[k]))) delete c[k]; });
+    if (c.bgmOpacity != null) { c.bgmOpacity = num(c.bgmOpacity, null, 0, 1); if (c.bgmOpacity == null) delete c.bgmOpacity; }
+    if (c.bgmBlend != null && !(LM.Renderer && LM.Renderer.BLEND && LM.Renderer.BLEND[c.bgmBlend])) delete c.bgmBlend;
     if (c.trackAdj != null) { c.trackAdj = num(c.trackAdj, 0, -0.2, 0.5); if (!c.trackAdj) delete c.trackAdj; }
     if (c.wordSpaceAdj != null) { c.wordSpaceAdj = num(c.wordSpaceAdj, 1, 0.3, 3); if (c.wordSpaceAdj === 1) delete c.wordSpaceAdj; }
     const sc = c.scene && typeof c.scene === 'object' ? c.scene : {};

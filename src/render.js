@@ -4,6 +4,8 @@ LM.Renderer = (() => {
   const U = LM.U, E = LM.E, M = LM.motion, FX = LM.fx, D = LM.data;
   const { clamp, lerp, hash, mix, rgba, contrast, readable } = U;
   const PI = Math.PI, TAU = Math.PI * 2;
+  // blend modes for the background-motion layer (UI key → canvas globalCompositeOperation)
+  const BLEND = { normal: 'source-over', screen: 'screen', lighter: 'lighter', lighten: 'lighten', overlay: 'overlay', 'soft-light': 'soft-light', 'hard-light': 'hard-light', 'color-dodge': 'color-dodge', multiply: 'multiply', darken: 'darken', difference: 'difference', exclusion: 'exclusion', luminosity: 'luminosity', color: 'color' };
   const mk = () => document.createElement('canvas');
 
   /* ---------- project resolution helpers (shared with UI) ---------- */
@@ -302,6 +304,21 @@ void main(){
       this._gapK = key; this._gaps = out; return out;
     }
     gapAt(t) { for (const g of this.gaps()) if (t >= g.t0 && t < g.t1) return g; return null; }
+    // stable id of a gap: the lyric line that follows it (or 'end' for the outro)
+    gapKey(g) { const c = g && g.next >= 0 ? this.cues[g.next] : null; return c ? 'n:' + c.id : 'end'; }
+    // effective settings for an instrumental section: global gap settings, then this section's own overrides
+    gapCfg(g) {
+      const p = this.p, ov = (p.gapOv && g && p.gapOv[this.gapKey(g)]) || {};
+      const c = {
+        fill: p.gapFill || 'auto', bgm: Array.isArray(p.gapBgm) ? p.gapBgm : [], opacity: p.gapOpacity, blend: p.gapBlend,
+        amt: p.gapAmt == null ? 1.2 : p.gapAmt, speed: p.gapSpeed == null ? 1.12 : p.gapSpeed, cam: p.gapCam == null ? 1 : p.gapCam,
+        every: p.gapEvery == null ? 'auto' : p.gapEvery, flash: p.gapFlash == null ? 1 : p.gapFlash,
+        vis: p.gapVisual === false ? 'none' : p.gapVisStyle || 'auto', visAmt: p.gapVisAmt == null ? 1 : p.gapVisAmt,
+        label: p.gapLabel !== false, labelText: '', countdown: !!p.gapCountdown, progress: p.gapProgress !== false,
+      };
+      for (const k of Object.keys(c)) if (ov[k] !== undefined && ov[k] !== null) c[k] = ov[k];
+      return c;
+    }
     // time of a bar downbeat (bar "1") and bar length — for bar-synced scene changes
     barGrid() {
       const p = this.p, an = this.audio && this.audio.analysis, bpm = this.bpm() || 120, bar = (60 / bpm) * 4;
@@ -311,14 +328,16 @@ void main(){
     }
     // which background scenes play in a gap: rotate every bar-aligned segment, tone-matched to the theme
     gapPlan(g) {
-      const p = this.p, B = LM.bgm.lib;
-      const bpm = this.bpm() || 120, bar = (60 / bpm) * 4, seg = bar * (g.t1 - g.t0 > bar * 12 ? 4 : 2);
+      const p = this.p, B = LM.bgm.lib, cf = this.gapCfg(g);
+      const bpm = this.bpm() || 120, bar = (60 / bpm) * 4;
+      const seg = cf.every === 'auto' || cf.every == null ? bar * (g.t1 - g.t0 > bar * 12 ? 4 : 2) : +cf.every > 0 ? bar * +cf.every : Math.max(1, g.t1 - g.t0 + bar);
+      const visOf = () => (cf.vis && cf.vis !== 'auto' ? cf.vis : this.gapVisOf());
       let pool = [];
-      if (Array.isArray(p.gapBgm) && p.gapBgm.length) pool = p.gapBgm.filter((id) => B[id]);
-      else if (p.gapFill === 'continue' || (!p.autoBgm && p.bgm && p.bgm.length)) {
+      if (cf.bgm.length) pool = cf.bgm.filter((id) => B[id]);
+      else if (cf.fill === 'continue' || (!p.autoBgm && p.bgm && p.bgm.length)) {
         const c = this.cues[g.prev >= 0 ? g.prev : g.next]; pool = c ? this.bgmOf(c).slice() : (p.bgm || []).slice();
         if (!pool.length) pool = (p.bgm || []).slice();
-        return { seg, lists: [pool.filter((id) => B[id])], vis: this.gapVisOf() };
+        return { seg, lists: [pool.filter((id) => B[id])], vis: visOf(), cf };
       } else {
         const th = LM.data.themeById[p.theme] || {}, w = th.bgm || {};
         pool = Object.keys(w).filter((id) => B[id]).sort((a, b) => (w[b] || 0) - (w[a] || 0));
@@ -334,7 +353,7 @@ void main(){
         if (!L.length && pool.length) L.push(pool[k % pool.length]);
         lists.push(L);
       }
-      return { seg, lists, vis: this.gapVisOf() };
+      return { seg, lists, vis: visOf(), cf };
     }
     gapVisOf() {
       const id = (this.p.theme || '');
@@ -370,27 +389,31 @@ void main(){
       // what was playing under the last lyric, so the gap fades in from it
       const before = g.prev >= 0 ? this.bgmOf(this.cues[g.prev]) : [];
       const inK = clamp(lt / 0.8), outK = clamp((g.t1 - t) / 0.45), xf = prev ? clamp(sl / 0.5) : 1;
-      const boost = { amt: 1.2, speed: 1.12, dim: Math.min(p.bgmDim == null ? 0.22 : p.bgmDim, 0.06) };
+      const cf = plan.cf || this.gapCfg(g);
+      const boost = { amt: cf.amt, speed: cf.speed, dim: Math.min(p.bgmDim == null ? 0.22 : p.bgmDim, 0.06) };
       // bar-synced camera: slow push + beat punch on the background only
       const bpm = this.bpm() || 120, bar = (60 / bpm) * 4;
-      const z = 1 + 0.04 * clamp(sl / plan.seg) + (p.beatSync === false ? 0 : beat * 0.018), rot = Math.sin(lt * 0.15) * 0.01;
+      const cam = clamp(+cf.cam || 0, 0, 3);
+      const z = 1 + cam * (0.04 * clamp(sl / plan.seg) + (p.beatSync === false ? 0 : beat * 0.018)), rot = Math.sin(lt * 0.15) * 0.01 * cam;
       ctx.save(); ctx.translate(W / 2, H / 2); ctx.scale(z, z); ctx.rotate(rot); ctx.translate(-W / 2, -H / 2);
       if (inK < 1 && before.length) this.bgmLayer(ctx, before, 1 - inK, t, beat, pal, transparent);
       if (prev && xf < 1) this.bgmLayer(ctx, prev, (1 - xf) * inK, t, beat, pal, transparent, boost);
       this.bgmLayer(ctx, cur, xf * inK * (0.35 + 0.65 * outK), t, beat, pal, transparent, boost);
       ctx.restore();
       // scene-change hit on the bar
-      if (prev && sl < 0.12 && !transparent) { ctx.save(); ctx.globalAlpha = (1 - sl / 0.12) * 0.35; ctx.fillStyle = pal.accent; ctx.fillRect(0, 0, W, H); ctx.restore(); }
-      this._gapInfo = { g, si, sl, seg: plan.seg, bar, vis: plan.vis };
+      if (prev && sl < 0.12 && !transparent && cf.flash > 0) { ctx.save(); ctx.globalAlpha = (1 - sl / 0.12) * 0.35 * clamp(cf.flash, 0, 2); ctx.fillStyle = pal.accent; ctx.fillRect(0, 0, W, H); ctx.restore(); }
+      this._gapInfo = { g, si, sl, seg: plan.seg, bar, vis: plan.vis, cf };
     }
     // foreground for instrumental parts: audio-reactive ring / section typography / countdown into the next line
     drawGapFx(ctx, t, beat, pal, g) {
       const p = this.p, W = this.W, H = this.H, S = this.S, md = this.minD, info = this._gapInfo || { vis: this.gapVisOf(), sl: t - g.t0 };
-      const lt = t - g.t0, len = g.t1 - g.t0, fin = clamp(lt / 0.7) * clamp((g.t1 - t) / 0.5);
-      if (fin <= 0.01) return;
-      const vis = p.gapVisStyle && p.gapVisStyle !== 'auto' ? p.gapVisStyle : info.vis;
+      const cf = (info.g === g && info.cf) || this.gapCfg(g);
+      const lt = t - g.t0, len = g.t1 - g.t0, fin0 = clamp(lt / 0.7) * clamp((g.t1 - t) / 0.5), fin = fin0 * clamp(cf.visAmt == null ? 1 : +cf.visAmt, 0, 1);
+      if (fin0 <= 0.01) return;
+      const vis = cf.vis && cf.vis !== 'auto' ? cf.vis : info.vis || this.gapVisOf();
       const LBL = { intro: 'INTRO', inter: 'INTERLUDE', outro: 'OUTRO', bridge: 'BRIDGE', C: 'BRIDGE' };
-      const label = p.gapLabel === false ? '' : LBL[g.sec || g.kind] || 'INSTRUMENTAL', title = (p.title || '').trim(), artist = (p.artist || '').trim();
+      const label = !cf.label ? '' : String(cf.labelText || '').trim().slice(0, 40) || LBL[g.sec || g.kind] || 'INSTRUMENTAL', title = (p.title || '').trim(), artist = (p.artist || '').trim();
+      if (vis !== 'none' && fin > 0.01) {
       const F = (w, px) => `${w} ${px.toFixed(1)}px "Anton","Archivo Black","Bebas Neue","Noto Sans JP",sans-serif`;
       ctx.save(); ctx.globalAlpha = fin;
       if (vis === 'spectrum') {
@@ -423,10 +446,11 @@ void main(){
         ctx.globalAlpha = fin * 0.6; ctx.fillStyle = pal.accent; const w = md * 0.18 * q; ctx.fillRect(W / 2 - w / 2, H / 2 + md * 0.11, w, Math.max(1, S * 2));
       }
       // progress hairline across the gap
-      ctx.globalAlpha = fin * 0.7; ctx.fillStyle = pal.accent; ctx.fillRect(0, H - Math.max(2, S * 3), W * clamp(lt / len), Math.max(2, S * 3));
+      if (cf.progress) { ctx.globalAlpha = fin * 0.7; ctx.fillStyle = pal.accent; ctx.fillRect(0, H - Math.max(2, S * 3), W * clamp(lt / len), Math.max(2, S * 3)); }
       ctx.restore();
+      }
       // countdown into the next line (karaoke style: 3 beats)
-      if (p.gapCountdown && g.next >= 0) {
+      if (cf.countdown && g.next >= 0) {
         const per = 60 / (this.bpm() || 120), left = g.t1 - t, span = Math.min(per * 3, len * 0.8);
         if (left <= span + 0.4) {
           const k = clamp((span + 0.4 - left) / 0.3), n = 3, lit = Math.min(n, Math.floor((span - left) / (span / n)) + 1);
@@ -591,12 +615,28 @@ void main(){
       }
       this.imgActive = !transparent && this.imgList && this.imgList().length > 0 && !p.imgBgmFull;
       if (!transparent) { if (!(this.imgList && this.imgList().length && this.drawImages(ctx, t, bgPal, beat))) this.drawBackground(ctx, bgPal, t, beat, cur); }
-      const gap = !cur && p.gapFill !== 'off' ? this.gapAt(t) : null;
+      let gap = !cur ? this.gapAt(t) : null;
+      const gcf = gap ? this.gapCfg(gap) : null;
+      if (gcf && gcf.fill === 'off') gap = null;
       if (!transparent || (mode.overlays !== false && !mode.noOverlay)) {
-        if (gap) this.drawGapScene(ctx, t, beat, bgPal, gap, transparent);
-        else this.drawBgm(ctx, t, beat, bgPal, cur, cp.prevPal ? cp.prev : null, transparent);
+        // background motion can be composited over the image / background with its own opacity and blend mode
+        // per-phrase override → instrumental-section override → global
+        const src = gap ? { o: gcf.opacity, b: gcf.blend } : cur ? { o: cur.c.bgmOpacity, b: cur.c.bgmBlend } : {};
+        const bOp = clamp(src.o != null ? +src.o : p.bgmOpacity == null ? 1 : +p.bgmOpacity, 0, 1), bMode = BLEND[src.b] ? src.b : BLEND[p.bgmBlend] ? p.bgmBlend : 'normal';
+        const mix = !transparent && (bOp < 0.999 || bMode !== 'normal');
+        let bctx = ctx, Lc = null;
+        if (mix) {
+          Lc = this._bgmLayer || (this._bgmLayer = document.createElement('canvas'));
+          if (Lc.width !== ctx.canvas.width || Lc.height !== ctx.canvas.height) { Lc.width = ctx.canvas.width; Lc.height = ctx.canvas.height; }
+          bctx = Lc.getContext('2d'); bctx.setTransform(1, 0, 0, 1, 0, 0); bctx.clearRect(0, 0, Lc.width, Lc.height); bctx.setTransform(ctx.getTransform());
+        }
+        if (bOp > 0.001) {
+          if (gap) this.drawGapScene(bctx, t, beat, bgPal, gap, transparent);
+          else this.drawBgm(bctx, t, beat, bgPal, cur, cp.prevPal ? cp.prev : null, transparent);
+        }
+        if (mix && bOp > 0.001) { ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = bOp; ctx.globalCompositeOperation = BLEND[bMode]; ctx.drawImage(Lc, 0, 0); ctx.restore(); }
       }
-      if (gap && !mode.noOverlay && p.gapVisual !== false) this.drawGapFx(ctx, t, beat, bgPal, gap);
+      if (gap && !mode.noOverlay) this.drawGapFx(ctx, t, beat, bgPal, gap);
       const lt = cur ? t - cur.c.start : 0;
       const bbox = cur ? cur.L.bbox : { x: W * 0.3, y: H * 0.4, w: W * 0.4, h: H * 0.2, cx: W / 2, cy: H / 2 };
       const R = { W, H, S, minD: this.minD, t, lt, pal, beat, bbox, amt: 1, xp: 0, beatFlash: p.beatSync !== false && (fl.has('flash')) };
@@ -1246,6 +1286,6 @@ void main(){
       gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
     }
   }
-  Renderer.palOf = palOf; Renderer.tracksOf = tracksOf; Renderer.filtersOf = filtersOf; Renderer.fontOf = fontOf; Renderer.phases = phases;
+  Renderer.BLEND = BLEND; Renderer.palOf = palOf; Renderer.tracksOf = tracksOf; Renderer.filtersOf = filtersOf; Renderer.fontOf = fontOf; Renderer.phases = phases;
   return Renderer;
 })();

@@ -354,7 +354,11 @@
       const c = P.cues[hit.i];
       if (clickSel(hit.i, e, false)) { TL.drag = null; return; }
       TL.drag = { type: hit.part, i: hit.i, x0: x, s0: c.start, e0: c.end, moved: false };
-    } else { TL.drag = { type: 'seek' }; seek(x2t(x)); }
+    } else {
+      TL.drag = { type: 'seek' }; seek(x2t(x));
+      // click on an instrumental zone (hatched band) → edit that section's settings
+      if (y >= TL.trackY && y <= TL.trackY + TL.trackH) { const t = x2t(x), g = gapList().find((q) => t >= q.t0 && t < q.t1); if (g) { S.gapTarget = view.gapKey(g); syncGapUI(); } }
+    }
   });
   tl.addEventListener('pointermove', (e) => {
     const r = tl.getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top;
@@ -797,6 +801,8 @@
       if (f.size > 40 * 1024 * 1024) { toast(`${f.name} は大きすぎます（40MBまで）`, true); continue; }
       try { const { blob, im } = await prepImage(f); const id = U.uid(); S.images[imgKey(id)] = im; await idb.set(imgKey(id), blob); P.images = P.images || []; P.images.push({ id, name: f.name.replace(/\.[^.]+$/, '').slice(0, 60), on: true }); n++; } catch (e) { toast(`${f.name} を読み込めませんでした`, true); }
     }
+    const firstImg = (n || nv) && !P.bgmMixSet && (P.bgmOpacity == null || P.bgmOpacity === 1) && (!P.bgmBlend || P.bgmBlend === 'normal') && P.images.length === n + nv;
+    if (firstImg) { P.bgmOpacity = 0.6; P.bgmBlend = 'screen'; setTimeout(() => toast('背景モーションは画像が見えるよう「スクリーン・60%」で重ねています（背景画像の「背景モーションの重ね方」で変更できます）'), 2600); }
     if (n || nv) { if (P.imgMode === 'off') P.imgMode = 'auto'; view.images = S.images; commit(); toast(nv && n ? `背景に画像${n}枚・動画${nv}本を追加しました` : nv ? `${nv}本の背景動画を追加しました` : `${n}枚の背景画像を追加しました`); }
   }
   // remove stored image/video blobs that neither the project nor any snapshot refers to (run once at start-up)
@@ -879,6 +885,14 @@
   $('#imgKB').onchange = (e) => { P.imgKB = e.target.checked; commit(); };
   $('#imgBeat').onchange = (e) => { P.imgBeat = e.target.checked; commit(); };
   $('#imgBgmFull').onchange = (e) => { P.imgBgmFull = e.target.checked; commit(); };
+  // 背景モーションの重ね方（不透明度・描画モード）— the same two settings appear in the background-motion and image sections
+  function syncBgmMix() {
+    const op = Math.round((P.bgmOpacity == null ? 1 : P.bgmOpacity) * 100), bl = P.bgmBlend || 'normal';
+    $$('.bgmOp').forEach((el) => { el.value = op; const v = $('#' + el.id + 'V'); if (v) v.textContent = op + '%'; });
+    $$('.bgmBl').forEach((el) => { el.value = bl; });
+  }
+  $$('.bgmOp').forEach((el) => el.addEventListener('input', () => { P.bgmOpacity = +el.value / 100; P.bgmMixSet = true; syncBgmMix(); S.dirty = true; commitSoon(); }));
+  $$('.bgmBl').forEach((el) => (el.onchange = () => { P.bgmBlend = el.value; P.bgmMixSet = true; syncBgmMix(); commit(); }));
 
   /* ---------------- background motion & tempo ---------------- */
   function syncBgmUI() {
@@ -888,21 +902,61 @@
     $('#bgmAmt').value = Math.round((P.bgmAmt ?? 1) * 100); $('#bgmAmtV').textContent = $('#bgmAmt').value + '%';
     $('#bgmSpeed').value = Math.round((P.bgmSpeed ?? 1) * 100); $('#bgmSpeedV').textContent = $('#bgmSpeed').value + '%';
     $('#tempoSync').checked = P.tempoSync !== false;
-    $('#gapFill').value = P.gapFill || 'auto'; $('#gapVisStyle').value = P.gapVisual === false ? 'none' : P.gapVisStyle || 'auto';
-    $('#gapCountdown').checked = !!P.gapCountdown; $('#gapLabel').checked = P.gapLabel !== false; $('#gapMin').value = String(P.gapMin || 1.2);
-    $('#gapBgmCur').textContent = (P.gapBgm || []).length ? P.gapBgm.map((id) => (LM.bgm.lib[id] || {}).n).filter(Boolean).join(' ＋ ') : 'おまかせ';
+    syncGapUI();
     const th = D.themeById[P.theme];
     $('#tempoSel').innerHTML = Object.entries(D.tempos).map(([k, v]) => `<option value="${k}">${v}${k === 'theme' && th ? `（${th.n}：${Math.round(th.speed * 100)}%）` : ''}</option>`).join('');
     const match = Object.keys(D.tempos).find((k) => k !== 'theme' && Math.abs(+k - (P.speed || 1)) < 0.01);
     $('#tempoSel').value = th && Math.abs(th.speed - (P.speed || 1)) < 0.01 ? 'theme' : match || 'theme';
   }
   $('#bgmPick').onclick = () => openPicker('bgm');
+  /* ---- instrumental sections: "all sections" or one section (its own overrides in P.gapOv[key]) ---- */
+  const GAP_G = { fill: 'gapFill', bgm: 'gapBgm', opacity: 'gapOpacity', blend: 'gapBlend', amt: 'gapAmt', speed: 'gapSpeed', cam: 'gapCam', every: 'gapEvery', flash: 'gapFlash', visAmt: 'gapVisAmt', label: 'gapLabel', countdown: 'gapCountdown', progress: 'gapProgress' };
+  const gapList = () => { try { view.setProject(P); return view.gaps(); } catch (e) { return []; } };
+  const gapByKey = (k) => gapList().find((g) => view.gapKey(g) === k) || null;
+  function gapName(g) {
+    const sec = g.sec && MD.SEC[g.sec] ? MD.SEC[g.sec].n : null;
+    const kind = sec || { intro: 'イントロ', inter: '間奏', outro: 'アウトロ' }[g.kind] || '間奏';
+    return `${T(kind)}  ${U.fmtTime(g.t0, false)}–${U.fmtTime(g.t1, false)}`;
+  }
+  function gapCur() { const g = S.gapTarget ? gapByKey(S.gapTarget) : null; if (S.gapTarget && !g) S.gapTarget = null; return { g, cf: view.gapCfg(g) }; }
+  function gapSet(k, v) {
+    if (S.gapTarget) { P.gapOv = P.gapOv || {}; const o = (P.gapOv[S.gapTarget] = P.gapOv[S.gapTarget] || {}); if (v === undefined) delete o[k]; else o[k] = v; if (!Object.keys(o).length) delete P.gapOv[S.gapTarget]; }
+    else if (k === 'vis') { P.gapVisual = v !== 'none'; P.gapVisStyle = v === 'none' ? 'auto' : v; }
+    else if (k === 'labelText') return;
+    else P[GAP_G[k]] = v === undefined ? null : v;
+  }
+  function syncGapUI() {
+    const gs = gapList();
+    $('#gapTarget').innerHTML = `<option value="">${esc(T('すべての区間'))}</option>` + gs.map((g) => { const k = view.gapKey(g); const ov = P.gapOv && P.gapOv[k]; return `<option value="${esc(k)}">${esc(gapName(g))}${ov ? ' ●' : ''}</option>`; }).join('');
+    const { g, cf } = gapCur(); $('#gapTarget').value = S.gapTarget || '';
+    const one = !!g; $('#gapTargetHint').hidden = !one; $('#gapReset').hidden = !one; $('#gapMinRow').hidden = one; $('#gapLabelTextRow').hidden = !one;
+    $('#gapFill').value = cf.fill; $('#gapVisStyle').value = cf.vis || 'auto';
+    $('#gapLabel').checked = !!cf.label; $('#gapCountdown').checked = !!cf.countdown; $('#gapProgress').checked = cf.progress !== false;
+    $('#gapLabelText').value = cf.labelText || ''; $('#gapMin').value = String(P.gapMin || 1.2);
+    $('#gapBgmCur').textContent = (cf.bgm || []).length ? cf.bgm.map((id) => (LM.bgm.lib[id] || {}).n).filter(Boolean).join(' ＋ ') : T('おまかせ');
+    $$('#gapBox .gk').forEach((el) => {
+      const k = el.dataset.k, m = +el.dataset.m || 1, v = cf[k], val = el.nextElementSibling;
+      if (el.tagName === 'SELECT') { el.value = k === 'blend' ? v || '' : String(v == null ? 'auto' : v); return; }
+      if (k === 'opacity') { const inh = v == null, ov = inh ? (P.bgmOpacity == null ? 1 : P.bgmOpacity) : v; el.value = Math.round(ov * 100); if (val) val.textContent = inh ? `${T('全体')} ${Math.round(ov * 100)}%` : Math.round(ov * 100) + '%'; return; }
+      el.value = Math.round((v == null ? 1 : v) * m); if (val) val.textContent = Math.round((v == null ? 1 : v) * 100) + '%';
+    });
+  }
+  $('#gapTarget').onchange = (e) => { S.gapTarget = e.target.value || null; syncGapUI(); const g = S.gapTarget && gapByKey(S.gapTarget); if (g) seek(Math.min(g.t1 - 0.05, g.t0 + Math.min(1.5, (g.t1 - g.t0) / 2))); };
+  $$('#gapBox .gk').forEach((el) => {
+    const k = el.dataset.k, m = +el.dataset.m || 1;
+    if (el.tagName === 'SELECT') el.onchange = () => { gapSet(k, k === 'blend' ? el.value || undefined : el.value); commit(); };
+    else el.addEventListener('input', () => { gapSet(k, +el.value / m); const val = el.nextElementSibling; if (val) val.textContent = el.value + '%'; S.dirty = true; commitSoon(); });
+  });
+  $('#gapOpInherit').onclick = () => { gapSet('opacity', undefined); commit(); };
   $('#gapBgmPick').onclick = () => openPicker('gbgm');
-  $('#gapFill').onchange = (e) => { P.gapFill = e.target.value; commit(); };
-  $('#gapVisStyle').onchange = (e) => { const v = e.target.value; P.gapVisual = v !== 'none'; P.gapVisStyle = v === 'none' ? 'auto' : v; commit(); };
-  $('#gapLabel').onchange = (e) => { P.gapLabel = e.target.checked; commit(); };
-  $('#gapCountdown').onchange = (e) => { P.gapCountdown = e.target.checked; commit(); };
+  $('#gapFill').onchange = (e) => { gapSet('fill', e.target.value); commit(); };
+  $('#gapVisStyle').onchange = (e) => { gapSet('vis', e.target.value); commit(); };
+  $('#gapLabel').onchange = (e) => { gapSet('label', e.target.checked); commit(); };
+  $('#gapCountdown').onchange = (e) => { gapSet('countdown', e.target.checked); commit(); };
+  $('#gapProgress').onchange = (e) => { gapSet('progress', e.target.checked); commit(); };
+  $('#gapLabelText').addEventListener('input', (e) => { gapSet('labelText', e.target.value.trim() ? e.target.value.slice(0, 40) : undefined); S.dirty = true; commitSoon(); });
   $('#gapMin').onchange = (e) => { P.gapMin = +e.target.value; commit(); };
+  $('#gapReset').onclick = () => { if (S.gapTarget && P.gapOv) delete P.gapOv[S.gapTarget]; commit(); };
   $('#autoBgm').onchange = (e) => { P.autoBgm = e.target.checked; if (P.autoBgm && P.cues.length && !P.cues.some((c) => c.scene && c.scene.bgm)) { P.cues = LM.director.generate(P, { seed: P.seed }); } commit(); };
   $('#bgmAmt').oninput = (e) => { P.bgmAmt = +e.target.value / 100; $('#bgmAmtV').textContent = e.target.value + '%'; S.dirty = true; commitSoon(); };
   $('#bgmSpeed').oninput = (e) => { P.bgmSpeed = +e.target.value / 100; $('#bgmSpeedV').textContent = e.target.value + '%'; S.dirty = true; commitSoon(); };
@@ -1068,7 +1122,7 @@
   function pruneMulti() { const ids = new Set(P.cues.map((c) => c.id)); for (const id of S.multi) if (!ids.has(id)) S.multi.delete(id); if (S.multi.size <= 1) S.multi.clear(); }
 
   /* style clipboard */
-  const STYLE_KEYS = ['enter', 'hold', 'exit', 'filters', 'filterAmt', 'font', 'textScale', 'colors', 'trans', 'gfx', 'bgm', 'tf', 'ed', 'xd', 'noGlobalFilters', 'trackAdj', 'wordSpaceAdj'];
+  const STYLE_KEYS = ['enter', 'hold', 'exit', 'filters', 'filterAmt', 'font', 'textScale', 'colors', 'trans', 'gfx', 'bgm', 'tf', 'ed', 'xd', 'noGlobalFilters', 'trackAdj', 'wordSpaceAdj', 'bgmOpacity', 'bgmBlend'];
   function copyStyle() {
     const c = selCue(); if (!c) return;
     const o = {}; STYLE_KEYS.forEach((k) => { if (c[k] !== undefined) o[k] = JSON.parse(JSON.stringify(c[k])); });
@@ -1110,6 +1164,7 @@
     view.invalidate(); S.dirty = true; commitSoon(); renderInspector();
     toast(kind === 'track' ? `字間 ${v > 0 ? '+' : ''}${v.toFixed(2)}em` : `単語間 ${Math.round(v * 100)}%`);
   }
+  const BLEND_OPTS = [['normal', '通常'],['screen', 'スクリーン（明るく重ねる）'],['lighter', '加算（光らせる）'],['lighten', '比較（明）'],['color-dodge', '覆い焼きカラー'],['overlay', 'オーバーレイ'],['soft-light', 'ソフトライト'],['hard-light', 'ハードライト'],['multiply', '乗算（暗く重ねる）'],['darken', '比較（暗）'],['difference', '差の絶対値'],['exclusion', '除外'],['luminosity', '輝度（明度だけ重ねる）'],['color', 'カラー（色だけ重ねる）']];
   function renderInspector() {
     view.setProject(P);
     const c = selCue(), b = $('#ibody');
@@ -1156,7 +1211,9 @@
         <div class="row"><label>模様</label><select id="iDeco" style="flex:1">${Object.entries(D.patterns).map(([k, v]) => `<option value="${k}" ${(sc.decoration || 'none') === k ? 'selected' : ''}>${v}</option>`).join('')}</select></div>
         <label class="tg"><input type="checkbox" id="iInv" ${sc.invert ? 'checked' : ''}><i></i>背景と文字の色を反転</label>
         ${(P.images || []).length ? `<div class="row" style="margin-top:8px"><label>背景画像</label><select id="iImg" style="flex:1"><option value="">自動（全体の切り替えに従う）</option><option value="__none" ${c.img === '__none' ? 'selected' : ''}>この行から画像なし</option>${P.images.map((x, i) => `<option value="${esc(x.id)}" ${c.img === x.id ? 'selected' : ''}>${i + 1}. ${esc(x.name)}</option>`).join('')}</select></div>` : ''}
-        <div class="row" style="margin-top:8px"><label>背景モーション</label><button class="btn sm" id="iBgm" style="flex:1;justify-content:flex-start;overflow:hidden">${esc(Array.isArray(c.bgm) ? (c.bgm.length ? c.bgm.map((id) => (LM.bgm.lib[id] || {}).n).join('＋') : 'なし') : '全体設定に従う（' + (view.bgmOf(c).map((id) => (LM.bgm.lib[id] || {}).n).join('＋') || 'なし') + '）')}</button></div></div>
+        <div class="row" style="margin-top:8px"><label>背景モーション</label><button class="btn sm" id="iBgm" style="flex:1;justify-content:flex-start;overflow:hidden">${esc(Array.isArray(c.bgm) ? (c.bgm.length ? c.bgm.map((id) => (LM.bgm.lib[id] || {}).n).join('＋') : 'なし') : '全体設定に従う（' + (view.bgmOf(c).map((id) => (LM.bgm.lib[id] || {}).n).join('＋') || 'なし') + '）')}</button></div>
+        <div class="row"><label title="この行だけ背景モーションの濃さを変える">不透明度</label><input type="range" id="iBgmOp" min="0" max="100" step="1" value="${Math.round((c.bgmOpacity != null ? c.bgmOpacity : P.bgmOpacity == null ? 1 : P.bgmOpacity) * 100)}"><span class="val" id="iBgmOpV"></span><button class="btn sm ic" id="iBgmOpR" title="全体の設定に合わせる">↺</button></div>
+        <div class="row"><label title="この行だけ背景モーションの重ね方を変える">描画モード</label><select id="iBgmBl" style="flex:1"><option value="">全体の設定に合わせる</option>${BLEND_OPTS.map(([k, n]) => `<option value="${k}" ${c.bgmBlend === k ? 'selected' : ''}>${n}</option>`).join('')}</select></div></div>
       <div class="sec"><h3>位置・大きさ・動きの長さ <span class="sp"></span><button class="btn sm" id="iTfReset">リセット</button></h3>
         ${tfRow('iTx', '横位置', Math.round((tf.x || 0) * 100), -50, 50, 1, (v) => (v > 0 ? '+' : '') + v + '%')}
         ${tfRow('iTy', '縦位置', Math.round((tf.y || 0) * 100), -50, 50, 1, (v) => (v > 0 ? '+' : '') + v + '%')}
@@ -1210,6 +1267,11 @@
     $('#iCustom').onchange = (e) => { c.colors = e.target.checked ? arr.slice() : null; commit(); };
     $('#iFont').onchange = async (e) => { c.font = e.target.value || null; if (c.font) await LM.fonts.ensure(c.font, c.text); view.invalidate(); commit(); };
     const trF = (v) => (v === 0 ? TXT('全体と同じ') : (v > 0 ? '+' : '') + (v / 100).toFixed(2) + 'em'), wsF = (v) => (v === 100 ? TXT('全体と同じ') : v + '%');
+    const opF = () => { $('#iBgmOpV').textContent = c.bgmOpacity == null ? `${TXT('全体')} ${Math.round((P.bgmOpacity == null ? 1 : P.bgmOpacity) * 100)}%` : Math.round(c.bgmOpacity * 100) + '%'; };
+    opF();
+    $('#iBgmOp').oninput = (e) => { const v = +e.target.value / 100; eachSel((q) => (q.bgmOpacity = v)); opF(); S.dirty = true; commitSoon(); };
+    $('#iBgmOpR').onclick = () => { eachSel((q) => delete q.bgmOpacity); commit(); };
+    $('#iBgmBl').onchange = (e) => { const v = e.target.value; eachSel((q) => { if (v) q.bgmBlend = v; else delete q.bgmBlend; }); commit(); };
     $('#iTrackV').textContent = trF(+$('#iTrack').value); $('#iWspV').textContent = wsF(+$('#iWsp').value);
     $('#iTrack').oninput = (e) => { const v = +e.target.value; eachSel((q) => { q.trackAdj = v / 100 || undefined; if (!v) delete q.trackAdj; }); $('#iTrackV').textContent = trF(v); view.invalidate(); S.dirty = true; commitSoon(); };
     $('#iWsp').oninput = (e) => { const v = +e.target.value; eachSel((q) => { if (v === 100) delete q.wordSpaceAdj; else q.wordSpaceAdj = v / 100; }); $('#iWspV').textContent = wsF(v); view.invalidate(); S.dirty = true; commitSoon(); };
@@ -1323,7 +1385,7 @@
     if (pick.kind === 'trans') return c.trans || 'none';
     if (pick.kind === 'gfx') return (c.gfx && c.gfx.length) ? c.gfx : ['__none'];
     if (pick.kind === 'bgm') return P.autoBgm ? [] : (P.bgm || []);
-    if (pick.kind === 'gbgm') return (P.gapBgm || []).length ? P.gapBgm : ['__none'];
+    if (pick.kind === 'gbgm') { const b = view.gapCfg(S.gapTarget ? gapByKey(S.gapTarget) : null).bgm || []; return b.length ? b : ['__none']; }
     if (pick.kind === 'cbgm') return Array.isArray(c.bgm) ? (c.bgm.length ? c.bgm : ['__none']) : ['__inherit'];
     const tr = R.tracksOf(c); return pick.kind === 'layout' ? c.scene.layout : tr[pick.kind];
   }
@@ -1430,9 +1492,10 @@
       return;
     }
     if (pick.kind === 'gbgm') {
-      let list = (P.gapBgm || []).slice();
+      const gcf = view.gapCfg(S.gapTarget ? gapByKey(S.gapTarget) : null);
+      let list = (gcf.bgm || []).slice();
       if (id === '__none') list = []; else if (list.includes(id)) list = list.filter((x) => x !== id); else { list.push(id); if (list.length > 6) list.shift(); }
-      P.gapBgm = list; if (P.gapFill === 'off') P.gapFill = 'auto'; commit({ quiet: true }); syncBgmUI(); S.dirty = true;
+      gapSet('bgm', S.gapTarget && !list.length ? undefined : list); if (gcf.fill === 'off') gapSet('fill', 'auto'); commit({ quiet: true }); syncBgmUI(); S.dirty = true;
       $$('#pickGrid .card').forEach((cd) => cd.classList.toggle('on', list.length ? list.includes(cd.dataset.id) : cd.dataset.id === '__none'));
       return;
     }
@@ -1479,7 +1542,7 @@
   })();
 
   /* ---------------- looks (saved design presets) ---------------- */
-  const LOOK_KEYS = ['theme', 'palette', 'colors', 'autoColors', 'series', 'font', 'fontWeight', 'textScale', 'tracking', 'intensity', 'speed', 'tempoSync', 'filters', 'filterAmt', 'filterIntensity', 'autoFilters', 'pattern', 'camera', 'keyColor', 'autoBgm', 'bgm', 'bgmAmt', 'bgmSpeed', 'bgmDim', 'autoTrans', 'autoGfx', 'transOff', 'ruby', 'drive', 'feel', 'variety', 'latinTrack', 'wordSpace', 'wakanGap', 'yakuAmt', 'wakan', 'yakumono'];
+  const LOOK_KEYS = ['theme', 'palette', 'colors', 'autoColors', 'series', 'font', 'fontWeight', 'textScale', 'tracking', 'intensity', 'speed', 'tempoSync', 'filters', 'filterAmt', 'filterIntensity', 'autoFilters', 'pattern', 'camera', 'keyColor', 'autoBgm', 'bgm', 'bgmAmt', 'bgmSpeed', 'bgmDim', 'autoTrans', 'autoGfx', 'transOff', 'ruby', 'drive', 'feel', 'variety', 'latinTrack', 'wordSpace', 'wakanGap', 'yakuAmt', 'wakan', 'yakumono', 'bgmOpacity', 'bgmBlend', 'gapFill', 'gapBgm', 'gapVisual', 'gapVisStyle', 'gapLabel', 'gapCountdown', 'gapOpacity', 'gapBlend', 'gapAmt', 'gapSpeed', 'gapCam', 'gapEvery', 'gapFlash', 'gapVisAmt', 'gapProgress'];
   // looks come from localStorage or imported files: validate everything through the project normalizer
   function cleanLook(lk) {
     if (!lk || typeof lk !== 'object' || !lk.v || typeof lk.v !== 'object' || Array.isArray(lk.v)) return null;
@@ -1867,7 +1930,7 @@
     $('#planInfo').textContent = S.plans.length ? `案 ${S.planIdx + 1} / ${S.plans.length}` : '案 –';
     $('#planPrev').disabled = S.planIdx <= 0; $('#planNext').disabled = S.planIdx >= S.plans.length - 1;
     $$('#aspects .chip').forEach((b) => b.classList.toggle('on', b.dataset.a === P.aspect)); $('#aspectQuick').value = P.aspect;
-    buildPalettes(); buildCustom(); buildFonts(); syncMotionUI();
+    buildPalettes(); buildCustom(); buildFonts(); syncMotionUI(); syncBgmMix();
     $('#keyColor').checked = P.keyColor !== false;
     syncers.forEach((f) => f());
     $('#bgType').value = (P.bg && P.bg.type) || 'solid'; $('#bgImgRow').hidden = $('#bgType').value !== 'image';

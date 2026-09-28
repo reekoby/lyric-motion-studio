@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.1.0 — 2026-09-28
+- Per-phrase background-motion opacity / blend mode / 行ごとの不透明度・描画モード
+- Intro / interlude / outro settings for all sections or each section: background strength & speed, opacity & blend, camera motion, scene-change interval, flash, foreground style & opacity, custom section name, progress bar, countdown / イントロ・間奏・アウトロを全体または区間ごとに設定
+- Background motion opacity and blend modes (screen, add, multiply, overlay, luminosity, …) so background images stay visible / 背景モーションの不透明度と描画モード（スクリーン・加算・乗算・オーバーレイ・輝度など）を追加。背景画像が見えるように
+
 ## 1.0.0 — 2026-09-27
 First public release / 初公開
 
