@@ -1,6 +1,8 @@
 # Changelog
 
 ## 1.1.0 — 2026-09-28
+- Background images / videos get their own opacity and blend mode over the plain background; image "Blend" and "Blur" are now stored separately from the Background section / 背景画像・動画そのものの不透明度と描画モードを追加。画像の「なじませ」「ぼかし」を「背景」欄の設定と分離
+- "Override" badges on per-phrase / per-section values, and a notice with a one-click reset on the global background-motion blending controls / 個別設定中の印と、全体設定欄の「個別設定を解除」
 - Per-phrase background-motion opacity / blend mode / 行ごとの不透明度・描画モード
 - Intro / interlude / outro settings for all sections or each section: background strength & speed, opacity & blend, camera motion, scene-change interval, flash, foreground style & opacity, custom section name, progress bar, countdown / イントロ・間奏・アウトロを全体または区間ごとに設定
 - Background motion opacity and blend modes (screen, add, multiply, overlay, luminosity, …) so background images stay visible / 背景モーションの不透明度と描画モード（スクリーン・加算・乗算・オーバーレイ・輝度など）を追加。背景画像が見えるように

@@ -867,8 +867,9 @@
     const tr = LM.Renderer.imgTrans; $('#imgTransCur').textContent = P.imgTrans && P.imgTrans !== 'auto' && tr[P.imgTrans] ? tr[P.imgTrans].n : 'おまかせ（テーマに合わせて毎回変える）';
     $('#imgTransDur').value = Math.round((P.imgTransDur || 0) * 100); $('#imgTransDurV').textContent = P.imgTransDur > 0 ? P.imgTransDur.toFixed(2) + 's' : '1拍（自動）';
     $('#imgLook').value = P.imgLook || 'natural';
-    $('#imgDim').value = Math.round(((P.bg && P.bg.dim) ?? 0.35) * 100); $('#imgDimV').textContent = $('#imgDim').value + '%';
-    $('#imgBlur').value = (P.bg && P.bg.blur) || 0; $('#imgBlurV').textContent = $('#imgBlur').value;
+    $('#imgDim').value = Math.round((P.imgDim != null ? P.imgDim : (P.bg && P.bg.dim) ?? 0.35) * 100); $('#imgDimV').textContent = $('#imgDim').value + '%';
+    $('#imgBlur').value = P.imgBlur != null ? P.imgBlur : (P.bg && P.bg.blur) || 0; $('#imgBlurV').textContent = $('#imgBlur').value;
+    const iop = Math.round((P.imgOpacity == null ? 1 : P.imgOpacity) * 100); $('#imgOpacity').value = iop; $('#imgOpacityV').textContent = iop + '%'; $('#imgBlend').value = P.imgBlend || 'normal';
     $('#imgKB').checked = P.imgKB !== false; $('#imgBeat').checked = !!P.imgBeat; $('#imgBgmFull').checked = !!P.imgBgmFull;
     renderImgs();
   }
@@ -880,17 +881,30 @@
   $('#imgTransPick').onclick = () => openPicker('itrans');
   $('#imgTransDur').addEventListener('input', (e) => { P.imgTransDur = +e.target.value / 100; $('#imgTransDurV').textContent = P.imgTransDur > 0 ? P.imgTransDur.toFixed(2) + 's' : '1拍（自動）'; S.dirty = true; commitSoon(); });
   $('#imgLook').onchange = (e) => { P.imgLook = e.target.value; commit(); };
-  $('#imgDim').addEventListener('input', (e) => { P.bg = Object.assign({}, P.bg, { dim: +e.target.value / 100 }); $('#imgDimV').textContent = e.target.value + '%'; S.dirty = true; commitSoon(); });
-  $('#imgBlur').addEventListener('input', (e) => { P.bg = Object.assign({}, P.bg, { blur: +e.target.value }); $('#imgBlurV').textContent = e.target.value; S.dirty = true; commitSoon(); });
+  $('#imgDim').addEventListener('input', (e) => { P.imgDim = +e.target.value / 100; $('#imgDimV').textContent = e.target.value + '%'; S.dirty = true; commitSoon(); });
+  $('#imgBlur').addEventListener('input', (e) => { P.imgBlur = +e.target.value; $('#imgBlurV').textContent = e.target.value; S.dirty = true; commitSoon(); });
   $('#imgKB').onchange = (e) => { P.imgKB = e.target.checked; commit(); };
   $('#imgBeat').onchange = (e) => { P.imgBeat = e.target.checked; commit(); };
   $('#imgBgmFull').onchange = (e) => { P.imgBgmFull = e.target.checked; commit(); };
+  $('#imgOpacity').addEventListener('input', (e) => { P.imgOpacity = +e.target.value / 100; $('#imgOpacityV').textContent = e.target.value + '%'; S.dirty = true; commitSoon(); });
+  $('#imgBlend').onchange = (e) => { P.imgBlend = e.target.value; commit(); };
   // 背景モーションの重ね方（不透明度・描画モード）— the same two settings appear in the background-motion and image sections
   function syncBgmMix() {
     const op = Math.round((P.bgmOpacity == null ? 1 : P.bgmOpacity) * 100), bl = P.bgmBlend || 'normal';
     $$('.bgmOp').forEach((el) => { el.value = op; const v = $('#' + el.id + 'V'); if (v) v.textContent = op + '%'; });
     $$('.bgmBl').forEach((el) => { el.value = bl; });
+    // show where the global value is overridden (per phrase / per instrumental section)
+    const nc = (P.cues || []).filter((c) => c.bgmOpacity != null || c.bgmBlend != null).length;
+    const ov = P.gapOv || {}, ng = Object.keys(ov).filter((k) => ov[k] && (ov[k].opacity != null || ov[k].blend != null)).length;
+    const all = P.gapOpacity != null || P.gapBlend != null;
+    const parts = []; if (nc) parts.push(T('フレーズ {0}行').replace('{0}', nc)); if (ng) parts.push(T('区間 {0}か所').replace('{0}', ng)); if (all) parts.push(T('歌詞のない区間すべて'));
+    $$('.ovinfo').forEach((el) => {
+      el.hidden = !parts.length; if (!parts.length) { el.innerHTML = ''; return; }
+      el.innerHTML = `<b class="ovb">${esc(T('個別'))}</b><span style="flex:1">${esc(T('ここと違う設定があります：{0}').replace('{0}', parts.join(T('、'))))}</span><button class="btn sm ovclr">${esc(T('個別設定を解除'))}</button>`;
+      el.querySelector('.ovclr').onclick = () => { (P.cues || []).forEach((c) => { delete c.bgmOpacity; delete c.bgmBlend; }); Object.keys(ov).forEach((k) => { if (ov[k]) { delete ov[k].opacity; delete ov[k].blend; if (!Object.keys(ov[k]).length) delete ov[k]; } }); P.gapOpacity = null; P.gapBlend = null; commit(); toast(T('背景モーションの重ね方を全体の設定にそろえました')); };
+    });
   }
+  const ovMark = (row, on) => { if (!row) return; const lb = row.querySelector('label'); if (!lb) return; let b = lb.querySelector('.ovb'); if (on && !b) { b = document.createElement('b'); b.className = 'ovb'; b.textContent = T('個別'); lb.appendChild(b); } else if (!on && b) b.remove(); };
   $$('.bgmOp').forEach((el) => el.addEventListener('input', () => { P.bgmOpacity = +el.value / 100; P.bgmMixSet = true; syncBgmMix(); S.dirty = true; commitSoon(); }));
   $$('.bgmBl').forEach((el) => (el.onchange = () => { P.bgmBlend = el.value; P.bgmMixSet = true; syncBgmMix(); commit(); }));
 
@@ -934,8 +948,10 @@
     $('#gapLabel').checked = !!cf.label; $('#gapCountdown').checked = !!cf.countdown; $('#gapProgress').checked = cf.progress !== false;
     $('#gapLabelText').value = cf.labelText || ''; $('#gapMin').value = String(P.gapMin || 1.2);
     $('#gapBgmCur').textContent = (cf.bgm || []).length ? cf.bgm.map((id) => (LM.bgm.lib[id] || {}).n).filter(Boolean).join(' ＋ ') : T('おまかせ');
+    const gov = (g && P.gapOv && P.gapOv[S.gapTarget]) || null;
     $$('#gapBox .gk').forEach((el) => {
       const k = el.dataset.k, m = +el.dataset.m || 1, v = cf[k], val = el.nextElementSibling;
+      ovMark(el.closest('.row'), !!gov && gov[k] != null);
       if (el.tagName === 'SELECT') { el.value = k === 'blend' ? v || '' : String(v == null ? 'auto' : v); return; }
       if (k === 'opacity') { const inh = v == null, ov = inh ? (P.bgmOpacity == null ? 1 : P.bgmOpacity) : v; el.value = Math.round(ov * 100); if (val) val.textContent = inh ? `${T('全体')} ${Math.round(ov * 100)}%` : Math.round(ov * 100) + '%'; return; }
       el.value = Math.round((v == null ? 1 : v) * m); if (val) val.textContent = Math.round((v == null ? 1 : v) * 100) + '%';
@@ -1212,8 +1228,8 @@
         <label class="tg"><input type="checkbox" id="iInv" ${sc.invert ? 'checked' : ''}><i></i>背景と文字の色を反転</label>
         ${(P.images || []).length ? `<div class="row" style="margin-top:8px"><label>背景画像</label><select id="iImg" style="flex:1"><option value="">自動（全体の切り替えに従う）</option><option value="__none" ${c.img === '__none' ? 'selected' : ''}>この行から画像なし</option>${P.images.map((x, i) => `<option value="${esc(x.id)}" ${c.img === x.id ? 'selected' : ''}>${i + 1}. ${esc(x.name)}</option>`).join('')}</select></div>` : ''}
         <div class="row" style="margin-top:8px"><label>背景モーション</label><button class="btn sm" id="iBgm" style="flex:1;justify-content:flex-start;overflow:hidden">${esc(Array.isArray(c.bgm) ? (c.bgm.length ? c.bgm.map((id) => (LM.bgm.lib[id] || {}).n).join('＋') : 'なし') : '全体設定に従う（' + (view.bgmOf(c).map((id) => (LM.bgm.lib[id] || {}).n).join('＋') || 'なし') + '）')}</button></div>
-        <div class="row"><label title="この行だけ背景モーションの濃さを変える">不透明度</label><input type="range" id="iBgmOp" min="0" max="100" step="1" value="${Math.round((c.bgmOpacity != null ? c.bgmOpacity : P.bgmOpacity == null ? 1 : P.bgmOpacity) * 100)}"><span class="val" id="iBgmOpV"></span><button class="btn sm ic" id="iBgmOpR" title="全体の設定に合わせる">↺</button></div>
-        <div class="row"><label title="この行だけ背景モーションの重ね方を変える">描画モード</label><select id="iBgmBl" style="flex:1"><option value="">全体の設定に合わせる</option>${BLEND_OPTS.map(([k, n]) => `<option value="${k}" ${c.bgmBlend === k ? 'selected' : ''}>${n}</option>`).join('')}</select></div></div>
+        <div class="row"><label title="この行だけ背景モーションの濃さを変える">不透明度${c.bgmOpacity != null ? '<b class="ovb">個別</b>' : ''}</label><input type="range" id="iBgmOp" min="0" max="100" step="1" value="${Math.round((c.bgmOpacity != null ? c.bgmOpacity : P.bgmOpacity == null ? 1 : P.bgmOpacity) * 100)}"><span class="val" id="iBgmOpV"></span><button class="btn sm ic" id="iBgmOpR" title="全体の設定に合わせる">↺</button></div>
+        <div class="row"><label title="この行だけ背景モーションの重ね方を変える">描画モード${c.bgmBlend ? '<b class="ovb">個別</b>' : ''}</label><select id="iBgmBl" style="flex:1"><option value="">全体の設定に合わせる</option>${BLEND_OPTS.map(([k, n]) => `<option value="${k}" ${c.bgmBlend === k ? 'selected' : ''}>${n}</option>`).join('')}</select></div></div>
       <div class="sec"><h3>位置・大きさ・動きの長さ <span class="sp"></span><button class="btn sm" id="iTfReset">リセット</button></h3>
         ${tfRow('iTx', '横位置', Math.round((tf.x || 0) * 100), -50, 50, 1, (v) => (v > 0 ? '+' : '') + v + '%')}
         ${tfRow('iTy', '縦位置', Math.round((tf.y || 0) * 100), -50, 50, 1, (v) => (v > 0 ? '+' : '') + v + '%')}
@@ -1269,7 +1285,7 @@
     const trF = (v) => (v === 0 ? TXT('全体と同じ') : (v > 0 ? '+' : '') + (v / 100).toFixed(2) + 'em'), wsF = (v) => (v === 100 ? TXT('全体と同じ') : v + '%');
     const opF = () => { $('#iBgmOpV').textContent = c.bgmOpacity == null ? `${TXT('全体')} ${Math.round((P.bgmOpacity == null ? 1 : P.bgmOpacity) * 100)}%` : Math.round(c.bgmOpacity * 100) + '%'; };
     opF();
-    $('#iBgmOp').oninput = (e) => { const v = +e.target.value / 100; eachSel((q) => (q.bgmOpacity = v)); opF(); S.dirty = true; commitSoon(); };
+    $('#iBgmOp').oninput = (e) => { const v = +e.target.value / 100; eachSel((q) => (q.bgmOpacity = v)); opF(); ovMark(e.target.closest('.row'), true); S.dirty = true; commitSoon(); };
     $('#iBgmOpR').onclick = () => { eachSel((q) => delete q.bgmOpacity); commit(); };
     $('#iBgmBl').onchange = (e) => { const v = e.target.value; eachSel((q) => { if (v) q.bgmBlend = v; else delete q.bgmBlend; }); commit(); };
     $('#iTrackV').textContent = trF(+$('#iTrack').value); $('#iWspV').textContent = wsF(+$('#iWsp').value);

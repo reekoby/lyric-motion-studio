@@ -199,13 +199,13 @@
     if (p.imgBeat && p.beatSync !== false) s *= 1 + beat * 0.012;
     const fx = ent.fx == null ? 0.5 : ent.fx, fy = ent.fy == null ? 0.5 : ent.fy;
     const iw = im.width * s, ih = im.height * s, x = (W - iw) * fx + dx, y = (H - ih) * fy + dy;
-    const look = p.imgLook || 'natural', blur = bg.blur || 0;
+    const look = p.imgLook || 'natural', blur = p.imgBlur != null ? p.imgBlur : bg.blur || 0;
     const f = []; if (blur) f.push(`blur(${(blur * this.S).toFixed(1)}px)`); if (look === 'mono' || look === 'duo') f.push('grayscale(1) contrast(1.12)'); if (look === 'vivid') f.push('saturate(1.35) contrast(1.08)'); if (look === 'fade') f.push('contrast(0.85) saturate(0.8) brightness(1.05)');
     ctx.filter = f.length ? f.join(' ') : 'none';
     ctx.drawImage(im.src, x, y, iw, ih); ctx.filter = 'none';
     if (look === 'duo') { ctx.globalCompositeOperation = 'multiply'; ctx.fillStyle = pal.accent; ctx.fillRect(0, 0, W, H); ctx.globalCompositeOperation = 'screen'; ctx.fillStyle = mix(pal.bg, '#000000', 0.55); ctx.fillRect(0, 0, W, H); ctx.globalCompositeOperation = 'source-over'; }
     else if (look === 'tint') { ctx.globalCompositeOperation = 'color'; ctx.globalAlpha = 0.55; ctx.fillStyle = pal.accent; ctx.fillRect(0, 0, W, H); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; }
-    const dim = bg.dim == null ? 0.35 : bg.dim; if (dim > 0) { ctx.globalAlpha = dim; ctx.fillStyle = pal.bg; ctx.fillRect(0, 0, W, H); ctx.globalAlpha = 1; }
+    const dim = p.imgDim != null ? p.imgDim : bg.dim == null ? 0.35 : bg.dim; if (dim > 0) { ctx.globalAlpha = dim; ctx.fillStyle = pal.bg; ctx.fillRect(0, 0, W, H); ctx.globalAlpha = 1; }
   };
   // full background with transitions between slots
   P.drawImages = function (ctx, t, pal, beat) {

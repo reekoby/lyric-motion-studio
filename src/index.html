@@ -80,6 +80,11 @@ button{cursor:pointer}
 .row>label{color:var(--dim);min-width:84px;font-size:12px}
 .col{display:flex;flex-direction:column;gap:6px}
 .hint{color:var(--faint);font-size:11.5px;line-height:1.5}
+.subh{margin:10px 0 4px;font-size:12px;font-weight:600;color:var(--dim)}
+.subh .hint{font-weight:400}
+.ovb{display:inline-block;margin-left:5px;padding:0 5px;border-radius:7px;background:var(--acc);color:var(--acc-ink);font-size:9.5px;font-weight:600;line-height:15px;vertical-align:1px;white-space:nowrap}
+.ovinfo{margin:4px 0 2px;padding:6px 8px;border-radius:6px;background:var(--acc-soft);color:var(--text);display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.ovinfo[hidden]{display:none}
 .hint b{color:var(--dim)}
 input[type=text],input[type=number],select,textarea{background:var(--panel2);border:1px solid var(--line);border-radius:var(--r2);padding:6px 8px;min-width:0}
 input:focus,select:focus,textarea:focus{outline:none;border-color:var(--acc)}
@@ -462,6 +467,8 @@ input[type=color]{width:30px;height:28px;padding:0;border:1px solid var(--line);
           <div class="row"><label>暗くする</label><input type="range" id="bgmDim" min="0" max="80" step="1"><span class="val" id="bgmDimV"></span></div>
           <div class="row"><label title="背景モーションの濃さ。下げると背景画像・背景がよく見えます">不透明度</label><input type="range" class="bgmOp" id="bgmOpacity" min="0" max="100" step="1"><span class="val" id="bgmOpacityV"></span></div>
           <div class="row"><label title="背景モーションを下の画像・背景にどう重ねるか">描画モード</label><select class="bgmBl" id="bgmBlend" style="flex:1"><option value="normal">通常</option><option value="screen">スクリーン（明るく重ねる）</option><option value="lighter">加算（光らせる）</option><option value="lighten">比較（明）</option><option value="color-dodge">覆い焼きカラー</option><option value="overlay">オーバーレイ</option><option value="soft-light">ソフトライト</option><option value="hard-light">ハードライト</option><option value="multiply">乗算（暗く重ねる）</option><option value="darken">比較（暗）</option><option value="difference">差の絶対値</option><option value="exclusion">除外</option><option value="luminosity">輝度（明度だけ重ねる）</option><option value="color">カラー（色だけ重ねる）</option></select></div>
+          <p class="hint">不透明度・描画モードは「背景画像・動画」欄の「背景モーションの重ね方」と共通です。</p>
+          <div class="ovinfo hint" hidden></div>
           <div class="gapbox" id="gapBox">
             <h4>歌詞のない区間（イントロ・間奏・アウトロ）</h4>
             <div class="row"><label>設定する区間</label><select id="gapTarget" style="flex:1"></select></div>
@@ -503,7 +510,11 @@ input[type=color]{width:30px;height:28px;padding:0;border:1px solid var(--line);
           <div class="row"><label>ぼかし</label><input type="range" id="imgBlur" min="0" max="40"><span class="val" id="imgBlurV"></span></div>
           <label class="tg"><input type="checkbox" id="imgKB"><i></i>ゆっくりズーム＆パン（ケン・バーンズ）</label>
           <label class="tg"><input type="checkbox" id="imgBeat"><i></i>ビートに合わせてわずかに脈動</label>
-          <div class="hint" style="margin:8px 0 2px">背景モーションの重ね方</div>
+          <div class="subh">画像・動画の重ね方 <span class="hint">（下の「背景」の色・模様の上に重ねます）</span></div>
+          <div class="row"><label title="背景画像・動画そのものの濃さ。下げると「背景」の色や模様が透けて見えます">不透明度</label><input type="range" id="imgOpacity" min="0" max="100" step="1"><span class="val" id="imgOpacityV"></span></div>
+          <div class="row"><label title="背景画像・動画を下の「背景」（色・グラデーション・模様）にどう重ねるか">描画モード</label><select id="imgBlend" style="flex:1"><option value="normal">通常</option><option value="screen">スクリーン（明るく重ねる）</option><option value="lighter">加算（光らせる）</option><option value="lighten">比較（明）</option><option value="color-dodge">覆い焼きカラー</option><option value="overlay">オーバーレイ</option><option value="soft-light">ソフトライト</option><option value="hard-light">ハードライト</option><option value="multiply">乗算（暗く重ねる）</option><option value="darken">比較（暗）</option><option value="difference">差の絶対値</option><option value="exclusion">除外</option><option value="luminosity">輝度（明度だけ重ねる）</option><option value="color">カラー（色だけ重ねる）</option></select></div>
+          <div class="subh">背景モーションの重ね方 <span class="hint">（「背景モーション」欄と共通の設定）</span></div>
+          <div class="ovinfo hint" hidden></div>
           <div class="row"><label title="背景モーションの濃さ。下げると背景画像・背景がよく見えます">不透明度</label><input type="range" class="bgmOp" id="bgmOpacity2" min="0" max="100" step="1"><span class="val" id="bgmOpacity2V"></span></div>
           <div class="row"><label title="背景モーションを下の画像・背景にどう重ねるか">描画モード</label><select class="bgmBl" id="bgmBlend2" style="flex:1"><option value="normal">通常</option><option value="screen">スクリーン（明るく重ねる）</option><option value="lighter">加算（光らせる）</option><option value="lighten">比較（明）</option><option value="color-dodge">覆い焼きカラー</option><option value="overlay">オーバーレイ</option><option value="soft-light">ソフトライト</option><option value="hard-light">ハードライト</option><option value="multiply">乗算（暗く重ねる）</option><option value="darken">比較（暗）</option><option value="difference">差の絶対値</option><option value="exclusion">除外</option><option value="luminosity">輝度（明度だけ重ねる）</option><option value="color">カラー（色だけ重ねる）</option></select></div>
           <label class="tg"><input type="checkbox" id="imgBgmFull"><i></i>全面の背景モーション（シェーダー等）を画像の上に重ねる</label>

@@ -614,7 +614,19 @@ void main(){
         bgPal = Object.assign({}, pal, { bg: mix(cp.prevPal.bg, pal.bg, k) });
       }
       this.imgActive = !transparent && this.imgList && this.imgList().length > 0 && !p.imgBgmFull;
-      if (!transparent) { if (!(this.imgList && this.imgList().length && this.drawImages(ctx, t, bgPal, beat))) this.drawBackground(ctx, bgPal, t, beat, cur); }
+      if (!transparent) {
+        const hasImg = this.imgList && this.imgList().length > 0;
+        // the picture itself can be laid over the plain background (colour / gradient / pattern) with its own opacity and blend mode
+        const iOp = clamp(p.imgOpacity == null ? 1 : +p.imgOpacity, 0, 1), iMode = BLEND[p.imgBlend] ? p.imgBlend : 'normal';
+        if (hasImg && (iOp < 0.999 || iMode !== 'normal')) {
+          this.drawBackground(ctx, bgPal, t, beat, cur);
+          const Ic = this._imgLayer || (this._imgLayer = document.createElement('canvas'));
+          if (Ic.width !== ctx.canvas.width || Ic.height !== ctx.canvas.height) { Ic.width = ctx.canvas.width; Ic.height = ctx.canvas.height; }
+          const ictx = Ic.getContext('2d'); ictx.setTransform(1, 0, 0, 1, 0, 0); ictx.clearRect(0, 0, Ic.width, Ic.height); ictx.setTransform(ctx.getTransform());
+          ictx.globalAlpha = 1; ictx.globalCompositeOperation = 'source-over'; ictx.filter = 'none';
+          if (iOp > 0.001 && this.drawImages(ictx, t, bgPal, beat)) { ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = iOp; ctx.globalCompositeOperation = BLEND[iMode]; ctx.drawImage(Ic, 0, 0); ctx.restore(); }
+        } else if (!(hasImg && this.drawImages(ctx, t, bgPal, beat))) this.drawBackground(ctx, bgPal, t, beat, cur);
+      }
       let gap = !cur ? this.gapAt(t) : null;
       const gcf = gap ? this.gapCfg(gap) : null;
       if (gcf && gcf.fill === 'off') gap = null;
