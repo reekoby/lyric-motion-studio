@@ -253,6 +253,7 @@ input[type=color]{width:30px;height:28px;padding:0;border:1px solid var(--line);
 .mbox{background:var(--panel);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);width:min(980px,100%);max-height:calc(100vh - 40px);display:flex;flex-direction:column;overflow:hidden}
 .mhead{display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--line)}
 .mhead b{font-size:15px}
+.imgFirstBox{margin:6px 0 8px;padding:8px 10px;border-radius:8px;background:var(--acc-soft)}
 .rsHead{display:flex;align-items:center;gap:6px;margin:6px 0}
 .rsList{display:grid;gap:6px;padding:8px 10px;border:1px solid var(--line);border-radius:8px}
 .rsList .tg{align-items:flex-start}
@@ -508,6 +509,10 @@ input[type=color]{width:30px;height:28px;padding:0;border:1px solid var(--line);
           <div class="imgs" id="imgList"></div>
           <div class="vidopts" id="vidOpts" hidden></div>
           <div class="row"><label class="tg"><input type="checkbox" id="imgOn"><i></i>背景画像・動画を使う</label><span class="sp"></span><span class="hint" id="imgCount"></span></div>
+          <div class="imgFirstBox">
+            <div class="row"><label class="tg"><input type="checkbox" id="imgFirst"><i></i><b>背景画像・動画を主役にする</b></label><span class="sp"></span><button class="btn sm" id="imgFirstApply" title="今の演出を、画像がよく見えるように整え直します">整え直す</button></div>
+            <p class="hint" style="margin:2px 0 0">オンにすると、おまかせは画像を覆わない背景モーション（粒子・光・線など）だけを選び、画像がよく見える重ね方・なじませ・エフェクトに自動で調整します。文字が読みやすいよう影も付けます。</p>
+          </div>
           <div class="row"><label>切り替え</label><select id="imgChange" style="flex:1"><option value="auto">おまかせ（曲構成・フレーズに合わせる）</option><option value="phrase">フレーズごと</option><option value="bars">小節ごと</option><option value="manual">手動（フレーズごとに指定）</option></select></div>
           <div class="row" id="imgEveryRow"><label>間隔</label><select id="imgEvery" style="flex:1"><option value="1">1</option><option value="2">2</option><option value="4">4</option><option value="8">8</option></select><span class="hint" id="imgEveryU" style="width:70px">フレーズ</span></div>
           <div class="row"><label>順番</label><div class="seg" id="imgOrder"><button data-v="order">並び順</button><button data-v="shuffle">シャッフル</button></div></div>

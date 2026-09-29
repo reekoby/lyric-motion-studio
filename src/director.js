@@ -83,7 +83,9 @@ LM.director = (() => {
 
   // generate scene/motion/filters for cues. returns new cue array (does not mutate)
   function generate(p, opts = {}) {
-    const th = D.themeById[p.theme] || D.themes[0];
+    const th0 = D.themeById[p.theme] || D.themes[0];
+    // 背景画像・動画が主役: only vocabulary that keeps the picture visible
+    const th = LM.imgFirst && LM.imgFirst.active(p) ? LM.imgFirst.adaptTheme(th0) : th0;
     const seed = (opts.seed ?? p.seed ?? 1) >>> 0;
     const rng = U.rng(seed * 7919 + 17);
     const ST = styleOf(p), V = ST.variety;

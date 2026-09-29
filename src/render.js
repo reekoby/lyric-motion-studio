@@ -359,7 +359,7 @@ void main(){
         if (!pool.length) pool = (p.bgm || []).slice();
         return { seg, lists: [pool.filter((id) => B[id])], vis: visOf(), cf };
       } else {
-        const th = LM.data.themeById[p.theme] || {}, w = th.bgm || {};
+        const th = LM.data.themeById[p.theme] || {}, w = LM.imgFirst && LM.imgFirst.active(p) && this.imgActive ? LM.imgFirst.pool(th.bgm) : th.bgm || {};
         pool = Object.keys(w).filter((id) => B[id]).sort((a, b) => (w[b] || 0) - (w[a] || 0));
         if (!pool.length) pool = ['gl_mesh', 'gl_grainGrad', 'particles', 'gl_warp'].filter((id) => B[id]);
       }

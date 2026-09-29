@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.3.0 — 2026-09-29
+- "Make background images / videos the star": auto direction only picks background motions that leave the picture visible (coverage is measured automatically), avoids effects and layouts that hide the image, and applies a look that keeps it clear (Screen 50%, light blend-in, soft text shadow). Turns on automatically with the first image; "Re-apply" swaps covering motions in the current direction / 「背景画像・動画を主役にする」を追加。画像を覆わない背景モーションを自動で選び、画像がよく見える設定に自動調整
+
 ## 1.2.0 — 2026-09-29
 - Reset settings to defaults (File menu), choosing whether lyrics, lyric timing, the song, song structure & BPM, background images, screen size, title & artist and saved looks are reset too / 「設定を初期状態にリセット」を追加。歌詞・タイミング・曲・曲構成とBPM・背景画像・画面サイズ・タイトル・ルックもあわせて消すかを選べる
 - Typographic motions: weight transitions (faux variable weight that also works with Japanese fonts), text on a path / arc, per-character and per-word mask reveals, per-character focus pull, spring / ウェイト変化・カーブや円弧に沿う動き・一文字／単語マスク・一文字ずつピント・スプリング

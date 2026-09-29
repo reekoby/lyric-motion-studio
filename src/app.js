@@ -801,8 +801,9 @@
       if (f.size > 40 * 1024 * 1024) { toast(`${f.name} は大きすぎます（40MBまで）`, true); continue; }
       try { const { blob, im } = await prepImage(f); const id = U.uid(); S.images[imgKey(id)] = im; await idb.set(imgKey(id), blob); P.images = P.images || []; P.images.push({ id, name: f.name.replace(/\.[^.]+$/, '').slice(0, 60), on: true }); n++; } catch (e) { toast(`${f.name} を読み込めませんでした`, true); }
     }
-    const firstImg = (n || nv) && !P.bgmMixSet && (P.bgmOpacity == null || P.bgmOpacity === 1) && (!P.bgmBlend || P.bgmBlend === 'normal') && P.images.length === n + nv;
-    if (firstImg) { P.bgmOpacity = 0.6; P.bgmBlend = 'screen'; setTimeout(() => toast('背景モーションは画像が見えるよう「スクリーン・60%」で重ねています（背景画像の「背景モーションの重ね方」で変更できます）'), 2600); }
+    // first pictures in a project: switch to image-first so the motion never hides them
+    const firstImg = (n || nv) && !P.bgmMixSet && P.images.length === n + nv;
+    if (firstImg) { P.imgFirst = true; LM.imgFirst.applyLook(P); LM.imgFirst.fitCues(P); setTimeout(() => toast('画像が主役になるよう、覆わない背景モーションと見やすい設定にしました（背景画像の「背景画像・動画を主役にする」でオフにできます）'), 2600); }
     if (n || nv) { if (P.imgMode === 'off') P.imgMode = 'auto'; view.images = S.images; commit(); toast(nv && n ? `背景に画像${n}枚・動画${nv}本を追加しました` : nv ? `${nv}本の背景動画を追加しました` : `${n}枚の背景画像を追加しました`); }
   }
   // remove stored image/video blobs that neither the project nor any snapshot refers to (run once at start-up)
@@ -870,6 +871,7 @@
     $('#imgDim').value = Math.round((P.imgDim != null ? P.imgDim : (P.bg && P.bg.dim) ?? 0.35) * 100); $('#imgDimV').textContent = $('#imgDim').value + '%';
     $('#imgBlur').value = P.imgBlur != null ? P.imgBlur : (P.bg && P.bg.blur) || 0; $('#imgBlurV').textContent = $('#imgBlur').value;
     const iop = Math.round((P.imgOpacity == null ? 1 : P.imgOpacity) * 100); $('#imgOpacity').value = iop; $('#imgOpacityV').textContent = iop + '%'; $('#imgBlend').value = P.imgBlend || 'normal';
+    $('#imgFirst').checked = !!P.imgFirst; $('#imgFirstApply').disabled = !P.imgFirst;
     $('#imgKB').checked = P.imgKB !== false; $('#imgBeat').checked = !!P.imgBeat; $('#imgBgmFull').checked = !!P.imgBgmFull;
     renderImgs();
   }
@@ -886,6 +888,14 @@
   $('#imgKB').onchange = (e) => { P.imgKB = e.target.checked; commit(); };
   $('#imgBeat').onchange = (e) => { P.imgBeat = e.target.checked; commit(); };
   $('#imgBgmFull').onchange = (e) => { P.imgBgmFull = e.target.checked; commit(); };
+  function imgFirstApply(quiet) {
+    LM.imgFirst.applyLook(P); const n = LM.imgFirst.fitCues(P);
+    if (P.imgMode === 'off' && (P.images || []).length) P.imgMode = 'auto';
+    commit();
+    if (!quiet) toast(n ? T('画像を覆う背景モーション{0}か所を、画像が見えるものに差し替えました').replace('{0}', n) : '画像がよく見える設定にしました');
+  }
+  $('#imgFirst').onchange = (e) => { P.imgFirst = e.target.checked; if (P.imgFirst) imgFirstApply(); else { commit(); toast('おまかせは通常の背景モーションも選ぶようになります（いまの演出はそのまま）'); } };
+  $('#imgFirstApply').onclick = () => imgFirstApply();
   $('#imgOpacity').addEventListener('input', (e) => { P.imgOpacity = +e.target.value / 100; $('#imgOpacityV').textContent = e.target.value + '%'; S.dirty = true; commitSoon(); });
   $('#imgBlend').onchange = (e) => { P.imgBlend = e.target.value; commit(); };
   // 背景モーションの重ね方（不透明度・描画モード）— the same two settings appear in the background-motion and image sections
@@ -1853,7 +1863,7 @@
     P = MD.normalize(np);
     LM.director.applyTheme(P, 'jpop');
     // the first-image default: keep background images visible under the motion
-    if ((P.images || []).length) { P.bgmOpacity = 0.6; P.bgmBlend = 'screen'; }
+    if ((P.images || []).length) { P.imgFirst = true; LM.imgFirst.applyLook(P); }
     if (P.cues.length) { MD.repairEnds(P); P.cues = LM.director.generate(P, { seed: P.seed }); }
     if (o.audio) removeAudio();
     removedImgs.forEach((x) => { const v = S.images[imgKey(x.id)]; if (v && v.dispose) v.dispose(); delete S.images[imgKey(x.id)]; });
