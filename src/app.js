@@ -848,15 +848,63 @@
       }));
     });
   }
+  /* ---------- per-picture framing: position, size, fit, rotation, flip, pan ---------- */
+  const PAN_N = { auto: '全体設定に従う（ゆっくりズーム＆パン）', none: '動かさない', left: '左へパン', right: '右へパン', up: '上へパン', down: '下へパン', zoomIn: 'ズームイン', zoomOut: 'ズームアウト', spin: 'ゆっくり回転' };
+  function openImgAdj(id) {
+    S.imgAdj = id || null; if (!id) S.imgEditOn = false;
+    $('#frame').classList.toggle('imgedit', !!(S.imgAdj && S.imgEditOn));
+    renderImgs();
+    if (id) { // jump to a moment where this picture is on screen
+      const sl = (view.imageSlots() || []).find((x) => x.id === id);
+      if (sl && !(now() >= sl.t0 && now() < sl.t1)) seek(sl.t0 + Math.min(1, (sl.t1 - sl.t0) / 2));
+      else if (!sl) toast('この画像は今の切り替え設定では表示されていません（オンにする・行ごとに指定するなど）');
+    }
+  }
+  function renderImgAdj() {
+    const host = $('#imgAdj'), x = (P.images || []).find((y) => y.id === S.imgAdj);
+    host.hidden = !x; if (!x) { host.innerHTML = ''; host.dataset.id = ''; return; }
+    if (S.iaBusy && host.dataset.id === x.id) return; // don't rebuild under a slider that is being dragged
+    host.dataset.id = x.id;
+    if (!host._busyBound) { host._busyBound = true; host.addEventListener('pointerdown', () => (S.iaBusy = true)); window.addEventListener('pointerup', () => { if (S.iaBusy) { S.iaBusy = false; } }); }
+    const pct = (v) => Math.round(v * 100);
+    const row = (id, lab, v, lo, hi, st, fmt) => `<div class="row"><label>${lab}</label><input type="range" id="${id}" min="${lo}" max="${hi}" step="${st}" value="${v}"><span class="val" id="${id}V">${fmt(v)}</span></div>`;
+    host.innerHTML = `<div class="vt"><b data-noi18n>${esc(x.name)}</b><span class="sp"></span><button class="btn sm" id="iaClose">${esc(T('閉じる'))}</button></div>
+      <div class="row"><label class="tg"><input type="checkbox" id="iaDrag" ${S.imgEditOn ? 'checked' : ''}><i></i>${esc(T('プレビューで直接動かす'))}</label></div>
+      <p class="hint" style="margin:0 0 6px">${esc(T('ドラッグ：移動／Shift＋ドラッグ：回転／ホイール：拡大・縮小'))}</p>
+      <div class="row"><label>${esc(T('合わせ方'))}</label><div class="seg" id="iaFit"><button data-v="cover" class="${x.fit !== 'contain' ? 'on' : ''}">${esc(T('画面を埋める'))}</button><button data-v="contain" class="${x.fit === 'contain' ? 'on' : ''}">${esc(T('全体を収める'))}</button></div></div>
+      ${row('iaZoom', T('大きさ'), pct(x.zoom || 1), 20, 400, 1, (v) => v + '%')}
+      ${row('iaX', T('横位置'), pct(x.ox || 0), -100, 100, 1, (v) => (v > 0 ? '+' : '') + v + '%')}
+      ${row('iaY', T('縦位置'), pct(x.oy || 0), -100, 100, 1, (v) => (v > 0 ? '+' : '') + v + '%')}
+      ${row('iaRot', T('回転'), Math.round(x.rot || 0), -180, 180, 1, (v) => v + '°')}
+      <div class="row"><label class="tg"><input type="checkbox" id="iaFlip" ${x.flip ? 'checked' : ''}><i></i>${esc(T('左右反転'))}</label></div>
+      <div class="row"><label>${esc(T('パン（動き）'))}</label><select id="iaPan" style="flex:1">${Object.entries(PAN_N).map(([k, n]) => `<option value="${k}" ${(x.pan || 'auto') === k ? 'selected' : ''}>${esc(T(n))}</option>`).join('')}</select></div>
+      ${(x.pan || 'auto') !== 'auto' && x.pan !== 'none' ? row('iaPanAmt', T('動きの量'), x.panAmt == null ? 50 : x.panAmt, 0, 100, 1, (v) => v) : ''}
+      <div class="row"><span class="sp"></span><button class="btn sm" id="iaReset">${esc(T('位置・大きさ・回転を戻す'))}</button></div>`;
+    const bind = (id, fn, fmt) => { const el = $('#' + id); if (!el) return; el.addEventListener('input', () => { fn(+el.value); $('#' + id + 'V').textContent = fmt(+el.value); S.dirty = true; commitSoon(); }); };
+    bind('iaZoom', (v) => (x.zoom = v === 100 ? undefined : v / 100), (v) => v + '%');
+    bind('iaX', (v) => (x.ox = v ? v / 100 : undefined), (v) => (v > 0 ? '+' : '') + v + '%');
+    bind('iaY', (v) => (x.oy = v ? v / 100 : undefined), (v) => (v > 0 ? '+' : '') + v + '%');
+    bind('iaRot', (v) => (x.rot = v || undefined), (v) => v + '°');
+    bind('iaPanAmt', (v) => (x.panAmt = v), (v) => v);
+    $$('#iaFit button').forEach((b) => (b.onclick = () => { if (b.dataset.v === 'contain') x.fit = 'contain'; else delete x.fit; commit(); }));
+    $('#iaFlip').onchange = (e) => { if (e.target.checked) x.flip = true; else delete x.flip; commit(); };
+    $('#iaPan').onchange = (e) => { if (e.target.value === 'auto') delete x.pan; else x.pan = e.target.value; commit(); };
+    $('#iaDrag').onchange = (e) => { S.imgEditOn = e.target.checked; $('#frame').classList.toggle('imgedit', S.imgEditOn); };
+    $('#iaReset').onclick = () => { ['ox', 'oy', 'zoom', 'rot', 'flip', 'fit', 'fx', 'fy'].forEach((k) => delete x[k]); commit(); };
+    $('#iaClose').onclick = () => openImgAdj(null);
+  }
   function renderImgs() {
     const L = P.images || [];
-    $('#imgList').innerHTML = L.map((x, i) => { const im = S.images[imgKey(x.id)]; return `<div class="im ${x.on !== false ? 'on' : 'off'}" data-i="${i}" title="${esc(x.name)}（クリックでオン／オフ・ダブルクリックで位置調整）" style="background-image:url('${im ? im.src : ''}')"><span class="no">${i + 1}</span>${x.type === 'video' ? `<span class="vd">▶ ${fmtDur(x.dur)}</span>` : ''}<button class="ix" data-x="${i}" title="削除">×</button><span class="mv"><button data-l="${i}">◀</button><button data-r="${i}">▶</button></span></div>`; }).join('');
+    $('#imgList').innerHTML = L.map((x, i) => { const im = S.images[imgKey(x.id)]; return `<div class="im ${x.on !== false ? 'on' : 'off'}" data-i="${i}" title="${esc(x.name)}（クリックでオン／オフ・ダブルクリックで位置・大きさ・回転・パンを調整）" style="background-image:url('${im ? im.src : ''}')"><span class="no">${i + 1}</span>${x.type === 'video' ? `<span class="vd">▶ ${fmtDur(x.dur)}</span>` : ''}<button class="ix" data-x="${i}" title="削除">×</button><button class="ie" data-e="${i}" title="位置・大きさ・回転・パンを調整">調整</button><span class="mv"><button data-l="${i}">◀</button><button data-r="${i}">▶</button></span></div>`; }).join('');
     $('#imgCount').textContent = L.length ? `${L.filter((x) => x.on !== false).length} / ${L.length}枚を使用` : '';
     $$('#imgList .im').forEach((el) => {
       el.onclick = (e) => { if (e.target.closest('button')) return; const x = P.images[+el.dataset.i]; x.on = x.on === false; commit(); };
-      el.ondblclick = async () => { const x = P.images[+el.dataset.i]; const v = await ask('表示の中心（横,縦 を 0〜100 で。例：50,30 で上寄り）', { input: `${Math.round((x.fx ?? 0.5) * 100)},${Math.round((x.fy ?? 0.5) * 100)}`, ok: '適用' }); if (v == null) return; const [a, b] = String(v).split(/[,、\s]+/).map(Number); if (isFinite(a)) x.fx = U.clamp(a / 100, 0, 1); if (isFinite(b)) x.fy = U.clamp(b / 100, 0, 1); commit(); };
+      el.ondblclick = () => openImgAdj(P.images[+el.dataset.i].id);
     });
     $$('#imgList [data-x]').forEach((b) => (b.onclick = async (e) => { e.stopPropagation(); const i = +b.dataset.x, x = P.images[i]; if (!(await ask(`「${x.name}」を背景画像から削除しますか？`, { ok: '削除' }))) return; P.images.splice(i, 1); P.cues.forEach((c) => { if (c.img === x.id) delete c.img; }); const v = S.images[imgKey(x.id)]; if (v && v.dispose) v.dispose(); delete S.images[imgKey(x.id)]; commit(); }));
+    $$('#imgList [data-e]').forEach((b) => (b.onclick = (e) => { e.stopPropagation(); const x = P.images[+b.dataset.e]; openImgAdj(S.imgAdj === x.id ? null : x.id); }));
+    $$('#imgList .im').forEach((el) => el.classList.toggle('edit', !!S.imgAdj && (P.images[+el.dataset.i] || {}).id === S.imgAdj));
+    renderImgAdj();
     renderVidOpts();
     $$('#imgList [data-l],#imgList [data-r]').forEach((b) => (b.onclick = (e) => { e.stopPropagation(); const i = +(b.dataset.l ?? b.dataset.r), j = i + (b.dataset.l != null ? -1 : 1); if (j < 0 || j >= P.images.length) return; [P.images[i], P.images[j]] = [P.images[j], P.images[i]]; commit(); }));
   }
@@ -1560,6 +1608,24 @@
   (() => {
     const fr = $('#frame'); let dg = null;
     const activeIdx = () => { const t = now(); const c = selCue(); if (c && t >= c.start - 0.05 && t < c.end + 0.05) return S.sel; return P.cues.findIndex((q) => t >= q.start && t < q.end); };
+    // picture framing mode: drag = move, Shift+drag = rotate, wheel = zoom
+    let ig = null;
+    const imgEnt = () => (S.imgEditOn && S.imgAdj ? (P.images || []).find((y) => y.id === S.imgAdj) : null);
+    fr.addEventListener('pointerdown', (e) => {
+      const x = imgEnt(); if (!x || e.button !== 0 || e.target.closest('.prompter')) return;
+      e.stopImmediatePropagation(); const r = fr.getBoundingClientRect(); fr.setPointerCapture(e.pointerId);
+      ig = { x, x0: e.clientX, y0: e.clientY, w: r.width, h: r.height, ox: x.ox || 0, oy: x.oy || 0, rot: x.rot || 0 };
+    }, true);
+    fr.addEventListener('pointermove', (e) => {
+      if (!ig) return; e.stopImmediatePropagation();
+      const dx = (e.clientX - ig.x0) / ig.w, dy = (e.clientY - ig.y0) / ig.h;
+      if (e.shiftKey) { let r = Math.round(ig.rot + dx * 180); if (Math.abs(r) < 2) r = 0; ig.x.rot = r || undefined; }
+      else { let ox = U.clamp(ig.ox + dx, -1, 1), oy = U.clamp(ig.oy + dy, -1, 1); if (Math.abs(ox) < 0.01) ox = 0; if (Math.abs(oy) < 0.01) oy = 0; ig.x.ox = ox ? Math.round(ox * 1000) / 1000 : undefined; ig.x.oy = oy ? Math.round(oy * 1000) / 1000 : undefined; }
+      S.dirty = true;
+    }, true);
+    const igUp = (e) => { if (!ig) return; e.stopImmediatePropagation(); ig = null; commit({ quiet: true }); renderImgAdj(); };
+    fr.addEventListener('pointerup', igUp, true); fr.addEventListener('pointercancel', igUp, true);
+    fr.addEventListener('wheel', (e) => { const x = imgEnt(); if (!x) return; e.preventDefault(); const z = U.clamp((x.zoom || 1) * (e.deltaY < 0 ? 1.05 : 1 / 1.05), 0.2, 4); x.zoom = Math.abs(z - 1) < 0.01 ? undefined : Math.round(z * 1000) / 1000; S.dirty = true; commitSoon(); clearTimeout(ig && ig.tm); setTimeout(renderImgAdj, 250); }, { passive: false });
     fr.addEventListener('pointerdown', (e) => {
       if (S.tap || e.button !== 0 || e.target.closest('.prompter')) return;
       const i = activeIdx(); if (i < 0) return;

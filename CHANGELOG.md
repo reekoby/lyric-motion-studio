@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.5.0 — 2026-09-29
+- Per-picture framing for background images and videos: fit (fill / show all), size, horizontal and vertical position, rotation, horizontal flip, and pan (follow global, none, left / right / up / down, zoom in / out, slow rotation) with amount; drag / Shift+drag / wheel directly on the preview / 背景画像・動画ごとに位置・大きさ・回転・反転・パンを調整（プレビュー上で直接操作も可）
+
 ## 1.4.0 — 2026-09-29
 - Motion System: every motion is composed in layers (layout → enter → hold → emphasis → camera) and takes per-phrase parameters — intensity 0–100, variation 0–100 with a reproducible seed, stagger, easing (linear, ease, cubic, expo, back, elastic, spring with stiffness / damping / mass), length in beats (1/8 beat – 1 bar) and delay / モーションシステム：レイヤー合成と、強さ・ばらつき（シード）・スタッガー・イージング（スプリング含む）・拍単位の長さ・遅延の行ごとの調整
 - New emphasis track: 18 accents (scale punch, bounce, shake, impact, stretch / squash, tracking, weight, color flash, blur pulse, elastic, RGB…) triggered on beats, subdivisions, bars, word onsets or the phrase onset / 強調（アクセント）トラックを追加

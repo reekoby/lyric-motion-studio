@@ -171,6 +171,11 @@ input[type=color]{width:30px;height:28px;padding:0;border:1px solid var(--line);
 .imgs{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:8px}
 .imgs .im{position:relative;aspect-ratio:16/10;border-radius:8px;overflow:hidden;border:2px solid transparent;background:var(--panel2) center/cover no-repeat;cursor:pointer}
 .imgs .im.on{border-color:var(--acc)}
+.imgs .im.edit{box-shadow:0 0 0 3px var(--acc-soft),0 0 0 1px var(--acc)}
+.imgs .im .ie{position:absolute;left:20px;top:3px;height:18px;border-radius:9px;border:0;background:rgba(0,0,0,.6);color:#fff;font-size:10.5px;line-height:18px;padding:0 6px}
+.imgadj{margin:8px 0;padding:8px 10px;border:1px solid var(--line);border-radius:8px}
+.imgadj .vt{display:flex;align-items:center;gap:6px;margin-bottom:4px}
+#frame.imgedit{cursor:move;outline:2px dashed var(--acc);outline-offset:-2px}
 .imgs .im.off{opacity:.35;filter:grayscale(1)}
 .imgs .im .ix{position:absolute;right:3px;top:3px;width:18px;height:18px;border-radius:50%;border:0;background:rgba(0,0,0,.55);color:#fff;font-size:11px;line-height:18px;padding:0}
 .imgs .im .mv{position:absolute;bottom:3px;display:flex;gap:2px;left:3px}
@@ -515,6 +520,7 @@ input[type=color]{width:30px;height:28px;padding:0;border:1px solid var(--line);
           <h3>背景画像・動画 <span class="sp"></span><label class="btn sm"><input type="file" id="imgFiles" accept="image/*,video/mp4,video/webm,video/quicktime,.mp4,.m4v,.mov,.webm" multiple hidden>＋ 画像・動画を追加</label></h3>
           <div class="imgdrop" id="imgDrop">ここに画像・動画をドロップ（複数可・JPG / PNG / WebP / MP4 / WebM）</div>
           <div class="imgs" id="imgList"></div>
+          <div class="imgadj" id="imgAdj" hidden></div>
           <div class="vidopts" id="vidOpts" hidden></div>
           <div class="row"><label class="tg"><input type="checkbox" id="imgOn"><i></i>背景画像・動画を使う</label><span class="sp"></span><span class="hint" id="imgCount"></span></div>
           <div class="imgFirstBox">

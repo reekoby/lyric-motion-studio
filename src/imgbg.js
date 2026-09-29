@@ -194,15 +194,28 @@
     const bg = p.bg || {}, ent = (p.images || []).find((x) => x.id === id) || {};
     const im = im0.isVideo ? { width: im0.width, height: im0.height, src: im0.source(this.videoTime(ent, slot, t, im0), ent.speed || 1) } : { width: im0.width, height: im0.height, src: im0 };
     const q = clamp((t - slot.t0 + 0.8) / Math.max(1, slot.t1 - slot.t0 + 1.6));
-    let s = Math.max(W / im.width, H / im.height), dx = 0, dy = 0;
-    if (p.imgKB !== false && !(im0.isVideo && ent.kb === false)) { const dir = hash(slot.k, 5, p.seed || 1) > 0.5 ? 1 : -1; s *= dir > 0 ? lerp(1.04, 1.16, q) : lerp(1.16, 1.04, q); dx = (hash(slot.k, 6) - 0.5) * 0.06 * W * (q - 0.5) * 2; dy = (hash(slot.k, 7) - 0.5) * 0.05 * H * (q - 0.5) * 2; }
+    // framing (per picture): fit, size, position offset, rotation, flip
+    let s = ent.fit === 'contain' ? Math.min(W / im.width, H / im.height) : Math.max(W / im.width, H / im.height);
+    s *= ent.zoom > 0 ? ent.zoom : 1;
+    let dx = 0, dy = 0, drot = 0;
+    // pan (movement over the slot): 'auto' follows the global slow zoom & pan (random per slot), or a chosen direction
+    const pan = ent.pan || 'auto', amt = (ent.panAmt == null ? 50 : ent.panAmt) / 50, u = (q - 0.5) * 2;
+    if (pan === 'auto') {
+      if (p.imgKB !== false && !(im0.isVideo && ent.kb === false)) { const dir = hash(slot.k, 5, p.seed || 1) > 0.5 ? 1 : -1; s *= dir > 0 ? lerp(1.04, 1.16, q) : lerp(1.16, 1.04, q); dx = (hash(slot.k, 6) - 0.5) * 0.06 * W * u; dy = (hash(slot.k, 7) - 0.5) * 0.05 * H * u; }
+    } else if (pan === 'left' || pan === 'right') { s *= 1 + 0.08 * amt; dx = (pan === 'left' ? -1 : 1) * u * W * 0.05 * amt; }
+    else if (pan === 'up' || pan === 'down') { s *= 1 + 0.08 * amt; dy = (pan === 'up' ? -1 : 1) * u * H * 0.05 * amt; }
+    else if (pan === 'zoomIn') s *= lerp(1, 1 + 0.2 * amt, q);
+    else if (pan === 'zoomOut') s *= lerp(1 + 0.2 * amt, 1, q);
+    else if (pan === 'spin') { drot = u * 0.06 * amt; s *= 1 + 0.12 * amt; }
     if (p.imgBeat && p.beatSync !== false) s *= 1 + beat * 0.012;
     const fx = ent.fx == null ? 0.5 : ent.fx, fy = ent.fy == null ? 0.5 : ent.fy;
-    const iw = im.width * s, ih = im.height * s, x = (W - iw) * fx + dx, y = (H - ih) * fy + dy;
+    const iw = im.width * s, ih = im.height * s;
+    const cx = (W - iw) * fx + iw / 2 + dx + (ent.ox || 0) * W, cy = (H - ih) * fy + ih / 2 + dy + (ent.oy || 0) * H;
     const look = p.imgLook || 'natural', blur = p.imgBlur != null ? p.imgBlur : bg.blur || 0;
     const f = []; if (blur) f.push(`blur(${(blur * this.S).toFixed(1)}px)`); if (look === 'mono' || look === 'duo') f.push('grayscale(1) contrast(1.12)'); if (look === 'vivid') f.push('saturate(1.35) contrast(1.08)'); if (look === 'fade') f.push('contrast(0.85) saturate(0.8) brightness(1.05)');
     ctx.filter = f.length ? f.join(' ') : 'none';
-    ctx.drawImage(im.src, x, y, iw, ih); ctx.filter = 'none';
+    ctx.save(); ctx.translate(cx, cy); const rr = ((ent.rot || 0) * Math.PI) / 180 + drot; if (rr) ctx.rotate(rr); if (ent.flip) ctx.scale(-1, 1);
+    ctx.drawImage(im.src, -iw / 2, -ih / 2, iw, ih); ctx.restore(); ctx.filter = 'none';
     if (look === 'duo') { ctx.globalCompositeOperation = 'multiply'; ctx.fillStyle = pal.accent; ctx.fillRect(0, 0, W, H); ctx.globalCompositeOperation = 'screen'; ctx.fillStyle = mix(pal.bg, '#000000', 0.55); ctx.fillRect(0, 0, W, H); ctx.globalCompositeOperation = 'source-over'; }
     else if (look === 'tint') { ctx.globalCompositeOperation = 'color'; ctx.globalAlpha = 0.55; ctx.fillStyle = pal.accent; ctx.fillRect(0, 0, W, H); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; }
     const dim = p.imgDim != null ? p.imgDim : bg.dim == null ? 0.35 : bg.dim; if (dim > 0) { ctx.globalAlpha = dim; ctx.fillStyle = pal.bg; ctx.fillRect(0, 0, W, H); ctx.globalAlpha = 1; }

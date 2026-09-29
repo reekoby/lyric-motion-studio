@@ -101,6 +101,11 @@ LM.model = (() => {
     p.duration = Math.max(1, Math.min(1200, +p.duration || 30));
     p.images = (Array.isArray(p.images) ? p.images : []).filter((x) => x && typeof x.id === 'string' && ID_RE.test(x.id)).slice(0, 60).map((x) => {
       const o = { id: x.id, name: String(x.name || '画像').slice(0, 60), on: x.on !== false, fx: num(x.fx, undefined, 0, 1), fy: num(x.fy, undefined, 0, 1) };
+      // framing: position offset (fraction of the frame), size, rotation, flip, fit, and per-picture pan
+      const PAN = ['auto', 'none', 'left', 'right', 'up', 'down', 'zoomIn', 'zoomOut', 'spin'];
+      const fr = { ox: num(x.ox, undefined, -1, 1), oy: num(x.oy, undefined, -1, 1), zoom: num(x.zoom, undefined, 0.1, 5), rot: num(x.rot, undefined, -180, 180), panAmt: num(x.panAmt, undefined, 0, 100) };
+      Object.keys(fr).forEach((k) => { if (fr[k] != null) o[k] = fr[k]; });
+      if (x.flip === true) o.flip = true; if (x.fit === 'contain') o.fit = 'contain'; if (PAN.includes(x.pan) && x.pan !== 'auto') o.pan = x.pan;
       if (x.type === 'video') Object.assign(o, { type: 'video', dur: num(x.dur, 0, 0, 36000), vin: num(x.vin, 0, 0, 36000), vout: num(x.vout, 0, 0, 36000), speed: num(x.speed, 1, 0.25, 4), sync: x.sync === 'song' ? 'song' : 'slot', loop: x.loop !== false, kb: x.kb !== false });
       return o;
     });
