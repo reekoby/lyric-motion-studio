@@ -5,18 +5,18 @@ LM.director = (() => {
   const LONG_OK = ['center', 'poster', 'subtitle', 'editorial', 'stack', 'labels', 'columns', 'split', 'echo', 'mirror', 'spotlight', 'frame', 'ribbon', 'wordwall', 'depth', 'diagonal', 'burst', 'outline', 'ladder', 'stairs', 'vertical'];
   const SHORT_GOOD = { poster: 1.5, grid: 1.6, orbit: 1.5, bigsmall: 1.3, stack: 1.2, outline: 1.2 };
   const INTENSE = new Set(['slam', 'stamp', 'whip', 'glitch', 'zoomOut', 'smear', 'tunnel', 'scatter', 'spin', 'magnet', 'splitJoin', 'wordPop', 'pop', 'bounce', 'scramble', 'crtOn', 'slot']);
-  const SLOW_ENTER = new Set(['typewriter', 'strokeDraw', 'cascade', 'rainIn', 'domino', 'pendulumChars', 'scramble', 'slot', 'stagger', 'charFlip', 'focusPull', 'spiral']);
+  const SLOW_ENTER = new Set(['charMask', 'blurChars', 'pathIn', 'springIn', 'typewriter', 'strokeDraw', 'cascade', 'rainIn', 'domino', 'pendulumChars', 'scramble', 'slot', 'stagger', 'charFlip', 'focusPull', 'spiral']);
 
   /* ---- motion character: 激しさ (drive) / 動きの付け方 (feel) / 変化の多さ (variety) ---- */
   const CAT = {
     '基本': [0.15, 'smooth cinema'], 'はずむ': [0.6, 'bounce'], '文字送り': [0.35, 'kinetic smooth'], 'スライド': [0.5, 'snap smooth'], 'デジタル': [0.82, 'glitch'],
     'ズーム': [0.6, 'snap cinema'], 'マスク': [0.3, 'smooth cinema'], '回転': [0.55, 'bounce organic'], '3D': [0.5, 'cinema smooth'], '重力': [0.55, 'bounce'],
     'ぼかし': [0.18, 'cinema smooth'], '集合': [0.65, 'snap kinetic'], '手作り': [0.4, 'organic'], 'フロー': [0.4, 'organic smooth'], '単語打ち': [0.6, 'kinetic snap'],
-    'エッジ': [0.88, 'glitch snap'], 'ゆらぎ': [0.3, 'organic smooth'], 'エネルギー': [0.72, 'snap bounce'], '歌詞': [0.3, 'kinetic'], '3D配置': [0.55, 'kinetic cinema'], '飛散': [0.78, 'snap'],
+    'エッジ': [0.88, 'glitch snap'], 'ゆらぎ': [0.3, 'organic smooth'], 'エネルギー': [0.72, 'snap bounce'], '歌詞': [0.3, 'kinetic'], '3D配置': [0.55, 'kinetic cinema'], '飛散': [0.78, 'snap'], 'ウェイト': [0.3, 'cinema smooth kinetic'], 'ボカロ': [0.82, 'glitch snap kinetic'], 'パス': [0.45, 'organic smooth kinetic'],
   };
   const OVR = {
-    enter: { none: [0, 'snap'], fade: [0.08, 'smooth cinema'], rise: [0.2, 'smooth'], whip: [0.8, 'snap'], smear: [0.75, 'snap'], slam: [0.92, 'snap'], stamp: [0.88, 'snap'], zoomRush: [0.85, 'snap'], tracking: [0.3, 'cinema smooth'], kernIn: [0.3, 'cinema'], focusPull: [0.15, 'cinema'], typewriter: [0.3, 'kinetic'], glitch: [0.9, 'glitch'], glitchSlice: [0.9, 'glitch'], glitchZoom: [0.92, 'glitch snap'], scramble: [0.7, 'glitch kinetic'], wordGlitch: [0.82, 'glitch kinetic'], tunnel: [0.8, 'snap'], spin: [0.75, 'snap bounce'], stutterIn: [0.9, 'glitch snap'], strokeDraw: [0.3, 'organic'], stopMotion: [0.5, 'organic'] },
-    hold: { none: [0.05, 'smooth cinema snap'], drift: [0.1, 'cinema smooth'], zoomSlow: [0.15, 'cinema'], breathe: [0.2, 'smooth'], jitter: [0.8, 'glitch'], glitchHold: [0.9, 'glitch'], flicker: [0.75, 'glitch'], quake: [0.92, 'snap'], beatPump: [0.72, 'snap'], heartbeat: [0.65, 'bounce'], bounceLoop: [0.7, 'bounce'], jelly: [0.5, 'bounce organic'], pulse: [0.55, 'snap bounce'], spinLetters: [0.8, 'snap'], marchStep: [0.6, 'bounce kinetic'], karaoke: [0.3, 'kinetic'], wordHighlight: [0.35, 'kinetic'] },
+    enter: { weightPunch: [0.78, 'snap kinetic'], springIn: [0.6, 'bounce'], charMask: [0.35, 'cinema smooth kinetic'], wordMask: [0.4, 'cinema kinetic'], none: [0, 'snap'], fade: [0.08, 'smooth cinema'], rise: [0.2, 'smooth'], whip: [0.8, 'snap'], smear: [0.75, 'snap'], slam: [0.92, 'snap'], stamp: [0.88, 'snap'], zoomRush: [0.85, 'snap'], tracking: [0.3, 'cinema smooth'], kernIn: [0.3, 'cinema'], focusPull: [0.15, 'cinema'], typewriter: [0.3, 'kinetic'], glitch: [0.9, 'glitch'], glitchSlice: [0.9, 'glitch'], glitchZoom: [0.92, 'glitch snap'], scramble: [0.7, 'glitch kinetic'], wordGlitch: [0.82, 'glitch kinetic'], tunnel: [0.8, 'snap'], spin: [0.75, 'snap bounce'], stutterIn: [0.9, 'glitch snap'], strokeDraw: [0.3, 'organic'], stopMotion: [0.5, 'organic'] },
+    hold: { weightBeat: [0.7, 'snap kinetic'], weightWave: [0.35, 'organic smooth'], none: [0.05, 'smooth cinema snap'], drift: [0.1, 'cinema smooth'], zoomSlow: [0.15, 'cinema'], breathe: [0.2, 'smooth'], jitter: [0.8, 'glitch'], glitchHold: [0.9, 'glitch'], flicker: [0.75, 'glitch'], quake: [0.92, 'snap'], beatPump: [0.72, 'snap'], heartbeat: [0.65, 'bounce'], bounceLoop: [0.7, 'bounce'], jelly: [0.5, 'bounce organic'], pulse: [0.55, 'snap bounce'], spinLetters: [0.8, 'snap'], marchStep: [0.6, 'bounce kinetic'], karaoke: [0.3, 'kinetic'], wordHighlight: [0.35, 'kinetic'] },
     exit: { cut: [0.4, 'snap kinetic'], fadeOut: [0.08, 'smooth cinema'], blurOut: [0.15, 'cinema'], glitchOut: [0.85, 'glitch'], tvOff: [0.7, 'glitch'], scrambleOut: [0.7, 'glitch kinetic'], explodeOut: [0.8, 'snap'], shatter: [0.8, 'snap'], rushOut: [0.75, 'snap'], zoomThrough: [0.7, 'snap cinema'], popOut: [0.55, 'bounce'], jumpOut: [0.6, 'bounce'], riseOut: [0.2, 'smooth'] },
     cam: { still: [0.05, 'smooth cinema kinetic'], drift: [0.25, 'cinema smooth organic'], push: [0.45, 'cinema snap'], pull: [0.45, 'cinema smooth'], tilt: [0.35, 'organic'], shake: [0.85, 'snap glitch'], punch: [0.9, 'snap bounce'] },
   };
@@ -24,7 +24,7 @@ LM.director = (() => {
     [0.6, 'bounce', 'gridPop colorBlocks hexFlip tileScatter splashFill colorBurst zigzag'], [0.3, 'cinema', 'blurCut dolly filmBurnCut leakBurn flashAccent iris prismFlash filmRoll roll'],
     [0.4, 'smooth', 'liquid ink gradientDiscs ribbonSweep doorsH fan barsH stripesDiag diamond splitClose'], [0.45, 'organic', 'inkBlob scribbleFill dryBrush tornPaper liquidDrip sliceBands'], [0.55, 'kinetic', 'colorBlocks barsH gridPop sliceBands']];
   const TR_META = {}; TRM.forEach(([e, f, ids]) => ids.split(' ').forEach((id) => { const m = TR_META[id] || (TR_META[id] = [e, []]); m[1].push(f); m[0] = Math.max(m[0], e); }));
-  const NO_EXTEND = { enter: new Set(['none']), hold: new Set(['carousel', 'helix', 'sphere', 'crawl3D', 'karaoke', 'wordHighlight']), exit: new Set(['cut']), cam: new Set(), tr: new Set() };
+  const NO_EXTEND = { enter: new Set(['none']), hold: new Set(['carousel', 'helix', 'sphere', 'crawl3D', 'karaoke', 'wordHighlight', 'weightSing']), exit: new Set(['cut']), cam: new Set(), tr: new Set() };
   function meta(kind, id) {
     if (kind === 'tr') { const m = TR_META[id]; return m ? { e: m[0], f: m[1] } : { e: 0.5, f: [] }; }
     const o = OVR[kind] && OVR[kind][id];

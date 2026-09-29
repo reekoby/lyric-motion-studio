@@ -253,6 +253,13 @@ input[type=color]{width:30px;height:28px;padding:0;border:1px solid var(--line);
 .mbox{background:var(--panel);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);width:min(980px,100%);max-height:calc(100vh - 40px);display:flex;flex-direction:column;overflow:hidden}
 .mhead{display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--line)}
 .mhead b{font-size:15px}
+.rsHead{display:flex;align-items:center;gap:6px;margin:6px 0}
+.rsList{display:grid;gap:6px;padding:8px 10px;border:1px solid var(--line);border-radius:8px}
+.rsList .tg{align-items:flex-start}
+.rsList .tg span{display:flex;flex-direction:column;gap:1px}
+.rsList .tg small{color:var(--faint);font-size:11px}
+.rsList .tg input:disabled~span{opacity:.45}
+.rsWarn{color:var(--acc)!important}
 .mbody{overflow:auto;padding:14px 16px}
 .mfoot{display:flex;gap:8px;align-items:center;padding:12px 16px;border-top:1px solid var(--line)}
 .grid-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px}
@@ -305,6 +312,7 @@ input[type=color]{width:30px;height:28px;padding:0;border:1px solid var(--line);
       <button class="btn" id="fileBtn"><svg viewBox="0 0 24 24"><path d="M4 4h6l2 2h8v14H4z"/></svg>ファイル</button>
       <div class="dd" id="fileMenu">
         <button data-act="new">新規プロジェクト</button>
+        <button data-act="reset">設定を初期状態にリセット…</button>
         <button data-act="open">開く（JSON / .lmz）<span class="k">Ctrl+O</span></button>
         <hr>
         <button data-act="saveJson">プロジェクトを保存（JSON）<span class="k">Ctrl+S</span></button>
@@ -730,6 +738,26 @@ input[type=color]{width:30px;height:28px;padding:0;border:1px solid var(--line);
 <div class="modal" id="askModal"><div class="mbox" style="width:min(440px,100%)">
   <div class="mbody"><p id="askMsg" style="margin:4px 0 12px;line-height:1.6"></p><input type="text" id="askInput" style="width:100%" hidden></div>
   <div class="mfoot"><div class="sp"></div><button class="btn" id="askCancel">キャンセル</button><button class="btn pri" id="askOk">OK</button></div>
+</div></div>
+<div class="modal" id="resetModal"><div class="mbox" style="width:min(500px,100%)">
+  <div class="mhead"><b>設定を初期状態にリセット</b><div class="sp"></div><button class="btn sm" data-close>閉じる</button></div>
+  <div class="mbody">
+    <p style="margin:0 0 8px;line-height:1.6">テーマ・配色・書体・レイアウト・モーション・エフェクト・背景モーション・歌詞のない区間・字間などの設定を初期状態に戻します。フレーズごとの個別設定も解除され、初期のテーマ（J-POP）で演出を付け直します。</p>
+    <div class="rsHead"><span class="hint">あわせてリセットする項目（チェックしたものだけ消えます。チェックしないものはそのまま残ります）</span><span class="sp"></span><button class="btn sm" id="rsAll">すべて選ぶ</button><button class="btn sm" id="rsNone">すべて外す</button></div>
+    <div class="rsList">
+      <label class="tg"><input type="checkbox" data-rs="lyrics"><i></i><span><b>歌詞</b><small>すべてのフレーズを削除</small></span></label>
+      <label class="tg"><input type="checkbox" data-rs="timing"><i></i><span><b>歌詞のタイミング</b><small>行と単語のタイミングを仮配置に戻す（歌詞の文字は残す）</small></span></label>
+      <label class="tg"><input type="checkbox" data-rs="audio"><i></i><span><b>読み込んだ曲</b><small>音源を外す（曲の長さは今のまま）</small></span></label>
+      <label class="tg"><input type="checkbox" data-rs="song"><i></i><span><b>曲の構成・BPM</b><small>セクション（Aメロ・サビなど）、BPM、ビート位置</small></span></label>
+      <label class="tg"><input type="checkbox" data-rs="images"><i></i><span><b>背景画像・動画</b><small>読み込んだ画像・動画を一覧から外す</small></span></label>
+      <label class="tg"><input type="checkbox" data-rs="aspect"><i></i><span><b>画面サイズ</b><small>縦横比を 16:9 に戻す</small></span></label>
+      <label class="tg"><input type="checkbox" data-rs="credits"><i></i><span><b>タイトル・アーティスト</b><small>曲名・アーティスト名とクレジット表示</small></span></label>
+      <label class="tg"><input type="checkbox" data-rs="looks"><i></i><span><b>保存したルック</b><small>このブラウザーに保存したルックを削除</small></span></label>
+    </div>
+    <p class="hint" id="rsNote" style="margin:10px 0 0">リセットの直前に自動でスナップショットを保存します。「元に戻す（Ctrl+Z）」でも戻せます。</p>
+    <p class="hint rsWarn" id="rsWarn" hidden>外した曲と保存したルックは「元に戻す」では戻りません（曲はもう一度読み込んでください）。</p>
+  </div>
+  <div class="mfoot"><div class="sp"></div><button class="btn" data-close>キャンセル</button><button class="btn pri" id="rsGo">リセットする</button></div>
 </div></div>
 <input type="file" id="openFile" accept=".json,.lmz,.zip,application/json" hidden>
 <input type="file" id="subFile" accept=".lrc,.srt,.txt" hidden>

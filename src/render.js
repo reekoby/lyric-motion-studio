@@ -5,6 +5,21 @@ LM.Renderer = (() => {
   const { clamp, lerp, hash, mix, rgba, contrast, readable } = U;
   const PI = Math.PI, TAU = Math.PI * 2;
   // blend modes for the background-motion layer (UI key → canvas globalCompositeOperation)
+  // SVG erode filters for faux light weights (quantised radius, created on demand)
+  const ERODE = new Set();
+  function erodeUrl(r) {
+    if (typeof document === 'undefined' || !document.body || r < 0.25) return '';
+    const k = Math.max(1, Math.min(24, Math.round(r * 2))), id = 'lmEr' + k;
+    if (!ERODE.has(k)) {
+      const NS = 'http://www.w3.org/2000/svg';
+      let svg = document.getElementById('lmFxDefs');
+      if (!svg) { svg = document.createElementNS(NS, 'svg'); svg.id = 'lmFxDefs'; svg.setAttribute('width', '0'); svg.setAttribute('height', '0'); svg.setAttribute('aria-hidden', 'true'); svg.style.cssText = 'position:absolute;width:0;height:0;overflow:hidden'; document.body.appendChild(svg); }
+      const f = document.createElementNS(NS, 'filter'); f.id = id; f.setAttribute('color-interpolation-filters', 'sRGB');
+      const m = document.createElementNS(NS, 'feMorphology'); m.setAttribute('operator', 'erode'); m.setAttribute('radius', String(k / 2));
+      f.appendChild(m); svg.appendChild(f); ERODE.add(k);
+    }
+    return `url(#${id})`;
+  }
   const BLEND = { normal: 'source-over', screen: 'screen', lighter: 'lighter', lighten: 'lighten', overlay: 'overlay', 'soft-light': 'soft-light', 'hard-light': 'hard-light', 'color-dodge': 'color-dodge', multiply: 'multiply', darken: 'darken', difference: 'difference', exclusion: 'exclusion', luminosity: 'luminosity', color: 'color' };
   const mk = () => document.createElement('canvas');
 
@@ -97,13 +112,15 @@ LM.Renderer = (() => {
   const VS = 'attribute vec2 p;varying vec2 v;void main(){v=p*0.5+0.5;gl_Position=vec4(p,0.,1.);}';
   const FS = `precision highp float;varying vec2 v;
 uniform sampler2D T0,T1,T2,T3;uniform vec2 R;uniform float time,seed,S;
-uniform float rgb,glitch,block,vhs,scan,noise,vig,pix,poster,half_,bloom,inv,blurMix,zblur,crt,chrom,duo,dither,sepia,heat,hue,tilt,mirror,fish,trgb,psort,slice,liquid,thermal;
-uniform vec3 duoA,duoB,grade;uniform vec4 key;uniform vec2 mblur;
+uniform float rgb,glitch,block,vhs,scan,noise,vig,pix,poster,half_,bloom,inv,blurMix,zblur,crt,chrom,duo,dither,sepia,heat,hue,tilt,mirror,fish,trgb,psort,slice,liquid,thermal,mono,monoInv,quad,bzoom,lineart;
+uniform vec3 duoA,duoB,grade,bgc;uniform vec4 key;uniform vec2 mblur;
 float h1(vec2 p){return fract(sin(dot(p,vec2(12.9898,78.233)))*43758.5453);}
 float b2(vec2 p){p=floor(mod(p,2.0));return mod(2.0*p.x+3.0*p.y,4.0);}
 void main(){
  vec2 u=v;
  if(mirror>0.5&&u.x>0.5)u.x=1.0-u.x;
+ if(quad>0.5){u=abs(u-0.5)+0.25;}
+ if(bzoom>0.0)u=(u-0.5)*(1.0-bzoom)+0.5;
  if(fish>0.0){vec2 c=u-0.5;float r2=dot(c,c);u=0.5+c*(1.0-fish*0.7*r2)/(1.0-fish*0.7*0.25);}
  if(crt>0.0){vec2 cc=u*2.0-1.0;cc*=1.0+crt*0.09*vec2(cc.y*cc.y,cc.x*cc.x);u=cc*0.5+0.5;}
  if(liquid>0.0){u.x+=sin(u.y*9.0+time*2.6)*0.014*liquid+sin(u.y*23.0-time*3.4)*0.005*liquid;u.y+=sin(u.x*7.0+time*2.1)*0.012*liquid;}
@@ -125,6 +142,8 @@ void main(){
  if(blurMix>0.0||tilt>0.0){vec4 bl=texture2D(T1,u);float m=blurMix;if(tilt>0.0)m=max(m,smoothstep(0.12,0.42,abs(u.y-0.5))*tilt);col=mix(col,bl,clamp(m,0.0,1.0));}
  if(bloom>0.0){vec4 bl=texture2D(T1,u);col.rgb+=bl.rgb*bloom;col.a=max(col.a,bl.a*bloom*0.7);}
  float a=clamp(col.a,0.0,1.0);vec3 c=a>0.001?col.rgb/a:vec3(0.0);
+ if(lineart>0.0){vec2 px=vec2(max(1.0,S*1.5))/R;float l0=dot(texture2D(T0,u).rgb,vec3(.299,.587,.114));float gx=dot(texture2D(T0,u+vec2(px.x,0.)).rgb-texture2D(T0,u-vec2(px.x,0.)).rgb,vec3(.333));float gy=dot(texture2D(T0,u+vec2(0.,px.y)).rgb-texture2D(T0,u-vec2(0.,px.y)).rgb,vec3(.333));float e=clamp(length(vec2(gx,gy))*3.0,0.0,1.0);c=mix(c,mix(duoA,duoB,e),lineart);}
+ if(mono>0.0){float vv=max(c.r,max(c.g,c.b)),vb=max(bgc.r,max(bgc.g,bgc.b));float m=step(0.35,max(abs(vv-vb),distance(c,bgc)*0.5));if(monoInv>0.5)m=1.0-m;c=mix(c,vec3(m),mono);}
  if(inv>0.0)c=mix(c,1.0-c,inv);
  c=(c-0.5)*grade.x+0.5+grade.z;float l=dot(c,vec3(0.299,0.587,0.114));c=mix(vec3(l),c,grade.y);
  if(sepia>0.0){vec3 sp=vec3(dot(c,vec3(.393,.769,.189)),dot(c,vec3(.349,.686,.168)),dot(c,vec3(.272,.534,.131)));c=mix(c,sp*0.9+vec3(0.04,0.02,0.0),sepia);}
@@ -142,7 +161,7 @@ void main(){
  c=clamp(c,0.0,1.0);
  if(key.a>0.5)gl_FragColor=vec4(mix(key.rgb,c,a),1.0);else gl_FragColor=vec4(c*a,a);
 }`;
-  const UNI = ['rgb', 'glitch', 'block', 'vhs', 'scan', 'noise', 'vig', 'pix', 'poster', 'half_', 'bloom', 'inv', 'blurMix', 'zblur', 'crt', 'chrom', 'duo', 'dither', 'sepia', 'heat', 'hue', 'tilt', 'mirror', 'fish', 'trgb', 'psort', 'slice', 'liquid', 'thermal'];
+  const UNI = ['rgb', 'glitch', 'block', 'vhs', 'scan', 'noise', 'vig', 'pix', 'poster', 'half_', 'bloom', 'inv', 'blurMix', 'zblur', 'crt', 'chrom', 'duo', 'dither', 'sepia', 'heat', 'hue', 'tilt', 'mirror', 'fish', 'trgb', 'psort', 'slice', 'liquid', 'thermal', 'mono', 'monoInv', 'quad', 'bzoom', 'lineart'];
 
   class Renderer {
     constructor(opt = {}) {
@@ -184,7 +203,7 @@ void main(){
         gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true);
         gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
         this.u = {};
-        UNI.concat(['R', 'time', 'seed', 'S', 'duoA', 'duoB', 'grade', 'key', 'mblur']).forEach((n) => (this.u[n] = gl.getUniformLocation(pr, n)));
+        UNI.concat(['R', 'time', 'seed', 'S', 'duoA', 'duoB', 'grade', 'bgc', 'key', 'mblur']).forEach((n) => (this.u[n] = gl.getUniformLocation(pr, n)));
         this.gl = gl; this.prog = pr;
         return true;
       } catch (e) {
@@ -268,9 +287,10 @@ void main(){
       const prevList = prevCue ? this.bgmOf(prevCue) : list;
       const lt = cur ? t - cur.c.start : 9;
       const fade = prevList.join() !== list.join() ? clamp(lt / 0.5) : 1;
-      const needSpec = list.concat(prevList).some((id) => id === 'eqBars' || id === 'circleSpectrum');
+      const needSpec = list.concat(prevList).some((id) => id === 'eqBars' || id === 'circleSpectrum' || (LM.bgm.lib[id] && LM.bgm.lib[id].spec));
+      const needWave = list.concat(prevList).some((id) => LM.bgm.lib[id] && LM.bgm.lib[id].wave);
       const au = this.bands(t);
-      const R = { W: this.W, H: this.H, S: this.S, minD: this.minD, t, pal, beat: p.beatSync === false ? 0 : beat, bass: au.bass, mid: au.mid, high: au.high, spec: needSpec && this.audio && this.audio.spectrum ? this.audio.spectrum(t) : null, bpm: this.bpm() || 120, title: p.title || '', text: cur ? String(cur.c.text).replace(/[|｜]([^《|｜]+)《[^》]*》/g, '$1').replace(/《[^》]*》/g, '').replace(/[*]/g, '').replace(/\s*\/\s*/g, ' ') : '' };
+      const R = { W: this.W, H: this.H, S: this.S, minD: this.minD, t, pal, beat: p.beatSync === false ? 0 : beat, bass: au.bass, mid: au.mid, high: au.high, spec: needSpec && this.audio && this.audio.spectrum ? this.audio.spectrum(t) : null, wave: needWave && this.audio && this.audio.waveAt ? this.audio.waveAt(t, 160) : null, bpm: this.bpm() || 120, title: p.title || '', text: cur ? String(cur.c.text).replace(/[|｜]([^《|｜]+)《[^》]*》/g, '$1').replace(/《[^》]*》/g, '').replace(/[*]/g, '').replace(/\s*\/\s*/g, ' ') : '' };
       const cfg = { amt: p.bgmAmt == null ? 1 : p.bgmAmt, speed: (p.bgmSpeed || 1) * this.tempo() };
       const run = (ids, a) => { if (a <= 0.01) return; ids.forEach((id) => {
         const b = LM.bgm.lib[id]; if (!b || ((transparent || this.imgActive) && b.full)) return;
@@ -364,8 +384,9 @@ void main(){
     bgmLayer(ctx, ids, a, t, beat, pal, transparent, boost = {}) {
       const p = this.p; if (a <= 0.01) return;
       const au = this.bands(t);
-      const needSpec = ids.some((id) => id === 'eqBars' || id === 'circleSpectrum');
-      const R = { W: this.W, H: this.H, S: this.S, minD: this.minD, t, pal, beat: p.beatSync === false ? 0 : beat, bass: au.bass, mid: au.mid, high: au.high, spec: needSpec && this.audio && this.audio.spectrum ? this.audio.spectrum(t) : null, bpm: this.bpm() || 120, title: p.title || '', text: boost.text || p.title || '' };
+      const needSpec = ids.some((id) => id === 'eqBars' || id === 'circleSpectrum' || (LM.bgm.lib[id] && LM.bgm.lib[id].spec));
+      const needWave = ids.some((id) => LM.bgm.lib[id] && LM.bgm.lib[id].wave);
+      const R = { W: this.W, H: this.H, S: this.S, minD: this.minD, t, pal, beat: p.beatSync === false ? 0 : beat, bass: au.bass, mid: au.mid, high: au.high, spec: needSpec && this.audio && this.audio.spectrum ? this.audio.spectrum(t) : null, wave: needWave && this.audio && this.audio.waveAt ? this.audio.waveAt(t, 160) : null, bpm: this.bpm() || 120, title: p.title || '', text: boost.text || p.title || '' };
       const cfg = { amt: (p.bgmAmt == null ? 1 : p.bgmAmt) * (boost.amt || 1), speed: (p.bgmSpeed || 1) * this.tempo() * (boost.speed || 1) };
       ids.forEach((id) => {
         const b = LM.bgm.lib[id]; if (!b || ((transparent || this.imgActive) && b.full)) return;
@@ -891,6 +912,10 @@ void main(){
           if (A.fill != null) T.fill = A.fill;
           if (A.stut) { T.stut = Math.max(T.stut || 0, A.stut); T.stutD = A.stutD; if (A.stutA) T.stutA = A.stutA; }
           if (A.erode) T.erode = Math.max(T.erode || 0, A.erode);
+          if (A.wt) T.wt = (T.wt || 0) + A.wt;
+          if (A.rgb) T.rgb = (T.rgb || 0) + A.rgb;
+          if (A.boxB != null) { T.boxA = A.boxA || 0; T.boxB = A.boxB; }
+          if (A.boxBg) T.boxBg = Math.max(T.boxBg || 0, A.boxBg);
           if (A.strips) { T.strips = A.strips; T.stripOff = (T.stripOff || 0) + (A.stripOff || 0); }
         };
         // enter
@@ -926,7 +951,7 @@ void main(){
     drawGlyph(ctx, g, T, st, tmpl, fill, cc, pal) {
       if (T.vis === false) return;
       const a = (T.a == null ? 1 : T.a) * (g.alpha == null ? 1 : g.alpha) * (st.alphaMul || 1);
-      if (a <= 0.004) return;
+      if (a <= 0.004 && !(T.boxB > T.boxA)) return;
       const S = this.S, size = g.size;
       const ch = T.ch || g.ch;
       ctx.save();
@@ -951,8 +976,18 @@ void main(){
       const outlineOnly = !fill;
       if (T.bright) col = mix(col, '#ffffff', clamp(T.bright));
       if (T.dark) col = mix(col, cc.surf, clamp(T.dark));
-      if (T.blur > 0.35) ctx.filter = `blur(${T.blur.toFixed(1)}px)`;
-      const draw0 = () => this.glyphInk(ctx, ch, g, T, st, col, cc, pal, outlineOnly);
+      // thinner weight: morphological erode (works with CJK fonts whose outlines overlap, unlike erasing a stroke)
+      const er0 = T.wt < -0.01 && fill ? erodeUrl(size * 0.014 * Math.min(1.2, -T.wt) * Math.abs(ctx.getTransform().a || 1)) : '';
+      if (T.blur > 0.35 || er0) ctx.filter = (er0 + (T.blur > 0.35 ? ` blur(${T.blur.toFixed(1)}px)` : '')).trim();
+      // テロップ帯: the glyph sits on a solid accent box and switches to the surface colour
+      if (T.boxBg > 0.01) { ctx.save(); ctx.filter = 'none'; ctx.fillStyle = cc.acc; ctx.globalAlpha = a * clamp(T.boxBg); ctx.fillRect(-g.w / 2 - size * 0.09, -size * 0.6, g.w + size * 0.18, size * 1.2); ctx.restore(); col = cc.surf; }
+      const ink = () => this.glyphInk(ctx, ch, g, T, st, col, cc, pal, outlineOnly);
+      // RGB split: offset magenta / cyan copies behind the glyph
+      const draw0 = T.rgb > 0.4 ? () => {
+        ctx.save(); ctx.shadowColor = 'transparent'; const a0 = ctx.globalAlpha;
+        ctx.globalAlpha = a0 * 0.85; ctx.fillStyle = '#ff2a6d'; ctx.fillText(ch, -T.rgb, 0); ctx.fillStyle = '#12d6f0'; ctx.fillText(ch, T.rgb, T.rgb * 0.15);
+        ctx.restore(); ink();
+      } : ink;
       // letter-repeat stutter: fading copies trailing behind the glyph
       const draw = T.stut > 0.05 ? () => {
         const n = Math.min(8, Math.ceil(T.stut)), dd = T.stutD == null ? g.w * 0.55 : T.stutD, a0 = ctx.globalAlpha;
@@ -977,6 +1012,7 @@ void main(){
           ctx.translate((hash(g.i, k, Math.floor(this.curT * 20)) - 0.5) * size * 0.5 * T.slice, 0); draw(); ctx.restore();
         }
       } else draw();
+      if (T.boxB > T.boxA) { const x0 = -g.w / 2 - size * 0.1, w0 = g.w + size * 0.2; ctx.save(); ctx.filter = 'none'; ctx.globalAlpha = Math.max(a, 0.001) > 0 ? 1 * (st.alphaMul || 1) : 0; ctx.fillStyle = cc.acc; ctx.fillRect(x0 + w0 * T.boxA, -size * 0.6, w0 * (T.boxB - T.boxA) + 0.5, size * 1.2); ctx.restore(); }
       if (er > 0.01 && !st.plain) {
         // grain erosion: punch noise specks out of the ink (steps at 12fps for a printed/stop-motion feel)
         ctx.filter = 'none'; ctx.globalCompositeOperation = 'destination-out';
@@ -1016,6 +1052,8 @@ void main(){
         fillStyle = mix(col, '#ffffff', 0.55);
       }
       if (st.outline && !outlineOnly) { ctx.save(); ctx.shadowColor = 'transparent'; ctx.lineJoin = 'round'; ctx.lineWidth = size * 0.09; ctx.strokeStyle = cc.acc === col ? cc.surf : cc.acc; ctx.strokeText(ch, 0, 0); ctx.restore(); }
+      const wt = T.wt ? clamp(T.wt, -1.2, 1.6) : 0;
+      if (wt > 0.01 && !outlineOnly) { ctx.save(); ctx.lineJoin = 'round'; ctx.lineWidth = size * 0.075 * wt; ctx.strokeStyle = T.fill != null && T.fill < 1 ? mix(col, cc.surf, 0.48) : T.fill === 1 ? cc.acc : fillStyle; ctx.strokeText(ch, 0, 0); ctx.restore(); }
       // karaoke fill
       if (T.fill != null && T.fill < 1) {
         ctx.fillStyle = mix(col, cc.surf, 0.48);
@@ -1027,7 +1065,7 @@ void main(){
         const Ld = size * 3; ctx.setLineDash([Ld, Ld]); ctx.lineDashOffset = Ld * (1 - T.stroke);
         ctx.lineWidth = Math.max(1, size * 0.025); ctx.strokeStyle = outlineOnly ? cc.fill : col; ctx.strokeText(ch, 0, 0); ctx.restore();
         if (T.fillA > 0 && !outlineOnly) { ctx.globalAlpha *= T.fillA; ctx.fillStyle = fillStyle; ctx.fillText(ch, 0, 0); }
-      } else if (outlineOnly) { ctx.lineWidth = Math.max(1, size * 0.03); ctx.strokeStyle = T.accent ? cc.acc : cc.fill; ctx.strokeText(ch, 0, 0); }
+      } else if (outlineOnly) { ctx.lineWidth = Math.max(0.5, size * 0.03 * (1 + wt * 1.6)); ctx.strokeStyle = T.accent ? cc.acc : cc.fill; ctx.strokeText(ch, 0, 0); }
       else { ctx.fillStyle = fillStyle; ctx.fillText(ch, 0, 0); }
       ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
       if (st.underline) { ctx.fillStyle = cc.acc; ctx.fillRect(-g.w / 2 - size * 0.03, size * 0.56, g.w + size * 0.06, Math.max(1, size * 0.06)); }
@@ -1262,8 +1300,15 @@ void main(){
       if (fl.has('sliceShift')) u.slice = g('sliceShift') * (burst * 1.3 + xb * 1.3 + (beat > 0.7 ? beat * 0.7 : 0));
       u.liquid = g('liquidWarp') * (0.8 + beat * 0.5);
       u.thermal = clamp(g('thermal') * 0.9);
+      if (fl.has('monoBeat')) { u.mono = clamp(g('monoBeat')); u.monoInv = this.p.beatSync !== false && beat > 0.6 ? 1 : 0; }
+      u.quad = fl.has('quadMirror') ? 1 : 0;
+      if (fl.has('beatZoom')) u.bzoom = (this.p.beatSync !== false ? beat : 0) * 0.07 * g('beatZoom') + burst * 0.05 * g('beatZoom');
+      u.lineart = clamp(g('lineArt'));
+      if (fl.has('mosaicBeat') && this.p.beatSync !== false && beat > 0.55) u.pix = Math.max(u.pix, S * (10 + 26 * g('mosaicBeat')) * beat);
+      u.step = fl.has('stepFrames') ? Math.max(4, Math.round(13 - 6 * clamp(g('stepFrames'), 0, 1.4))) : 0;
       if (fl.has('duotone')) u.duo = clamp(g('duotone') * 0.85);
       u.duoA = U.hex2rgb(mix(pal.bg, '#000000', 0.3)).map((v) => v / 255);
+      u.bgc = U.hex2rgb(pal.bg).map((v) => v / 255);
       u.duoB = U.hex2rgb(pal.accent).map((v) => v / 255);
       let gr = [1, 1, 0];
       if (fl.has('contrastPop')) gr = [1 + 0.3 * g('contrastPop'), 1 + 0.35 * g('contrastPop'), 0];
@@ -1287,11 +1332,14 @@ void main(){
         gl.activeTexture(gl.TEXTURE3); gl.bindTexture(gl.TEXTURE_2D, this.tex[3]); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, this.prev[1]);
       }
       gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, this.tex[0]);
-      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, this.scene);
+      // コマ落ち: only refresh the source texture a few times per second
+      const stepK = u.step > 0 ? Math.floor(t * u.step) : null;
+      if (stepK == null || stepK !== this._stepK || Math.abs(t - (this._stepT || 0)) > 1) { gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, this.scene); this._stepT = t; }
+      this._stepK = stepK;
       UNI.forEach((n) => gl.uniform1f(U2[n], u[n] || 0));
       gl.uniform2f(U2.R, this.W, this.H); gl.uniform1f(U2.time, t); gl.uniform1f(U2.seed, (this.p.seed || 0) % 97); gl.uniform1f(U2.S, this.S);
       gl.uniform2f(U2.mblur, u.mblur ? u.mblur[0] : 0, u.mblur ? -u.mblur[1] : 0);
-      gl.uniform3fv(U2.duoA, u.duoA); gl.uniform3fv(U2.duoB, u.duoB); gl.uniform3fv(U2.grade, u.grade);
+      gl.uniform3fv(U2.duoA, u.duoA); gl.uniform3fv(U2.duoB, u.duoB); gl.uniform3fv(U2.grade, u.grade); if (U2.bgc) gl.uniform3fv(U2.bgc, u.bgc || [0, 0, 0]);
       if (mode.key) { const k = U.hex2rgb(mode.key).map((v) => v / 255); gl.uniform4f(U2.key, k[0], k[1], k[2], 1); }
       else gl.uniform4f(U2.key, 0, 0, mode.transparent ? -1 : 0, 0);
       gl.clearColor(0, 0, 0, 0); gl.clear(gl.COLOR_BUFFER_BIT);

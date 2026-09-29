@@ -13,7 +13,7 @@ A browser-only kinetic-typography lyric video maker. [English below ↓](#englis
 
 - **自動配置** — 🎤 歌声を解析して、行と単語のタイミングを自動で合わせる（ブラウザー内処理）。タップ打刻・ビート吸着・クオンタイズで仕上げ
 - **おまかせ演出** — 22のジャンル・テーマから、配色・書体・レイアウト・動き・トランジション・背景モーションを曲構成に合わせて自動生成。激しさ・動きの付け方・変化の多さも調整可能
-- **豊富なモーション** — 約200種の登場／保持／退場モーション、37種のレイアウト、52種のトランジション、110種以上の背景モーション（GPUシェーダー含む）、約100書体
+- **豊富なモーション** — 約230種の登場／保持／退場モーション（ボカロPV風・ウェイト変化・パス沿いなど）、37種のレイアウト、52種のトランジション、120種以上の背景モーション（GPUシェーダー含む）、約100種のエフェクト、約100書体
 - **美しい文字組み** — 和欧混植（欧文書体の自動ペアリング、ベースライン・大文字高さの調整、和欧間、約物詰め）、縦組み、ルビ、字間・単語間の手動調整
 - **背景画像・動画** — 複数の写真やMP4/WebMを、19種のトランジションで自動／手動切り替え
 - **多言語** — 画面表示：日本語・English・Español・Italiano・한국어。歌詞も各言語に対応（ハングル書体20種）
@@ -69,7 +69,7 @@ npm run build      # → dist/lyric-motion-studio.html（公開用 index.html �
 ### Features
 - **Auto-timing from vocals** — analyses the singing to time every line and word (on your device); refine with tap timing, beat snapping and quantize
 - **Auto direction** — 22 genre themes generate colours, fonts, layouts, motion, transitions and background motion that follow the song structure; adjust intensity, motion feel and variety
-- **Motion library** — ~200 enter/hold/exit motions, 37 layouts, 52 transitions, 110+ background motions (incl. GPU shaders), ~100 typefaces
+- **Motion library** — ~230 enter/hold/exit motions (incl. Vocaloid-PV style, weight changes, text on a path), 37 layouts, 52 transitions, 120+ background motions (incl. GPU shaders), ~100 effects, ~100 typefaces
 - **Typography** — mixed Japanese/Latin typesetting (auto Latin pairing, baseline and cap-height matching), vertical text, ruby, manual tracking and word spacing
 - **Background images & videos** with 19 crafted transitions
 - **UI in 日本語 / English / Español / Italiano / 한국어**, lyrics in all of them (20 Hangul typefaces)

@@ -1807,8 +1807,71 @@
     return (P.title ? `${P.title}${P.artist ? ' / ' + P.artist : ''}\n\n` : '') + lines.join('\n') + '\n';
   }
 
+
+  /* ---------------- 設定を初期状態にリセット ---------------- */
+  const RS_KEYS = ['lyrics', 'timing', 'audio', 'song', 'images', 'aspect', 'credits', 'looks'];
+  function rsSync() {
+    const on = (k) => $(`#resetModal [data-rs="${k}"]`).checked;
+    const tm = $('#resetModal [data-rs="timing"]'); tm.disabled = on('lyrics'); if (tm.disabled) tm.checked = false;
+    $('#rsWarn').hidden = !((on('audio') && hasAudio()) || on('looks'));
+  }
+  function openReset() {
+    $$('#resetModal [data-rs]').forEach((el) => { el.checked = false; el.onchange = rsSync; });
+    rsSync(); $('#resetModal').classList.add('open');
+  }
+  $('#rsAll').onclick = () => { $$('#resetModal [data-rs]').forEach((el) => (el.checked = true)); rsSync(); };
+  $('#rsNone').onclick = () => { $$('#resetModal [data-rs]').forEach((el) => (el.checked = false)); rsSync(); };
+  function removeAudio() {
+    if (S.playing) { try { pause(); } catch (e) {} }
+    try { au.pause(); } catch (e) {}
+    if (au.src) { try { URL.revokeObjectURL(au.src); } catch (e) {} }
+    au.removeAttribute('src'); try { au.load(); } catch (e) {}
+    LM.audio.clear && LM.audio.clear();
+    S.audioBlob = null; S.audioName = null; S.peaks = null; P.audioName = null;
+    idb.del('audio');
+    $('#audioInfo').hidden = true;
+  }
+  async function resetSettings(o) {
+    await saveSnap('設定リセットの直前', true);
+    const old = P, np = MD.newProject();
+    // always kept: song length and this device's tap latency calibration
+    np.duration = old.duration; if (old.tapLatency != null) np.tapLatency = old.tapLatency;
+    if (!o.aspect) np.aspect = old.aspect;
+    if (!o.credits) { np.title = old.title; np.artist = old.artist; np.showCredits = old.showCredits; np.creditPos = old.creditPos; }
+    if (!o.song) { np.sections = old.sections; np.bpm = old.bpm; np.beatOffset = old.beatOffset; }
+    if (!o.images) np.images = old.images;
+    if (!o.audio) np.audioName = old.audioName;
+    if (!o.lyrics) {
+      let cues = (old.cues || []).map((c) => ({ id: c.id, text: c.text, start: c.start, end: c.end, words: c.words, locked: c.locked, kind: c.kind, img: o.images ? undefined : c.img, scene: {} }));
+      if (o.timing && cues.length) {
+        const times = MD.autoTime(cues.map((c) => c.text), np.duration, o.audio ? null : LM.audio.analysis, {});
+        cues = cues.map((c, i) => Object.assign(c, times[i] ? { start: times[i].start, end: times[i].end } : {}, { words: undefined }));
+      }
+      np.cues = cues;
+    }
+    const removedImgs = o.images ? (old.images || []) : [];
+    P = MD.normalize(np);
+    LM.director.applyTheme(P, 'jpop');
+    // the first-image default: keep background images visible under the motion
+    if ((P.images || []).length) { P.bgmOpacity = 0.6; P.bgmBlend = 'screen'; }
+    if (P.cues.length) { MD.repairEnds(P); P.cues = LM.director.generate(P, { seed: P.seed }); }
+    if (o.audio) removeAudio();
+    removedImgs.forEach((x) => { const v = S.images[imgKey(x.id)]; if (v && v.dispose) v.dispose(); delete S.images[imgKey(x.id)]; });
+    if (o.looks) { U.store.set('lms.looks', []); buildLooks(); }
+    S.sel = P.cues.length ? 0 : -1; S.gapTarget = null; S.multi && S.multi.clear();
+    afterLoad(); commit();
+    const kept = RS_KEYS.filter((k) => !o[k]).length;
+    toast(kept === RS_KEYS.length ? '設定を初期状態に戻しました（歌詞・曲・画像などはそのままです）' : '設定と選んだ項目を初期状態に戻しました');
+  }
+  $('#rsGo').onclick = async () => {
+    const o = {}; $$('#resetModal [data-rs]').forEach((el) => (o[el.dataset.rs] = el.checked && !el.disabled));
+    if (o.lyrics) o.timing = false;
+    $('#resetModal').classList.remove('open');
+    await resetSettings(o);
+  };
   const acts = {
     new: async () => { if (!(await ask('新規プロジェクトを作成します（現在の内容は「元に戻す」で復元できます）', { ok: '新規作成' }))) return; const keepDur = hasAudio() ? P.duration : 30; P = MD.newProject(); P.duration = keepDur; LM.director.applyTheme(P, 'jpop'); $('#lyrics').value = ''; S.sel = -1; afterLoad(); commit(); },
+    reset: () => openReset(),
     open: () => $('#openFile').click(), saveJson, savePkg,
     srt: () => saveFile(new Blob([MD.toSRT(P)], { type: 'text/plain' }), safeName() + '.srt'),
     vtt: () => saveFile(new Blob([MD.toVTT(P)], { type: 'text/vtt' }), safeName() + '.vtt'),
