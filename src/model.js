@@ -120,7 +120,20 @@ LM.model = (() => {
     if (c.words && !(Array.isArray(c.words) && c.words.every((x) => x == null || isFinite(+x)))) delete c.words;
     if (c.tf && (typeof c.tf !== 'object' || Array.isArray(c.tf))) delete c.tf;
     if (c.tf) c.tf = Object.fromEntries(Object.entries(c.tf).filter(([, v]) => typeof v === 'number' && isFinite(v)));
-    ['enter', 'hold', 'exit'].forEach((k) => { if (c[k] != null && !(typeof c[k] === 'string' && M[k] && M[k][c[k]])) delete c[k]; });
+    ['enter', 'hold', 'exit', 'emph'].forEach((k) => { if (c[k] != null && !(typeof c[k] === 'string' && M[k] && M[k][c[k]])) delete c[k]; });
+    // Motion System parameters: only known keys, numbers clamped, strings from fixed vocabularies
+    if (c.mp != null) {
+      const src = c.mp && typeof c.mp === 'object' && !Array.isArray(c.mp) ? c.mp : {}, out = {};
+      const EZ = ['auto', 'linear', 'easeIn', 'easeOut', 'easeInOut', 'cubic', 'expo', 'back', 'elastic', 'spring'], TR = ['beat', 'half', 'quarter', 'eighth', 'two', 'bar', 'word', 'phrase'], TG = ['auto', 'all', 'emph', 'word'];
+      ['e', 'h', 'm', 'x'].forEach((k) => {
+        const o = src[k]; if (!o || typeof o !== 'object' || Array.isArray(o)) return; const r = {};
+        [['i', 0, 100], ['v', 0, 100], ['st', 0, 100], ['beats', 0, 8], ['delay', 0, 5], ['k', 10, 1000], ['dm', 1, 200], ['ms', 0.1, 10], ['s', 0, 5]].forEach(([n, lo, hi]) => { const v = num(o[n], null, lo, hi); if (v != null) r[n] = v; });
+        if (EZ.includes(o.ease)) r.ease = o.ease; if (TR.includes(o.trig)) r.trig = o.trig; if (TG.includes(o.tgt)) r.tgt = o.tgt;
+        if (Object.keys(r).length) out[k] = r;
+      });
+      const sd = num(src.seed, null, 0, 1e6); if (sd != null) out.seed = Math.round(sd);
+      if (Object.keys(out).length) c.mp = out; else delete c.mp;
+    }
     c.gfx = strArr(c.gfx, (x) => !!(LM.gfx && LM.gfx.lib ? LM.gfx.lib[x] : /^[\w-]{1,40}$/.test(x)), 4);
     if (c.bgm != null) { if (Array.isArray(c.bgm)) c.bgm = strArr(c.bgm, (x) => !!(LM.bgm && LM.bgm.lib[x]), 4); else delete c.bgm; }
     if (c.trans != null && !(typeof c.trans === 'string' && (c.trans === 'none' || (LM.trans && LM.trans.lib[c.trans])))) delete c.trans;

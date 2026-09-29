@@ -25,6 +25,18 @@ LM.director = (() => {
     [0.4, 'smooth', 'liquid ink gradientDiscs ribbonSweep doorsH fan barsH stripesDiag diamond splitClose'], [0.45, 'organic', 'inkBlob scribbleFill dryBrush tornPaper liquidDrip sliceBands'], [0.55, 'kinetic', 'colorBlocks barsH gridPop sliceBands']];
   const TR_META = {}; TRM.forEach(([e, f, ids]) => ids.split(' ').forEach((id) => { const m = TR_META[id] || (TR_META[id] = [e, []]); m[1].push(f); m[0] = Math.max(m[0], e); }));
   const NO_EXTEND = { enter: new Set(['none']), hold: new Set(['carousel', 'helix', 'sphere', 'crawl3D', 'karaoke', 'wordHighlight', 'weightSing']), exit: new Set(['cut']), cam: new Set(), tr: new Set() };
+  // emphasis vocabulary per theme (weights); '_' is the fallback
+  const EMPH_POOL = {
+    _: { pulse: 2, scalePunch: 1.5, colorFlash: 1, weightHit: 1 },
+    jpop: { bounce: 2, elasticHit: 1.5, scalePunch: 1.5, colorFlash: 1 }, rock: { impact: 2, shake: 1.5, scalePunch: 1.5 }, metal: { impact: 2, shake: 2, rgbHit: 1 },
+    edm: { scalePunch: 2, colorFlash: 1.5, rgbHit: 1, pulse: 1 }, hiphop: { impact: 2, trackCompress: 1.2, weightHit: 1.2, shake: 1 }, ballad: { pulse: 2, blurPulse: 1.5, weightHit: 1 },
+    lofi: { pulse: 2, waveHit: 1.5, blurPulse: 1 }, citypop: { colorFlash: 1.5, pulse: 1.5, tiltHit: 1 }, vocaloid: { rgbHit: 2, jitterHit: 1.5, colorFlash: 1.5, scalePunch: 1 },
+    anison: { scalePunch: 2, elasticHit: 1.5, impact: 1.2 }, cinematic: { blurPulse: 2, pulse: 1.5, trackExpand: 1.5 }, wa: { weightHit: 2, pulse: 1.5 },
+    acoustic: { pulse: 2, waveHit: 1.5 }, ambient: { blurPulse: 2, pulse: 1.5 }, minimal: { weightHit: 2, trackExpand: 1.5, trackCompress: 1.5 }, dream: { blurPulse: 2, waveHit: 1.5 },
+    edge: { impact: 1.5, rgbHit: 1.5, trackExpand: 1.2, scalePunch: 1 }, psyche: { rgbHit: 1.5, waveHit: 1.5, elasticHit: 1 }, thermalvj: { rgbHit: 2, impact: 1 }, vj: { scalePunch: 1.5, rgbHit: 1.5, colorFlash: 1 },
+    showreel: { trackExpand: 1.5, scalePunch: 1.5, tiltHit: 1 }, artistmv: { pulse: 1.5, weightHit: 1.5, blurPulse: 1 },
+  };
+  const CALM = new Set(['ballad', 'ambient', 'acoustic', 'minimal', 'cinematic', 'wa', 'dream', 'lofi']);
   function meta(kind, id) {
     if (kind === 'tr') { const m = TR_META[id]; return m ? { e: m[0], f: m[1] } : { e: 0.5, f: [] }; }
     const o = OVR[kind] && OVR[kind][id];
@@ -144,6 +156,8 @@ LM.director = (() => {
       const ePrim = remembered ? remembered.e : rng.weighted(boost(pools.enter));
       const hPrim = remembered ? remembered.h : rng.weighted(pools.hold);
       const xPrim = remembered ? remembered.x : rng.weighted(pools.exit);
+      const emPool = EMPH_POOL[th.id] || EMPH_POOL._;
+      const mPrim = remembered && remembered.m ? remembered.m : rng.weighted(emPool);
       const palId = remembered ? remembered.pal : palPool[(si + (seed % palPool.length)) % palPool.length];
       const cam = rng.weighted(tune(th.camera, 'cam', ST, tgt));
       const trPool = th.tr ? tune(th.tr, 'tr', ST, tgt) : null;
@@ -159,7 +173,7 @@ LM.director = (() => {
       prevBgm = secBgm.slice();
       const secFont = remembered ? remembered.font : th.fonts[(isChorus || secE > 0.72) && th.fonts.length > 1 && rng() < (isChorus ? 0.6 : 0.35) ? 1 : 0];
       const invertSec = remembered ? remembered.inv : secE > 0.7 && rng() < (isChorus ? 0.45 : 0.3);
-      if (stype && !remembered) typeLook[stype] = { primary, e: ePrim, h: hPrim, x: xPrim, bgm: secBgm.slice(), font: secFont, inv: invertSec, pal: palId };
+      if (stype && !remembered) typeLook[stype] = { primary, e: ePrim, h: hPrim, x: xPrim, m: mPrim, bgm: secBgm.slice(), font: secFont, inv: invertSec, pal: palId };
       sec.forEach((ci, k) => {
         const c = cues[ci];
         if ((c.locked || c.kind === 'title') && !opts.force) return;
@@ -185,11 +199,19 @@ LM.director = (() => {
         prevLayout = lay;
         const isKin = KIN.includes(lay);
         // motion tracks
-        let ent = rng() < keepP(0.6) ? ePrim : rng.weighted(boost(pools.enter));
+        // motion language: ~70% the section's motif, ~20% a variation of it, ~10% an accent / surprise
+        const motifP = keepP(0.7), varP = Math.min(0.97, motifP + 0.2);
+        let ent, mpE = null; const rE0 = rng();
+        if (rE0 < motifP) ent = ePrim;
+        else if (rE0 < varP) { ent = ePrim; mpE = { v: 35 + Math.round(rng() * 40), i: Math.round(U.clamp(50 + (rng() - 0.5) * 40, 0, 100)) }; }
+        else { ent = rng.weighted(boost(pools.enter), [ePrim]) || ePrim; mpE = { i: 60 + Math.round(rng() * 25) }; }
         if (dur < 1.3 && SLOW_ENTER.has(ent)) ent = rng.pick(['fade', 'pop', 'slam', 'rise', 'mask'].filter((x) => M.enter[x]));
         if (cnt > 26 && M.enter[ent].per) ent = 'fade';
         let hol = rng() < keepP(0.7) ? hPrim : rng.weighted(pools.hold);
-        let ext = rng() < keepP(0.65) ? xPrim : rng.weighted(pools.exit);
+        let ext, mpX = null; const rX0 = rng();
+        if (rX0 < motifP) ext = xPrim;
+        else if (rX0 < varP) { ext = xPrim; mpX = { v: 30 + Math.round(rng() * 40) }; }
+        else ext = rng.weighted(pools.exit, [xPrim]) || xPrim;
         const next = cues[ci + 1];
         if (next && next.start - c.end < 0.05 && dur < 1.2 && M.exit[ext].d > 0.4) ext = rng() < 0.5 ? 'cut' : 'fadeOut';
         if (M.enter[ent] && M.enter[ent].wt && (dur < 1.2 || cnt > 30)) ent = 'pop';
@@ -198,6 +220,19 @@ LM.director = (() => {
         c.enter = M.enter[ent] ? ent : 'fade';
         c.hold = M.hold[hol] ? hol : 'none';
         c.exit = M.exit[ext] ? ext : 'fadeOut';
+        if (c.enter === 'morphFrom' && ci === 0) c.enter = 'fade';
+        // emphasis accents (beat / word onsets), with the section's motif most of the time
+        let em = 'none', mpM = null;
+        if (M.emph && !isKin && dur >= 1.2) {
+          const calm = CALM.has(th.id), prob = (0.2 + energy[ci] * 0.45) * dMul * (calm ? 0.6 : 1);
+          if (rng() < prob) {
+            em = rng() < 0.75 ? mPrim : rng.weighted(emPool, [mPrim]) || mPrim;
+            const hasEm = /\*[^*]+\*/.test(c.text || '');
+            mpM = hasEm ? { trig: 'beat', tgt: 'emph', i: 55 } : calm ? { trig: rng() < 0.5 ? 'word' : 'phrase', tgt: rng() < 0.5 ? 'word' : 'all', i: 40 } : energy[ci] > 0.65 ? { trig: rng() < 0.7 ? 'beat' : 'two', tgt: 'all', i: 40 + Math.round(energy[ci] * 25) } : { trig: 'word', tgt: 'word', i: 45 };
+          }
+        }
+        if (M.emph && M.emph[em] && em !== 'none') c.emph = em; else delete c.emph;
+        { const mp = {}; if (mpE) mp.e = mpE; if (mpX) mp.x = mpX; if (em !== 'none' && mpM) mp.m = mpM; const sd = c.mp && c.mp.seed; if (sd) mp.seed = sd; if (Object.keys(mp).length) c.mp = mp; else delete c.mp; }
         // designed cut into this phrase
         if (p.autoTrans !== false) {
           const rate = Math.min(0.9, (th.trRate == null ? 0.25 : th.trRate) * dMul);
@@ -218,6 +253,8 @@ LM.director = (() => {
           pal: p.autoColors ? palId : prevScene.pal,
           bgm: p.autoBgm ? secBgm.filter((id) => LM.bgm.lib[id]) : prevScene.bgm,
         };
+        const fh = M.enter[c.enter] && M.enter[c.enter].font;
+        if (fh && fh.length) { const f2 = latHeavy ? (fh.includes('caveat') ? 'caveat' : fh[0]) : fh.find((id) => id !== 'caveat') || fh[0]; if (D.fontById[f2]) c.scene.font = f2; }
         // filters
         if (p.autoFilters) {
           const prob = th.fx * (ST.drive == null ? 1 : 0.5 + ST.drive) * (0.55 + energy[ci] * 0.7);

@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.4.0 — 2026-09-29
+- Motion System: every motion is composed in layers (layout → enter → hold → emphasis → camera) and takes per-phrase parameters — intensity 0–100, variation 0–100 with a reproducible seed, stagger, easing (linear, ease, cubic, expo, back, elastic, spring with stiffness / damping / mass), length in beats (1/8 beat – 1 bar) and delay / モーションシステム：レイヤー合成と、強さ・ばらつき（シード）・スタッガー・イージング（スプリング含む）・拍単位の長さ・遅延の行ごとの調整
+- New emphasis track: 18 accents (scale punch, bounce, shake, impact, stretch / squash, tracking, weight, color flash, blur pulse, elastic, RGB…) triggered on beats, subdivisions, bars, word onsets or the phrase onset / 強調（アクセント）トラックを追加
+- Primitive-based presets that fill gaps in the library (slide down / right, scale punch, overshoot, spring, compress, condensed → extended, skew, line height, line split, random reveal, word reorder, word push, fly away, slide-blur, squash, tracking collapse…) / プリミティブから組み立てた新プリセット
+- Pen writing, handwritten spelling, typing on manuscript paper (原稿用紙), washed away by / rising out of water, and morphing the previous phrase into the next one / ペンで書く・手書きでつづる・原稿用紙にタイピング・水に流れる・次のフレーズへ変形
+- Motion library: metadata for every motion (category, target, energy, readability, recommended length, genres), 19 style tags, MOTION / TYPE samples, sorting / モーションライブラリ（メタデータ・スタイルタグ・サンプル文字・並び替え）
+- Auto direction keeps a motion language: ~70% section motif, ~20% variation, ~10% accent / おまかせはモチーフ70%・バリエーション20%・アクセント10%で選択
+- Fix: hexagon-pulse background shader failed to compile / ヘキサゴン・パルス背景の不具合を修正
+
 ## 1.3.0 — 2026-09-29
 - "Make background images / videos the star": auto direction only picks background motions that leave the picture visible (coverage is measured automatically), avoids effects and layouts that hide the image, and applies a look that keeps it clear (Screen 50%, light blend-in, soft text shadow). Turns on automatically with the first image; "Re-apply" swaps covering motions in the current direction / 「背景画像・動画を主役にする」を追加。画像を覆わない背景モーションを自動で選び、画像がよく見える設定に自動調整
 

@@ -88,7 +88,7 @@ float grain(vec2 f){return h21(f+fract(T)*97.)-.5;}
       vec3 c=mix(C0,C1,v); c=mix(c,C2,smoothstep(.25,.0,abs(length(p)-.35-.05*BASS))*.8);
       gl_FragColor=vec4(c,1.);`],
     hexglow: ['ヘキサゴン・パルス', 'パターン', `
-      vec2 q=p*6.; vec2 s=vec2(1.,1.732); vec2 a=mod(q,s)-s*.5, b=mod(q-s*.5,s)-s*.5; vec2 g=dot(a,a)<dot(b,b)?a:b; vec2 id=q-g;
+      vec2 q=p*6.; vec2 s=vec2(1.,1.732); vec2 ha=mod(q,s)-s*.5, hb=mod(q-s*.5,s)-s*.5; vec2 g=dot(ha,ha)<dot(hb,hb)?ha:hb; vec2 id=q-g;
       vec2 h=abs(g); float e=max(dot(h,normalize(vec2(1.,1.732))),h.x); float edge=smoothstep(.045,.0,.5-e);
       float pulse=pow(.5+.5*sin(length(id)*.7-T*3.-BASS*3.),3.);
       vec3 c=C0*.8+mix(C3,C2,pulse)*edge*(.5+pulse*1.2)+C2*pulse*.18*(1.-edge);

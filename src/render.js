@@ -45,6 +45,7 @@ LM.Renderer = (() => {
       enter: M.enter[cue.enter] ? cue.enter : lg.enter && M.enter[lg.enter] ? lg.enter : 'fade',
       hold: M.hold[cue.hold] ? cue.hold : lg.hold && M.hold[lg.hold] ? lg.hold : 'none',
       exit: M.exit[cue.exit] ? cue.exit : lg.exit && M.exit[lg.exit] ? lg.exit : 'fadeOut',
+      emph: M.emph && M.emph[cue.emph] ? cue.emph : 'none',
     };
   }
   function filtersOf(p, cue) {
@@ -96,15 +97,20 @@ LM.Renderer = (() => {
     const sync = p.tempoSync !== false && bpm > 40;
     let ed = (me.per ? me.d * Math.max(1, nGlyph) : me.d) / sp;
     if (sync && !me.per && me.d > 0.05) ed = snapBeat(ed, bpm);
+    const MS = LM.MS, pe0 = MS && MS.par(c, 'enter'), px0 = MS && MS.par(c, 'exit');
+    if (pe0 && pe0.beats > 0 && bpm > 40 && !me.per) ed = pe0.beats * 60 / bpm;
     if (c.ed > 0) ed = c.ed;
     ed = Math.max(0.001, Math.min(ed, dur * (me.per ? 0.62 : 0.45)));
     let xd = (mx.per ? mx.d * Math.max(1, nGlyph) : mx.d) / sp;
     if (sync && !mx.per && mx.d > 0.05) xd = snapBeat(xd, bpm);
+    if (px0 && px0.beats > 0 && bpm > 40 && !mx.per) xd = px0.beats * 60 / bpm;
     if (c.xd > 0) xd = c.xd;
     xd = Math.min(xd, dur * 0.4, c.xd > 0 ? 3 : 0.9);
     const next = cues[i + 1];
     const gap = next ? Math.max(0, next.start - c.end) : 0.6;
-    const tail = Math.min(gap, xd * 0.6);
+    let tail = Math.min(gap, xd * 0.6);
+    // the next phrase grows out of this one: hand the glyphs over instead of playing an exit
+    if (next && M.enter[next.enter] && M.enter[next.enter].morph && gap < 0.35) { tr.exit = 'cut'; xd = 0.001; tail = 0; }
     return { dur, ed, xd, tail, exitStart: c.end + tail - xd, vEnd: c.end + tail, tr };
   }
 
@@ -563,6 +569,16 @@ void main(){
     }
 
     /* ---------- beat envelope ---------- */
+    // time of the most recent rhythmic trigger (div: 1 = beat, 2 = 8th, 4 = 16th, 0.5 = every 2 beats, 0.25 = bar)
+    lastTrig(t, div = 1) {
+      const p = this.p;
+      if (p.bpm > 0) { const per = 60 / p.bpm / div, off = p.beatOffset || 0; return off + Math.floor((t - off) / per) * per; }
+      const an = this.audio && this.audio.analysis, bs = an && an.beats;
+      if (!bs || !bs.length || t < bs[0]) { const b = this.bpm() || 120, per = 60 / b / div; return Math.floor(t / per) * per; }
+      let lo = 0, hi = bs.length - 1; while (lo < hi) { const m = (lo + hi + 1) >> 1; if (bs[m] <= t) lo = m; else hi = m - 1; }
+      if (div >= 1) { const per = (bs[lo + 1] != null ? bs[lo + 1] : bs[lo] + 0.5) - bs[lo], sub = per / div; return bs[lo] + Math.floor((t - bs[lo]) / sub) * sub; }
+      const n = Math.max(1, Math.round(1 / div)); return bs[lo - (lo % n)];
+    }
     beatAt(t) {
       const p = this.p;
       if (p.beatSync === false) return 0;
@@ -819,6 +835,7 @@ void main(){
       const st = {
         outline: fl.has('outlineText'), neon: fl.has('neonText'), longShadow: fl.has('longShadow'), marker: fl.has('markerText'), extrude: fl.has('extrude'),
         gradient: fl.has('gradientText'), erode: fl.has('erodeText'), glow: fl.has('glowText'), drop: fl.has('dropShadow'), underline: fl.has('underline'),
+        genko: fl.has('genkoGrid') || !!(M.enter[ph.tr.enter] && M.enter[ph.tr.enter].genko), vert: L.lay === 'vertical',
       };
       const keyColor = p.keyColor !== false;
       // colors per glyph
@@ -887,6 +904,25 @@ void main(){
       const N = L.glyphs.length;
       const cx = L.bbox.cx, cy = L.bbox.cy;
       const C = { W: this.W, H: this.H, S: this.S, amp, cx, cy, N, gl: L.glyphs, beat, seed: idx, W_: Math.max(1, L.words), tempo: this.tempo(), bb: L.bbox, lt: t - c.start, dur: ph.dur, ct: L._ct || this.charTimes(c), tAbs: t };
+      // Motion System parameters (intensity / variation / seed / easing / stagger / delay) per track
+      const MS = LM.MS, pE = MS && MS.par(c, 'enter'), pH = MS && MS.par(c, 'hold'), pM = MS && MS.par(c, 'emph'), pX = MS && MS.par(c, 'exit');
+      const seedV = (U.strHash(c.id) ^ (((c.mp && c.mp.seed) || 0) * 7919) ^ ((this.p.seed || 0) * 31)) >>> 0;
+      const kE = pE && MS.ik(pE.i), kH = pH && MS.ik(pH.i), kM = MS ? MS.ik(pM && pM.i != null ? pM.i : 50) : null, kX = pX && MS.ik(pX.i);
+      const vE = pE && pE.v ? pE.v / 100 : 0, vH = pH && pH.v ? pH.v / 100 : 0, vM = pM && pM.v ? pM.v / 100 : 0, vX = pX && pX.v ? pX.v / 100 : 0;
+      const stE = pE && pE.st != null ? clamp(pE.st / 100 * 0.92, 0, 0.95) : me.st * (kE ? kE.st : 1);
+      const stX = pX && pX.st != null ? clamp(pX.st / 100 * 0.92, 0, 0.95) : mx.st * (kX ? kX.st : 1);
+      const wrap = (pp, o) => { if (!o || !o.ease || o.ease === 'auto') return pp; if (MS.WARP[o.ease]) return MS.WARP[o.ease](pp); return clamp(MS.ease(o.ease, o)(pp), 0, 1.25); };
+      const delayE = pE && pE.delay > 0 ? pE.delay : 0;
+      if (me.morph) { const cs = this.cues, k0 = cs.indexOf(c); if (k0 > 0) C.prevL = this.getLayout(cs[k0 - 1], k0 - 1); }
+      const emId = ph.tr.emph, emOn = emId && emId !== 'none' && M.emph && M.emph[emId];
+      const emTgt = (pM && pM.tgt) || 'auto', emTrig = (pM && pM.trig) || 'beat';
+      const anyEmph = emOn && L.glyphs.some((q) => q.emph);
+      let emT0 = null;
+      if (emOn && emTrig !== 'word') {
+        if (emTrig === 'phrase') emT0 = c.start + ph.ed * 0.9;
+        else emT0 = this.lastTrig(t, { beat: 1, half: 2, quarter: 4, eighth: 8, two: 0.5, bar: 0.25 }[emTrig] || 1);
+        if (emT0 != null && emT0 < c.start) emT0 = null;
+      }
       if (!L.rE[ph.tr.enter]) L.rE[ph.tr.enter] = M.ranks(L.glyphs, me.u || 'g', me.o || 'fwd', 11);
       if (!L.rX[ph.tr.exit]) L.rX[ph.tr.exit] = M.ranks(L.glyphs, mx.u || 'g', mx.o || 'fwd', 13);
       const rE = L.rE[ph.tr.enter], rX = L.rX[ph.tr.exit];
@@ -916,27 +952,44 @@ void main(){
           if (A.rgb) T.rgb = (T.rgb || 0) + A.rgb;
           if (A.boxB != null) { T.boxA = A.boxA || 0; T.boxB = A.boxB; }
           if (A.boxBg) T.boxBg = Math.max(T.boxBg || 0, A.boxBg);
+          if (A.wash) T.wash = Math.max(T.wash || 0, A.wash);
+          if (A.pen) T.pen = A.pen; if (A.hand != null) T.hand = A.hand; if (A.caret) T.caret = 1; if (A.cellA != null) T.cellA = A.cellA;
           if (A.strips) { T.strips = A.strips; T.stripOff = (T.stripOff || 0) + (A.stripOff || 0); }
         };
         // enter
-        let pe = Pe;
+        let pe = delayE ? clamp((lt - delayE) / ph.ed) : Pe;
+        const addE = (A, p0) => add(MS ? MS.vary(MS.scaleT(A, kE), vE, seedV, g, 1 - p0) : A);
         if (me.wt) {
           const n = me.wt === 'char' ? N : Math.max(1, L.words), idx = me.wt === 'char' ? g.k : g.wordIdx;
           const span = Math.min(ph.dur * 0.8, n * Math.max(0.12, 60 / (this.bpm() || 120) / (me.wt === 'char' ? 2 : 1)));
           const ct = C.ct; const tk = ct ? (me.wt === 'char' ? ct.cs[g.k] : ct.ws[g.k]) - c.start : (idx / n) * span;
-          add(me.f(clamp((lt - tk) / Math.max(0.05, me.d)), g, C));
+          const pw = clamp((lt - delayE - tk) / Math.max(0.05, me.d)); addE(me.f(wrap(pw, pE), g, C), pw);
         } else {
-          if (me.st > 0) pe = clamp((Pe - rE[i] * me.st) / (1 - me.st));
-          if (Pe < 1 || pe < 1) add(me.f(pe, g, C));
+          const P0 = pe;
+          if (stE > 0) pe = clamp((P0 - rE[i] * stE) / (1 - stE));
+          if (vE) { const sh = MS.timeShift(vE, seedV, g); pe = clamp((pe - sh) / Math.max(0.05, 1 - sh)); }
+          if (P0 < 1 || pe < 1) addE(me.f(wrap(pe, pE), g, C), pe);
         }
-        // hold
-        if (mh && ph.tr.hold !== 'none') add(mh.f(Math.max(0, lt), g, C, hp));
+        // continuous (hold)
+        if (mh && ph.tr.hold !== 'none') { const hs = vH ? U.hash(seedV, g.wordIdx || 0, 9) * vH * 3 : 0; add(MS && kH ? MS.scaleT(mh.f(Math.max(0, lt) + hs, g, C, hp), kH) : mh.f(Math.max(0, lt) + hs, g, C, hp)); }
+        // emphasis (accent on beats / word onsets), faded in after the entrance and out before the exit
+        if (emOn && (emTgt === 'all' || emTgt === 'word' || (emTgt === 'emph' ? g.emph : anyEmph ? g.emph : true))) {
+          const em = M.emph[emId]; let t0 = emT0;
+          if (emTrig === 'word' || emTgt === 'word') t0 = C.ct ? C.ct.ws[g.k] : c.start + ((g.wordIdx || 0) / C.W_) * ph.dur * 0.8;
+          if (t0 != null) {
+            const sh = vM ? U.hash(seedV, g.wordIdx || 0, 11) * vM * 0.12 : 0;
+            const q = (t - t0 - sh) / Math.max(0.05, em.dur);
+            const fade = clamp(lt / Math.max(0.05, ph.ed)) * (1 - Px);
+            if (q >= 0 && q < 1 && fade > 0.01) add(MS.emphT(emId, q, g, C, (kM ? kM.d : 1) * fade));
+          }
+        }
         // exit
         if (Px > 0) {
           let px = Px;
-          if (mx.st > 0) px = clamp((Px - rX[i] * mx.st) / (1 - mx.st));
+          if (stX > 0) px = clamp((Px - rX[i] * stX) / (1 - stX));
+          if (vX) { const sh = MS.timeShift(vX, seedV ^ 77, g); px = clamp((px - sh) / Math.max(0.05, 1 - sh)); }
           if (ph.tr.exit === 'cut') { if (t >= c.end) T.vis = false; }
-          else if (px > 0) add(mx.f(px, g, C));
+          else if (px > 0) { const A2 = mx.f(wrap(px, pX), g, C); add(MS ? MS.vary(MS.scaleT(A2, kX), vX, seedV ^ 77, g, px) : A2); }
         }
         if (L.seq && g.seq != null) {
           const k = L._k != null && L._k >= 0 ? L._k : this.seqIndex(L, lt, ph.dur);
@@ -949,7 +1002,18 @@ void main(){
     }
 
     drawGlyph(ctx, g, T, st, tmpl, fill, cc, pal) {
-      if (T.vis === false) return;
+      if (T.vis === false && !(st.genko && T.cellA)) return;
+      if (st.genko) {
+        const ca = (g.alpha == null ? 1 : g.alpha) * (st.alphaMul || 1) * (T.cellA != null ? T.cellA : T.a == null ? 1 : T.a);
+        if (ca > 0.004) {
+          const cw = st.vert ? g.size * 1.12 : Math.max(g.w, g.size) * 1.04, ch2 = st.vert ? Math.max(g.w, g.size) * 1.04 : g.size * 1.12;
+          ctx.save(); ctx.translate(g.x, g.y); if (g.rot) ctx.rotate(g.rot); ctx.globalAlpha = ca;
+          ctx.fillStyle = rgba(cc.acc, 0.07); ctx.fillRect(-cw / 2, -ch2 / 2, cw, ch2);
+          ctx.strokeStyle = rgba(cc.acc, 0.7); ctx.lineWidth = Math.max(1, this.S * 1.6); ctx.strokeRect(-cw / 2, -ch2 / 2, cw, ch2);
+          ctx.restore();
+        }
+        if (T.vis === false) return;
+      }
       const a = (T.a == null ? 1 : T.a) * (g.alpha == null ? 1 : g.alpha) * (st.alphaMul || 1);
       if (a <= 0.004 && !(T.boxB > T.boxA)) return;
       const S = this.S, size = g.size;
@@ -995,7 +1059,28 @@ void main(){
         draw0();
       } : draw0;
       const er = Math.max(T.erode || 0, st.erode ? 0.26 : 0);
-      if (T.strips && Math.abs(T.stripOff || 0) > 0.5) {
+      // 手書き: the stroke is revealed along the writing direction with a slightly ragged edge
+      if (T.hand != null && T.hand < 1) {
+        const hw = g.w + size * 0.24, x0 = -g.w / 2 - size * 0.12, pr = clamp(T.hand);
+        ctx.beginPath();
+        if (st.vert) { ctx.rect(-hw, -size * 0.66, hw * 2, size * 1.32 * pr); }
+        else { ctx.moveTo(x0, -size * 0.7); const n = 8; for (let k = 0; k <= n; k++) { const yy = -size * 0.7 + (size * 1.4 * k) / n; ctx.lineTo(x0 + hw * pr + Math.sin(k * 2.1 + g.i) * size * 0.05 * (1 - pr), yy); } ctx.lineTo(x0, size * 0.7); ctx.closePath(); }
+        ctx.clip();
+      }
+      if (T.wash > 0.01) {
+        // 水で流れる: horizontal slices drift on a travelling wave, sink and thin out, droplets trail behind
+        const w = clamp(T.wash), n = 10, h = (size * 1.4) / n, a0 = ctx.globalAlpha, tt = this.curT || 0;
+        if (w > 0.05) ctx.filter = `blur(${(w * size * 0.05 + (T.blur || 0)).toFixed(1)}px)`;
+        for (let k = 0; k < n; k++) {
+          const fk = k / n;
+          const dx = Math.sin(k * 0.85 + tt * 6 + g.i * 0.7) * size * 0.2 * w + w * w * size * 0.8 * (0.2 + fk);
+          const dy = w * w * size * (0.6 + 1.3 * fk);
+          ctx.save(); ctx.beginPath(); ctx.rect(-g.w - size, -size * 0.7 + k * h, (g.w + size) * 2, h + 0.6); ctx.clip();
+          ctx.translate(dx, dy); ctx.globalAlpha = a0 * clamp(1 - w * (0.3 + 0.7 * fk)); draw(); ctx.restore();
+        }
+        ctx.filter = 'none';
+        if (w > 0.08 && w < 0.97) { ctx.fillStyle = col; for (let m = 0; m < 6; m++) { const r = size * (0.02 + 0.03 * hash(g.i, m)) * (1 - w * 0.5); ctx.globalAlpha = a0 * w * (1 - w) * 2.2; ctx.beginPath(); ctx.arc((hash(g.i, m, 2) - 0.3) * size * 1.8 * w + size * w, size * 0.5 + w * size * 1.6 * hash(g.i, m, 3), r, 0, 6.2832); ctx.fill(); } ctx.globalAlpha = a0; }
+      } else if (T.strips && Math.abs(T.stripOff || 0) > 0.5) {
         const n = T.strips, hw = g.w + size + Math.abs(T.stripOff), h = (size * 1.3) / n;
         for (let k = 0; k < n; k++) {
           ctx.save(); ctx.beginPath(); ctx.rect(-hw, -size * 0.65 + k * h, hw * 2, h + 0.6); ctx.clip();
@@ -1012,6 +1097,19 @@ void main(){
           ctx.translate((hash(g.i, k, Math.floor(this.curT * 20)) - 0.5) * size * 0.5 * T.slice, 0); draw(); ctx.restore();
         }
       } else draw();
+      if (T.pen > 0) {
+        // ペン: the nib travels through the glyph in writing order (rows, left → right)
+        const s2 = clamp(T.pen / 0.8), rows = 3, r = Math.min(rows - 1, Math.floor(s2 * rows)), fr = s2 * rows - r;
+        const nx = lerp(-0.42, 0.42, fr) * g.w, ny = lerp(-0.3, 0.3, r / (rows - 1)) * size + Math.sin(fr * PI * 3) * size * 0.05;
+        ctx.save(); ctx.filter = 'none'; ctx.globalAlpha = 1 * (st.alphaMul || 1); ctx.translate(nx, ny); ctx.rotate(-0.75);
+        ctx.fillStyle = 'rgba(0,0,0,0.18)'; ctx.fillRect(size * 0.2, size * 0.02, size * 1.05, size * 0.1);
+        ctx.fillStyle = cc.acc; ctx.fillRect(size * 0.16, -size * 0.05, size * 1.05, size * 0.1);
+        ctx.fillStyle = mix(cc.acc, '#000000', 0.35); ctx.fillRect(size * 0.16, -size * 0.05, size * 0.12, size * 0.1);
+        ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(size * 0.17, -size * 0.05); ctx.lineTo(size * 0.17, size * 0.05); ctx.closePath(); ctx.fill();
+        ctx.beginPath(); ctx.arc(0, 0, Math.max(1, size * 0.018), 0, 6.2832); ctx.fill();
+        ctx.restore();
+      }
+      if (T.caret) { ctx.save(); ctx.filter = 'none'; ctx.fillStyle = cc.acc; ctx.globalAlpha = 0.9 * (st.alphaMul || 1); if (st.vert) ctx.fillRect(-size * 0.4, size * 0.62, size * 0.8, Math.max(1, size * 0.07)); else ctx.fillRect(g.w / 2 + size * 0.1, -size * 0.45, Math.max(1, size * 0.07), size * 0.9); ctx.restore(); }
       if (T.boxB > T.boxA) { const x0 = -g.w / 2 - size * 0.1, w0 = g.w + size * 0.2; ctx.save(); ctx.filter = 'none'; ctx.globalAlpha = Math.max(a, 0.001) > 0 ? 1 * (st.alphaMul || 1) : 0; ctx.fillStyle = cc.acc; ctx.fillRect(x0 + w0 * T.boxA, -size * 0.6, w0 * (T.boxB - T.boxA) + 0.5, size * 1.2); ctx.restore(); }
       if (er > 0.01 && !st.plain) {
         // grain erosion: punch noise specks out of the ink (steps at 12fps for a printed/stop-motion feel)

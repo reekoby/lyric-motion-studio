@@ -213,6 +213,11 @@ input[type=color]{width:30px;height:28px;padding:0;border:1px solid var(--line);
 .ibody{overflow:auto;flex:1;padding:12px 12px 30px}
 .empty{color:var(--faint);text-align:center;padding:40px 16px;line-height:1.7}
 .tr3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px}
+.tr4{grid-template-columns:1fr 1fr 1fr 1fr}
+.mpBox{margin-top:8px}.mpBox summary{cursor:pointer;font-size:12px;color:var(--dim);padding:4px 0}
+.mmeta{display:block;font-style:normal;font-size:10.5px;color:var(--faint);line-height:1.35;margin-top:2px}
+.pickTools[hidden]{display:none}
+.chip.sm{padding:2px 8px;font-size:11px}
 .mbtn{display:flex;flex-direction:column;align-items:flex-start;gap:1px;padding:7px 8px;border:1px solid var(--line);background:var(--panel2);border-radius:8px;text-align:left;min-width:0}
 .mbtn:hover{border-color:var(--acc)}
 .mbtn small{font-size:10px;color:var(--faint);letter-spacing:.05em}
@@ -270,6 +275,9 @@ input[type=color]{width:30px;height:28px;padding:0;border:1px solid var(--line);
 .card canvas{display:block;width:100%;aspect-ratio:16/9;background:#000}
 .card div{padding:6px 8px;font-size:12px;display:flex;justify-content:space-between;gap:6px}
 .card div small{color:var(--faint)}
+.card div{flex-wrap:wrap;align-items:baseline}
+.card div small{white-space:nowrap}
+.card .mmeta{flex-basis:100%;text-align:left}
 .fmt{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px}
 .fmt button{border:1px solid var(--line);background:var(--panel2);border-radius:10px;padding:10px 12px;text-align:left}
 .fmt button b{display:block;font-size:13px}
@@ -657,7 +665,9 @@ input[type=color]{width:30px;height:28px;padding:0;border:1px solid var(--line);
 
 <div class="modal" id="pickModal"><div class="mbox">
   <div class="mhead"><b id="pickTitle">モーションを選ぶ</b><div class="sp"></div><input type="text" id="pickSearch" placeholder="検索" style="width:180px"><button class="btn sm" data-close>閉じる</button></div>
-  <div class="mbody"><div class="chips" id="pickCats" style="margin-bottom:12px"></div><div class="grid-cards" id="pickGrid"></div></div>
+  <div class="mbody"><div class="chips" id="pickCats" style="margin-bottom:8px"></div>
+    <div id="pickTools" class="pickTools"><div class="chips" id="pickTags"></div><div class="row" style="gap:8px;margin:6px 0 10px"><label style="width:auto">サンプル文字</label><select id="pickSample"><option value="">この行の歌詞</option><option value="MOTION">MOTION</option><option value="TYPE">TYPE</option></select><label style="width:auto">並び順</label><select id="pickSort"><option value="">標準</option><option value="hot">動きが大きい順</option><option value="calm">動きが小さい順</option><option value="read">読みやすい順</option></select><span class="sp"></span><span class="hint">スタイルタグで絞り込めます（複数選択＝すべてに当てはまるもの）</span></div></div>
+    <div class="grid-cards" id="pickGrid"></div></div>
   <div class="mfoot"><span class="hint" id="pickHint">カードにマウスを乗せると動きを確認できます</span><div class="sp"></div><label class="tg" id="pickAllWrap"><input type="checkbox" id="pickAll"><i></i>全フレーズに適用</label></div>
 </div></div>
 

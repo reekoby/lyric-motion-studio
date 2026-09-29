@@ -1148,7 +1148,7 @@
   function pruneMulti() { const ids = new Set(P.cues.map((c) => c.id)); for (const id of S.multi) if (!ids.has(id)) S.multi.delete(id); if (S.multi.size <= 1) S.multi.clear(); }
 
   /* style clipboard */
-  const STYLE_KEYS = ['enter', 'hold', 'exit', 'filters', 'filterAmt', 'font', 'textScale', 'colors', 'trans', 'gfx', 'bgm', 'tf', 'ed', 'xd', 'noGlobalFilters', 'trackAdj', 'wordSpaceAdj', 'bgmOpacity', 'bgmBlend'];
+  const STYLE_KEYS = ['enter', 'hold', 'exit', 'filters', 'filterAmt', 'font', 'textScale', 'colors', 'trans', 'gfx', 'bgm', 'tf', 'ed', 'xd', 'noGlobalFilters', 'trackAdj', 'wordSpaceAdj', 'bgmOpacity', 'bgmBlend', 'emph', 'mp'];
   function copyStyle() {
     const c = selCue(); if (!c) return;
     const o = {}; STYLE_KEYS.forEach((k) => { if (c[k] !== undefined) o[k] = JSON.parse(JSON.stringify(c[k])); });
@@ -1227,8 +1227,9 @@
         <div class="wchips" id="iWords">${WR.map((w, k) => `<button data-w="${k}" class="${wset && wset[k] != null ? 'set' : ''}" title="クリック：再生位置をこの単語の歌い出しに（W）／右クリック：解除"><span data-noi18n>${esc(w.text)}</span><small>${wset && wset[k] != null ? '+' + (wset[k] - c.start).toFixed(2) + 's' : '自動'}</small></button>`).join('')}</div>
         <div class="row" style="margin-top:6px"><button class="btn sm" id="iWEven">均等に割り付け</button><button class="btn sm" id="iWBeat">ビートに割り付け</button><button class="btn sm" id="iWClear">クリア</button></div>
         <p class="hint">カラオケ塗り・単語ハイライト・単語順に出る動き（ワード系モーション・ワードフラッシュ等）が歌に同期します。下の「単語ごと」タップでも打刻できます。</p></div>
-      <div class="sec"><h3>モーション（登場 → 保持 → 退場）</h3>
-        <div class="tr3"><button class="mbtn" data-pick="enter"><small>登場</small><span>${esc(M.enter[tr.enter].n)}</span></button><button class="mbtn" data-pick="hold"><small>保持</small><span>${esc(M.hold[tr.hold].n)}</span></button><button class="mbtn" data-pick="exit"><small>退場</small><span>${esc(M.exit[tr.exit].n)}</span></button></div></div>
+      <div class="sec"><h3>モーション（登場 → 保持 → 強調 → 退場）</h3>
+        <div class="tr3 tr4"><button class="mbtn" data-pick="enter"><small>登場</small><span>${esc(M.enter[tr.enter].n)}</span></button><button class="mbtn" data-pick="hold"><small>保持</small><span>${esc(M.hold[tr.hold].n)}</span></button><button class="mbtn" data-pick="emph"><small>強調</small><span>${esc((M.emph[tr.emph] || M.emph.none).n)}</span></button><button class="mbtn" data-pick="exit"><small>退場</small><span>${esc(M.exit[tr.exit].n)}</span></button></div>
+        <details class="mpBox" ${S.mpOpen ? 'open' : ''}><summary>動きの調整（強さ・ばらつき・タイミング）${c.mp ? '<b class="ovb">個別</b>' : ''}</summary><div id="mpPanel"></div></details></div>
       <div class="sec"><h3>カット・グラフィック</h3>
         <div class="tr3" style="grid-template-columns:1fr 1fr"><button class="mbtn" data-pick="trans"><small>この行へのトランジション</small><span>${esc(c.trans && LM.trans.lib[c.trans] ? LM.trans.lib[c.trans].n : 'なし')}</span></button><button class="mbtn" data-pick="gfx"><small>アクセントグラフィック</small><span>${esc((c.gfx || []).map((id) => (LM.gfx.lib[id] || {}).n).filter(Boolean).join('＋') || 'なし')}</span></button></div>
         ${S.sel === 0 ? '<p class="hint">1行目にはトランジションは入りません</p>' : ''}</div>
@@ -1282,6 +1283,8 @@
     $$('[data-n]', b).forEach((bt) => (bt.onclick = () => { const d = +bt.dataset.n; const err = MD.stampStart(P, S.sel, U.clamp(c.start + d, 0, dur())); if (err) toast(err, true); commit(); }));
     $('#iPlay').onclick = () => { S.loop = true; $('#loopCue').classList.add('on'); seek(c.start); play(); };
     $$('[data-pick]', b).forEach((bt) => (bt.onclick = () => openPicker(bt.dataset.pick)));
+    $('.mpBox', b).ontoggle = (e) => { S.mpOpen = e.target.open; };
+    buildMpPanel(c);
     $('#iCam').onchange = (e) => { c.scene.camera = e.target.value; P.camera = null; commit(); };
     $('#iBgm').onclick = () => openPicker('cbgm');
     if ($('#iImg')) $('#iImg').onchange = (e) => { const v = e.target.value; if (v) c.img = v; else delete c.img; if (v && P.imgMode === 'off') P.imgMode = 'auto'; commit(); };
@@ -1388,10 +1391,12 @@
   const isTG = () => pick.kind === 'trans' || pick.kind === 'gfx';
   const DUMMY = () => ({ en: 'Beyond the *dawn*', es: 'Más allá del *alba*', it: 'Oltre l\'*alba*', ko: '*새벽* 너머로' }[LM.i18n && LM.i18n.lang] || '夜明けの*向こう*へ');
   const dummyCue = () => MD.normalizeCue({ id: 'dummy', text: DUMMY(), start: 0, end: 3, enter: 'fade', hold: 'none', exit: 'fadeOut', scene: { layout: 'center' } });
+  const MOTION_K = ['enter', 'hold', 'emph', 'exit'];
   function openPicker(kind) {
     const c = selCue(); if (!c && kind !== 'bgm' && kind !== 'gbgm' && kind !== 'itrans') return;
     pick.kind = kind; pick.cat = 'all'; pick.samples = null;
-    $('#pickTitle').textContent = { enter: '登場モーション', hold: '保持中の動き', exit: '退場モーション', layout: 'レイアウト', bgm: '背景モーション（全体・複数選択で重ねがけ）', itrans: '背景画像の切り替えトランジション', gbgm: 'インスト区間の背景（複数選ぶと小節ごとに切り替え）', cbgm: 'この行の背景モーション', trans: 'トランジション（前の行からこの行へ切り替わる瞬間）', gfx: 'アクセントグラフィック（最大2つ）' }[kind];
+    pick.tags = pick.tags || new Set(); $('#pickTools').hidden = !MOTION_K.includes(kind);
+    $('#pickTitle').textContent = { emph: '強調（アクセント）', enter: '登場モーション', hold: '保持中の動き', exit: '退場モーション', layout: 'レイアウト', bgm: '背景モーション（全体・複数選択で重ねがけ）', itrans: '背景画像の切り替えトランジション', gbgm: 'インスト区間の背景（複数選ぶと小節ごとに切り替え）', cbgm: 'この行の背景モーション', trans: 'トランジション（前の行からこの行へ切り替わる瞬間）', gfx: 'アクセントグラフィック（最大2つ）' }[kind];
     $('#pickAllWrap').hidden = isBg() || pick.kind === 'gfx' || pick.kind === 'itrans';
     $('#pickSearch').value = '';
     $('#pickAll').checked = false;
@@ -1422,8 +1427,16 @@
     $$('#pickCats .chip').forEach((b) => (b.onclick = () => { pick.cat = b.dataset.c; buildPicker(); }));
     const q = $('#pickSearch').value.trim();
     const cur = curVal(c);
-    const items = Object.entries(lib).filter(([id, m]) => (pick.cat === 'all' || m.c === pick.cat) && (!q || m.n.includes(q) || id.toLowerCase().includes(q.toLowerCase())));
-    $('#pickGrid').innerHTML = items.map(([id, m]) => `<button class="card ${(Array.isArray(cur) ? cur.includes(id) : id === cur) ? 'on' : ''}" data-id="${id}"><canvas width="320" height="180"></canvas><div><span>${esc(m.n)}</span><small>${esc(m.c)}</small></div></button>`).join('') || '<div class="empty">該当なし</div>';
+    const isM = MOTION_K.includes(pick.kind), mt = (id) => (isM && LM.MS ? LM.MS.meta(pick.kind, id) : null);
+    let items = Object.entries(lib).filter(([id, m]) => (pick.cat === 'all' || m.c === pick.cat) && (!q || T(m.n).includes(q) || m.n.includes(q) || id.toLowerCase().includes(q.toLowerCase())));
+    if (isM) {
+      const allTags = LM.MS.STYLE; $('#pickTags').innerHTML = allTags.map((tg) => `<button class="chip sm ${pick.tags.has(tg) ? 'on' : ''}" data-t="${tg}">${esc(T(LM.MS.STYLE_JA[tg]))}</button>`).join('');
+      $$('#pickTags .chip').forEach((b2) => (b2.onclick = () => { pick.tags.has(b2.dataset.t) ? pick.tags.delete(b2.dataset.t) : pick.tags.add(b2.dataset.t); buildPicker(); }));
+      if (pick.tags.size) items = items.filter(([id]) => { const x = mt(id); return x && [...pick.tags].every((tg) => x.tags.includes(tg)); });
+      const so = $('#pickSort').value; if (so) items.sort((a, b) => { const A2 = mt(a[0]) || {}, B2 = mt(b[0]) || {}; return so === 'calm' ? (A2.energy || 0) - (B2.energy || 0) : so === 'read' ? (B2.readability || 0) - (A2.readability || 0) : (B2.energy || 0) - (A2.energy || 0); });
+    }
+    const mline = (id) => { const x = mt(id); if (!x) return ''; return `<em class="mmeta">${x.tags.slice(0, 3).map((tg) => esc(T(LM.MS.STYLE_JA[tg]))).join(' · ')}<br>${esc(T('動き'))} ${x.energy} · ${esc(T('読みやすさ'))} ${x.readability} · ${(x.recommendedDuration[0] / 1000).toFixed(1)}–${(x.recommendedDuration[1] / 1000).toFixed(1)}s</em>`; };
+    $('#pickGrid').innerHTML = items.map(([id, m]) => `<button class="card ${(Array.isArray(cur) ? cur.includes(id) : id === cur) ? 'on' : ''}" data-id="${id}"><canvas width="320" height="180"></canvas><div><span>${esc(m.n)}</span><small>${esc(m.c)}</small>${mline(id)}</div></button>`).join('') || '<div class="empty">該当なし</div>';
     $('#pickHint').textContent = pick.kind === 'layout' ? '現在の歌詞で各レイアウトを表示しています' : pick.kind === 'bgm' ? 'クリックで追加／解除（最大3つまで重ねられます）。選ぶと「おまかせ背景」はオフになります' : pick.kind === 'gbgm' ? 'クリックで追加／解除（最大6つ）。歌詞のない区間で小節ごとに順番に切り替わります' : 'カードにマウスを乗せると動きを確認できます';
     const cards = $$('#pickGrid .card');
     let k = 0;
@@ -1450,7 +1463,11 @@
     if (pick.kind === 'enter') Object.assign(o, { hold: 'none', exit: 'cut' });
     if (pick.kind === 'hold') Object.assign(o, { enter: 'none', exit: 'cut' });
     if (pick.kind === 'exit') Object.assign(o, { enter: 'none', hold: 'none' });
-    return thumbProject(c, o);
+    if (pick.kind === 'emph') Object.assign(o, { enter: 'none', hold: 'none', exit: 'cut', mp: Object.assign({}, c.mp, { m: Object.assign({ trig: 'beat', tgt: 'all', i: 60 }, c.mp && c.mp.m, { tgt: 'all' }) }) });
+    const smp = $('#pickSample') && $('#pickSample').value; if (smp && MOTION_K.includes(pick.kind)) o.text = smp;
+    const pr = thumbProject(c, o); if (pick.kind === 'emph') pr.bpm = 120;
+    if (o.enter === 'morphFrom' || (pick.kind === 'enter' && id === 'morphFrom')) { pr.cues.unshift(MD.normalizeCue({ id: 'prevM', text: smp ? 'TYPE' : T('まえのフレーズ'), start: -1, end: 0, enter: 'none', hold: 'none', exit: 'cut', scene: { layout: 'center' } })); }
+    return pr;
   }
   // sample pictures for the image-transition picker (user's own first two, else generated)
   function sampleCanvases() {
@@ -1490,6 +1507,7 @@
     else if (isBg()) t = 1.5 + el;
     else if (pick.kind === 'enter') t = el % 2.2;
     else if (pick.kind === 'exit') t = 1.6 + (el % 1.9);
+    else if (pick.kind === 'emph') t = 0.45 + (el % 2);
     else t = 0.2 + (el % 2.6);
     drawCard(cd, cd.dataset.id, pick.kind === 'layout' ? null : t);
     if (pick.kind !== 'layout') pick.raf = requestAnimationFrame(animCard);
@@ -1536,6 +1554,7 @@
     toast(all || targets.length > 1 ? `${targets.length}行に適用しました` : '変更しました');
   }
   $('#pickSearch').addEventListener('input', U.debounce(buildPicker, 150));
+  $('#pickSample').onchange = () => buildPicker(); $('#pickSort').onchange = () => buildPicker();
 
   /* ---------------- direct manipulation on the preview ---------------- */
   (() => {
@@ -1879,6 +1898,38 @@
     $('#resetModal').classList.remove('open');
     await resetSettings(o);
   };
+  /* ---------------- Motion System parameters (per phrase) ---------------- */
+  const MPK = { e: 'enter', h: 'hold', m: 'emph', x: 'exit' };
+  function buildMpPanel(c) {
+    const host = $('#mpPanel'); if (!host || !LM.MS) return;
+    const k = S.mpTrk || 'e', o = (c.mp && c.mp[k]) || {}, MS = LM.MS;
+    const rng = (id, lab, v, lo, hi, st, fmt, tip) => `<div class="row"><label${tip ? ` title="${esc(tip)}"` : ''}>${lab}</label><input type="range" id="${id}" min="${lo}" max="${hi}" step="${st}" value="${v == null ? (lo + hi) / 2 : v}"><span class="val" id="${id}V">${v == null ? esc(T('標準')) : fmt(v)}</span><button class="btn sm ic" data-rs="${id}" title="${esc(T('標準に戻す'))}">↺</button></div>`;
+    const sel = (id, lab, v, opts) => `<div class="row"><label>${lab}</label><select id="${id}" style="flex:1">${Object.entries(opts).map(([a, n]) => `<option value="${a}" ${String(v) === a ? 'selected' : ''}>${esc(T(n))}</option>`).join('')}</select></div>`;
+    const tr = k === 'e' || k === 'x', ez = o.ease || 'auto';
+    host.innerHTML = `<div class="seg" id="mpTrk" style="margin:6px 0">${Object.entries({ e: '登場', h: '保持', m: '強調', x: '退場' }).map(([a, n]) => `<button data-v="${a}" class="${a === k ? 'on' : ''}">${esc(T(n))}${c.mp && c.mp[a] ? ' •' : ''}</button>`).join('')}</div>
+      ${rng('mpI', '強さ', o.i, 0, 100, 1, (v) => v, '移動距離・拡大率・回転・ぼかし・行き過ぎの量がモーションに合わせて変わります（50＝標準）')}
+      ${rng('mpV', 'ばらつき', o.v, 0, 100, 1, (v) => v, '単語ごとに向き・距離・タイミング・回転を少しずつ変えます（同じシードなら毎回同じ結果）')}
+      ${tr ? rng('mpSt', '間隔（スタッガー）', o.st, 0, 100, 1, (v) => v, '一文字・一単語ずつの時間差') : ''}
+      ${tr ? sel('mpEase', 'タイミングカーブ', ez, MS.EASE_N) : ''}
+      ${tr && ez === 'spring' ? rng('mpK', '硬さ（stiffness）', o.k, 20, 600, 5, (v) => v) + rng('mpDm', '減衰（damping）', o.dm, 2, 60, 1, (v) => v) + rng('mpMs', '質量（mass）', o.ms, 0.2, 4, 0.1, (v) => (+v).toFixed(1)) : ''}
+      ${tr && ez === 'back' ? rng('mpS', '行き過ぎ（overshoot）', o.s, 0, 5, 0.1, (v) => (+v).toFixed(1)) : ''}
+      ${tr ? sel('mpBeats', '長さ（拍に合わせる）', o.beats || 0, { 0: '自動', 0.125: '1/8拍', 0.25: '1/4拍', 0.5: '1/2拍', 1: '1拍', 2: '2拍', 4: '1小節' }) : ''}
+      ${k === 'e' ? rng('mpDelay', '遅らせて始める', o.delay, 0, 2, 0.05, (v) => (+v).toFixed(2) + 's') : ''}
+      ${k === 'm' ? sel('mpTrig', 'きっかけ', o.trig || 'beat', MS.TRIG) + sel('mpTgt', '対象', o.tgt || 'auto', MS.TGT) : ''}
+      <div class="row"><button class="btn sm" id="mpSeed">${esc(T('別のばらつきパターン'))}</button><span class="sp"></span><button class="btn sm" id="mpReset">${esc(T('この行の調整をすべて戻す'))}</button></div>
+      <p class="hint">${esc(T(k === 'm' ? '強調は、表示中の文字を拍や歌い出しに合わせて一瞬だけ動かすアクセントです。登場・保持・退場の動きに重ねて使えます。' : '強さ・ばらつきはこの行のモーションすべてに効きます。複数の行を選んでいれば、まとめて変わります。'))}</p>`;
+    const setv = (n, v) => { eachSel((q) => { q.mp = q.mp || {}; const t0 = (q.mp[k] = q.mp[k] || {}); if (v == null || v === '' || v === 'auto' || (n === 'beats' && !+v)) delete t0[n]; else t0[n] = v; if (!Object.keys(t0).length) delete q.mp[k]; if (!Object.keys(q.mp).length) delete q.mp; }); };
+    $$('#mpTrk button', host).forEach((bt) => (bt.onclick = () => { S.mpTrk = bt.dataset.v; buildMpPanel(c); }));
+    const RMAP = { mpI: 'i', mpV: 'v', mpSt: 'st', mpK: 'k', mpDm: 'dm', mpMs: 'ms', mpS: 's', mpDelay: 'delay' };
+    Object.entries(RMAP).forEach(([id, n]) => { const el = $('#' + id, host); if (!el) return; el.addEventListener('input', () => { setv(n, +el.value); $('#' + id + 'V', host).textContent = n === 'delay' ? (+el.value).toFixed(2) + 's' : n === 'ms' || n === 's' ? (+el.value).toFixed(1) : el.value; S.dirty = true; commitSoon(); }); });
+    $$('[data-rs]', host).forEach((bt) => (bt.onclick = () => { setv(RMAP[bt.dataset.rs], null); commit(); }));
+    if ($('#mpEase', host)) $('#mpEase', host).onchange = (e) => { setv('ease', e.target.value); commit(); };
+    if ($('#mpBeats', host)) $('#mpBeats', host).onchange = (e) => { setv('beats', +e.target.value); commit(); };
+    if ($('#mpTrig', host)) $('#mpTrig', host).onchange = (e) => { setv('trig', e.target.value); commit(); };
+    if ($('#mpTgt', host)) $('#mpTgt', host).onchange = (e) => { setv('tgt', e.target.value); commit(); };
+    $('#mpSeed', host).onclick = () => { eachSel((q) => { q.mp = q.mp || {}; q.mp.seed = ((q.mp.seed || 0) + 1) % 1000000; }); commit(); };
+    $('#mpReset', host).onclick = () => { eachSel((q) => delete q.mp); commit(); };
+  }
   const acts = {
     new: async () => { if (!(await ask('新規プロジェクトを作成します（現在の内容は「元に戻す」で復元できます）', { ok: '新規作成' }))) return; const keepDur = hasAudio() ? P.duration : 30; P = MD.newProject(); P.duration = keepDur; LM.director.applyTheme(P, 'jpop'); $('#lyrics').value = ''; S.sel = -1; afterLoad(); commit(); },
     reset: () => openReset(),
