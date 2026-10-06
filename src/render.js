@@ -118,7 +118,7 @@ LM.Renderer = (() => {
   const VS = 'attribute vec2 p;varying vec2 v;void main(){v=p*0.5+0.5;gl_Position=vec4(p,0.,1.);}';
   const FS = `precision highp float;varying vec2 v;
 uniform sampler2D T0,T1,T2,T3;uniform vec2 R;uniform float time,seed,S;
-uniform float rgb,glitch,block,vhs,scan,noise,vig,pix,poster,half_,bloom,inv,blurMix,zblur,crt,chrom,duo,dither,sepia,heat,hue,tilt,mirror,fish,trgb,psort,slice,liquid,thermal,mono,monoInv,quad,bzoom,lineart;
+uniform float rgb,glitch,block,vhs,scan,noise,vig,pix,poster,half_,bloom,inv,blurMix,zblur,crt,chrom,duo,dither,sepia,heat,hue,tilt,mirror,fish,trgb,psort,slice,liquid,thermal,mono,monoInv,quad,bzoom,lineart,ascii;
 uniform vec3 duoA,duoB,grade,bgc;uniform vec4 key;uniform vec2 mblur;
 float h1(vec2 p){return fract(sin(dot(p,vec2(12.9898,78.233)))*43758.5453);}
 float b2(vec2 p){p=floor(mod(p,2.0));return mod(2.0*p.x+3.0*p.y,4.0);}
@@ -138,6 +138,7 @@ void main(){
  if(block>0.0){vec2 b=floor(u*vec2(10.0,22.0));float r=h1(b+floor(time*15.0)+seed);if(r<block*0.25)u.x+=(h1(b+2.0)-0.5)*0.2*block;}
  if(glitch>0.0){float ln=floor(u.y*70.0);float r=h1(vec2(ln,floor(time*24.0)+seed));if(r<glitch*0.3)u.x+=(h1(vec2(ln,7.0))-0.5)*0.12*glitch;}
  if(pix>0.5){vec2 px=vec2(pix)/R;u=(floor(u/px)+0.5)*px;}
+ vec2 acell=vec2(0.);vec2 af=vec2(0.);if(ascii>0.5){vec2 cs=vec2(ascii*0.62,ascii)/R;acell=(floor(u/cs)+0.5)*cs;af=fract(u/cs);u=acell;}
  float rs=(rgb+glitch*8.0*S+block*6.0*S)/R.x;vec2 d=vec2(rs,0.0);
  if(chrom>0.0)d+=(u-0.5)*chrom*0.012;
  vec4 cg=texture2D(T0,u);vec4 col=cg;
@@ -148,6 +149,13 @@ void main(){
  if(blurMix>0.0||tilt>0.0){vec4 bl=texture2D(T1,u);float m=blurMix;if(tilt>0.0)m=max(m,smoothstep(0.12,0.42,abs(u.y-0.5))*tilt);col=mix(col,bl,clamp(m,0.0,1.0));}
  if(bloom>0.0){vec4 bl=texture2D(T1,u);col.rgb+=bl.rgb*bloom;col.a=max(col.a,bl.a*bloom*0.7);}
  float a=clamp(col.a,0.0,1.0);vec3 c=a>0.001?col.rgb/a:vec3(0.0);
+ if(ascii>0.5){float L=dot(c,vec3(.299,.587,.114));float lv=floor(L*5.99);vec2 q=af-0.5;float m=0.;
+  if(lv>=1.)m=max(m,step(length(q-vec2(0.,0.3)),0.13));
+  if(lv>=2.)m=max(m,step(length(q+vec2(0.,0.15)),0.13));
+  if(lv>=3.)m=max(m,step(abs(q.x),0.11)*step(abs(q.y),0.4));
+  if(lv>=4.)m=max(m,step(abs(q.y),0.1)*step(abs(q.x),0.42));
+  if(lv>=5.)m=max(m,step(abs(length(q)-0.34),0.1));
+  c=mix(c*0.1,min(c*1.35+0.08,vec3(1.)),m);}
  if(lineart>0.0){vec2 px=vec2(max(1.0,S*1.5))/R;float l0=dot(texture2D(T0,u).rgb,vec3(.299,.587,.114));float gx=dot(texture2D(T0,u+vec2(px.x,0.)).rgb-texture2D(T0,u-vec2(px.x,0.)).rgb,vec3(.333));float gy=dot(texture2D(T0,u+vec2(0.,px.y)).rgb-texture2D(T0,u-vec2(0.,px.y)).rgb,vec3(.333));float e=clamp(length(vec2(gx,gy))*3.0,0.0,1.0);c=mix(c,mix(duoA,duoB,e),lineart);}
  if(mono>0.0){float vv=max(c.r,max(c.g,c.b)),vb=max(bgc.r,max(bgc.g,bgc.b));float m=step(0.35,max(abs(vv-vb),distance(c,bgc)*0.5));if(monoInv>0.5)m=1.0-m;c=mix(c,vec3(m),mono);}
  if(inv>0.0)c=mix(c,1.0-c,inv);
@@ -167,7 +175,7 @@ void main(){
  c=clamp(c,0.0,1.0);
  if(key.a>0.5)gl_FragColor=vec4(mix(key.rgb,c,a),1.0);else gl_FragColor=vec4(c*a,a);
 }`;
-  const UNI = ['rgb', 'glitch', 'block', 'vhs', 'scan', 'noise', 'vig', 'pix', 'poster', 'half_', 'bloom', 'inv', 'blurMix', 'zblur', 'crt', 'chrom', 'duo', 'dither', 'sepia', 'heat', 'hue', 'tilt', 'mirror', 'fish', 'trgb', 'psort', 'slice', 'liquid', 'thermal', 'mono', 'monoInv', 'quad', 'bzoom', 'lineart'];
+  const UNI = ['rgb', 'glitch', 'block', 'vhs', 'scan', 'noise', 'vig', 'pix', 'poster', 'half_', 'bloom', 'inv', 'blurMix', 'zblur', 'crt', 'chrom', 'duo', 'dither', 'sepia', 'heat', 'hue', 'tilt', 'mirror', 'fish', 'trgb', 'psort', 'slice', 'liquid', 'thermal', 'mono', 'monoInv', 'quad', 'bzoom', 'lineart', 'ascii'];
 
   class Renderer {
     constructor(opt = {}) {
@@ -826,6 +834,8 @@ void main(){
       else if (cam === 'drift') lx.translate((hp - 0.5) * S * 70 * camAmp, 0);
       else if (cam === 'tilt') lx.rotate((hp - 0.5) * 0.06 * camAmp);
       else if (cam === 'shake') { lx.translate(U.noise1(t * 7, 1) * S * 9 * camAmp, U.noise1(t * 7, 2) * S * 9 * camAmp); lx.rotate(U.noise1(t * 5, 3) * 0.01 * camAmp); }
+      else if (cam === 'zoomStep') { const k = Math.floor(lt / Math.max(0.2, 60 / (this.bpm() || 120))), f = clamp((lt - k * 60 / (this.bpm() || 120)) / 0.12); const z = 1 + 0.035 * camAmp * (k + E.outExpo(f)); lx.scale(Math.min(z, 1.35), Math.min(z, 1.35)); }
+      else if (cam === 'float') { lx.translate(Math.sin(t * 0.37) * S * 26 * camAmp, Math.cos(t * 0.29) * S * 18 * camAmp); lx.rotate(Math.sin(t * 0.21) * 0.012 * camAmp); const z = 1 + 0.03 * Math.sin(t * 0.17) * camAmp; lx.scale(z, z); }
       else if (cam === 'punch') { const b = Math.max(beat, Math.max(0, 1 - lt / 0.3)); const k = 1 + 0.045 * b * camAmp; lx.scale(k, k); }
       if (L.drift) lx.translate(-hp * W * L.drift * 3, 0);
       L._k = L.seq ? this.seqIndex(L, lt, ph.dur) : -1;
@@ -834,7 +844,7 @@ void main(){
       // text style flags
       const st = {
         outline: fl.has('outlineText'), neon: fl.has('neonText'), longShadow: fl.has('longShadow'), marker: fl.has('markerText'), extrude: fl.has('extrude'),
-        gradient: fl.has('gradientText'), erode: fl.has('erodeText'), glow: fl.has('glowText'), drop: fl.has('dropShadow'), underline: fl.has('underline'),
+        gradient: fl.has('gradientText'), erode: fl.has('erodeText'), glow: fl.has('glowText'), drop: fl.has('dropShadow'), underline: fl.has('underline'), glass: fl.has('glassText'),
         genko: fl.has('genkoGrid') || !!(M.enter[ph.tr.enter] && M.enter[ph.tr.enter].genko), vert: L.lay === 'vertical',
       };
       const keyColor = p.keyColor !== false;
@@ -953,6 +963,7 @@ void main(){
           if (A.boxB != null) { T.boxA = A.boxA || 0; T.boxB = A.boxB; }
           if (A.boxBg) T.boxBg = Math.max(T.boxBg || 0, A.boxBg);
           if (A.wash) T.wash = Math.max(T.wash || 0, A.wash);
+          if (A.zsm) T.zsm = Math.max(T.zsm || 0, A.zsm); if (A.dot) T.dot = Math.max(T.dot || 0, A.dot); if (A.pillH != null) T.pillH = A.pillH; if (A.textA != null) T.textA = A.textA;
           if (A.pen) T.pen = A.pen; if (A.hand != null) T.hand = A.hand; if (A.caret) T.caret = 1; if (A.cellA != null) T.cellA = A.cellA;
           if (A.strips) { T.strips = A.strips; T.stripOff = (T.stripOff || 0) + (A.stripOff || 0); }
         };
@@ -1045,7 +1056,11 @@ void main(){
       if (T.blur > 0.35 || er0) ctx.filter = (er0 + (T.blur > 0.35 ? ` blur(${T.blur.toFixed(1)}px)` : '')).trim();
       // テロップ帯: the glyph sits on a solid accent box and switches to the surface colour
       if (T.boxBg > 0.01) { ctx.save(); ctx.filter = 'none'; ctx.fillStyle = cc.acc; ctx.globalAlpha = a * clamp(T.boxBg); ctx.fillRect(-g.w / 2 - size * 0.09, -size * 0.6, g.w + size * 0.18, size * 1.2); ctx.restore(); col = cc.surf; }
-      const ink = () => this.glyphInk(ctx, ch, g, T, st, col, cc, pal, outlineOnly);
+      if (T.pillH > 0.01) { const ph = size * 1.08 * T.pillH, pw = g.w + size * 1.12; ctx.save(); ctx.filter = 'none'; ctx.fillStyle = cc.acc; ctx.beginPath(); const r2 = Math.min(ph / 2, pw / 2); ctx.moveTo(-pw / 2 + r2, -ph / 2); ctx.arcTo(pw / 2, -ph / 2, pw / 2, ph / 2, r2); ctx.arcTo(pw / 2, ph / 2, -pw / 2, ph / 2, r2); ctx.arcTo(-pw / 2, ph / 2, -pw / 2, -ph / 2, r2); ctx.arcTo(-pw / 2, -ph / 2, pw / 2, -ph / 2, r2); ctx.fill(); ctx.restore(); }
+      const ink0 = () => this.glyphInk(ctx, ch, g, T, st, col, cc, pal, outlineOnly);
+      const ink1 = T.textA != null && T.textA < 1 ? () => { if (T.textA <= 0.01) return; const a0 = ctx.globalAlpha; ctx.globalAlpha = a0 * T.textA; ink0(); ctx.globalAlpha = a0; } : ink0;
+      // zoom smear: fading copies at growing scale behind the glyph
+      const ink = T.zsm > 0.02 ? () => { const a0 = ctx.globalAlpha, n = 6; for (let j = n; j >= 1; j--) { ctx.save(); const sc = 1 + j * 0.09 * T.zsm; ctx.scale(sc, sc); ctx.globalAlpha = a0 * 0.18 * (1 - j / (n + 1)) * Math.min(1, T.zsm * 2); ink1(); ctx.restore(); } ink1(); } : ink1;
       // RGB split: offset magenta / cyan copies behind the glyph
       const draw0 = T.rgb > 0.4 ? () => {
         ctx.save(); ctx.shadowColor = 'transparent'; const a0 = ctx.globalAlpha;
@@ -1097,6 +1112,7 @@ void main(){
           ctx.translate((hash(g.i, k, Math.floor(this.curT * 20)) - 0.5) * size * 0.5 * T.slice, 0); draw(); ctx.restore();
         }
       } else draw();
+      if (T.dot > 0.01) { ctx.save(); ctx.filter = 'none'; ctx.globalAlpha = Math.min(1, a * 1.2); ctx.fillStyle = col; ctx.beginPath(); ctx.arc(0, 0, size * 0.9 * E.outBack(clamp(T.dot)), 0, 6.2832); ctx.fill(); ctx.restore(); }
       if (T.pen > 0) {
         // ペン: the nib travels through the glyph in writing order (rows, left → right)
         const s2 = clamp(T.pen / 0.8), rows = 3, r = Math.min(rows - 1, Math.floor(s2 * rows)), fr = s2 * rows - r;
@@ -1128,6 +1144,13 @@ void main(){
     }
     glyphInk(ctx, ch, g, T, st, col, cc, pal, outlineOnly) {
       const size = g.size, S = this.S;
+      if (st.glass && !outlineOnly && !st.plain) {
+        // frosted glass: translucent body, bright rim, soft inner highlight
+        ctx.save(); ctx.shadowColor = 'rgba(0,0,0,0.25)'; ctx.shadowBlur = size * 0.12; ctx.shadowOffsetY = size * 0.04;
+        const gr = ctx.createLinearGradient(0, -size * 0.5, 0, size * 0.5); gr.addColorStop(0, 'rgba(255,255,255,0.42)'); gr.addColorStop(0.55, 'rgba(255,255,255,0.14)'); gr.addColorStop(1, rgba(col, 0.22));
+        ctx.fillStyle = gr; ctx.fillText(ch, 0, 0); ctx.shadowColor = 'transparent';
+        ctx.lineWidth = Math.max(1, size * 0.022); ctx.strokeStyle = 'rgba(255,255,255,0.75)'; ctx.strokeText(ch, 0, 0); ctx.restore(); return;
+      }
       if (st.plain) { ctx.fillStyle = col; outlineOnly ? (ctx.lineWidth = size * 0.03, ctx.strokeStyle = cc.fill, ctx.strokeText(ch, 0, 0)) : ctx.fillText(ch, 0, 0); return; }
       if (st.marker) { ctx.save(); ctx.globalAlpha *= 0.9; ctx.fillStyle = cc.acc === col ? cc.fill : cc.acc; ctx.globalAlpha *= 0.85; ctx.fillRect(-g.w / 2 - size * 0.02, size * 0.1, g.w + size * 0.04, size * 0.34); ctx.restore(); }
       if (st.longShadow || st.extrude) {
@@ -1402,6 +1425,8 @@ void main(){
       u.quad = fl.has('quadMirror') ? 1 : 0;
       if (fl.has('beatZoom')) u.bzoom = (this.p.beatSync !== false ? beat : 0) * 0.07 * g('beatZoom') + burst * 0.05 * g('beatZoom');
       u.lineart = clamp(g('lineArt'));
+      if (fl.has('pixelArt')) u.pix = Math.max(u.pix, S * (5 + 7 * clamp(g('pixelArt'), 0, 2)));
+      u.ascii = fl.has('asciiArt') ? Math.max(9, S * (22 - 6 * clamp(g('asciiArt'), 0, 1.5))) : 0;
       if (fl.has('mosaicBeat') && this.p.beatSync !== false && beat > 0.55) u.pix = Math.max(u.pix, S * (10 + 26 * g('mosaicBeat')) * beat);
       u.step = fl.has('stepFrames') ? Math.max(4, Math.round(13 - 6 * clamp(g('stepFrames'), 0, 1.4))) : 0;
       if (fl.has('duotone')) u.duo = clamp(g('duotone') * 0.85);

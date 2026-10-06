@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.6.0 — 2026-10-07
+- UI-motion pack (techniques inspired by prompt-motion.com — no code copied): typed in with a blinking cursor, accordion from / into a period, scroll in with ease / scroll away, heavy word lands and the line below bends, numbers count up, zoom smear in / out, melt into droplets, morph into a pill and vanish / UIモーション風の文字モーションを追加
+- New effects: glass text (frosted), pixel art, ASCII art / ガラス文字・ドット絵化・ASCIIアート化
+- 11 background motions (morphing card, orbit-and-lock squares, unfolding grid, 3D carousel, window parallax, brush strokes, rising liquid, line chart, dot ripples, ring escape, beat bounce), decorations (dot → pill, cursor click, frame break), the iris-blades transition and stepped-zoom / floating cameras / 背景モーション11種・装飾・絞り羽根トランジション・カメラ2種
+- Auto direction mixes them into matching themes / おまかせのテーマに組み込み
+
 ## 1.5.0 — 2026-09-29
 - Per-picture framing for background images and videos: fit (fill / show all), size, horizontal and vertical position, rotation, horizontal flip, and pan (follow global, none, left / right / up / down, zoom in / out, slow rotation) with amount; drag / Shift+drag / wheel directly on the preview / 背景画像・動画ごとに位置・大きさ・回転・反転・パンを調整（プレビュー上で直接操作も可）
 
