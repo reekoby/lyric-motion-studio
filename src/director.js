@@ -29,6 +29,7 @@ LM.director = (() => {
   const EMPH_POOL = {
     _: { pulse: 2, scalePunch: 1.5, colorFlash: 1, weightHit: 1 },
     jpop: { bounce: 2, elasticHit: 1.5, scalePunch: 1.5, colorFlash: 1 }, rock: { impact: 2, shake: 1.5, scalePunch: 1.5 }, metal: { impact: 2, shake: 2, rgbHit: 1 },
+    rnb: { blurPulse: 2, pulse: 1.5, colorFlash: 0.8 }, house: { scalePunch: 2.5, pulse: 1.5, colorFlash: 1.5 },
     edm: { scalePunch: 2, colorFlash: 1.5, rgbHit: 1, pulse: 1 }, hiphop: { impact: 2, trackCompress: 1.2, weightHit: 1.2, shake: 1 }, ballad: { pulse: 2, blurPulse: 1.5, weightHit: 1 },
     lofi: { pulse: 2, waveHit: 1.5, blurPulse: 1 }, citypop: { colorFlash: 1.5, pulse: 1.5, tiltHit: 1 }, vocaloid: { rgbHit: 2, jitterHit: 1.5, colorFlash: 1.5, scalePunch: 1 },
     anison: { scalePunch: 2, elasticHit: 1.5, impact: 1.2 }, cinematic: { blurPulse: 2, pulse: 1.5, trackExpand: 1.5 }, wa: { weightHit: 2, pulse: 1.5 },
@@ -36,7 +37,7 @@ LM.director = (() => {
     edge: { impact: 1.5, rgbHit: 1.5, trackExpand: 1.2, scalePunch: 1 }, psyche: { rgbHit: 1.5, waveHit: 1.5, elasticHit: 1 }, thermalvj: { rgbHit: 2, impact: 1 }, vj: { scalePunch: 1.5, rgbHit: 1.5, colorFlash: 1 },
     showreel: { trackExpand: 1.5, scalePunch: 1.5, tiltHit: 1 }, artistmv: { pulse: 1.5, weightHit: 1.5, blurPulse: 1 },
   };
-  const CALM = new Set(['ballad', 'ambient', 'acoustic', 'minimal', 'cinematic', 'wa', 'dream', 'lofi']);
+  const CALM = new Set(['rnb', 'ballad', 'ambient', 'acoustic', 'minimal', 'cinematic', 'wa', 'dream', 'lofi']);
   function meta(kind, id) {
     if (kind === 'tr') { const m = TR_META[id]; return m ? { e: m[0], f: m[1] } : { e: 0.5, f: [] }; }
     const o = OVR[kind] && OVR[kind][id];

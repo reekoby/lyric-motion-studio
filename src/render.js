@@ -391,7 +391,7 @@ void main(){
     }
     gapVisOf() {
       const id = (this.p.theme || '');
-      if (/vj|edm|thermal|edge|vocaloid|metal|rock|hiphop/.test(id)) return 'spectrum';
+      if (/vj|edm|thermal|edge|vocaloid|metal|rock|hiphop|house/.test(id)) return 'spectrum';
       if (/ballad|ambient|cinematic|artistmv|acoustic|wa|dream|lofi/.test(id)) return 'title';
       return 'marquee';
     }
@@ -836,6 +836,8 @@ void main(){
       else if (cam === 'shake') { lx.translate(U.noise1(t * 7, 1) * S * 9 * camAmp, U.noise1(t * 7, 2) * S * 9 * camAmp); lx.rotate(U.noise1(t * 5, 3) * 0.01 * camAmp); }
       else if (cam === 'zoomStep') { const k = Math.floor(lt / Math.max(0.2, 60 / (this.bpm() || 120))), f = clamp((lt - k * 60 / (this.bpm() || 120)) / 0.12); const z = 1 + 0.035 * camAmp * (k + E.outExpo(f)); lx.scale(Math.min(z, 1.35), Math.min(z, 1.35)); }
       else if (cam === 'float') { lx.translate(Math.sin(t * 0.37) * S * 26 * camAmp, Math.cos(t * 0.29) * S * 18 * camAmp); lx.rotate(Math.sin(t * 0.21) * 0.012 * camAmp); const z = 1 + 0.03 * Math.sin(t * 0.17) * camAmp; lx.scale(z, z); }
+      else if (cam === 'pump') { const z = 1 - 0.035 * beat * camAmp; lx.scale(z, z); }
+      else if (cam === 'groove') { const w = Math.sin(t * PI * (this.bpm() || 100) / 60 / 2); lx.translate(w * S * 16 * camAmp, Math.abs(w) * S * 5 * camAmp); lx.rotate(w * 0.008 * camAmp); }
       else if (cam === 'punch') { const b = Math.max(beat, Math.max(0, 1 - lt / 0.3)); const k = 1 + 0.045 * b * camAmp; lx.scale(k, k); }
       if (L.drift) lx.translate(-hp * W * L.drift * 3, 0);
       L._k = L.seq ? this.seqIndex(L, lt, ph.dur) : -1;

@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.8.0 — 2026-10-07
+- New genre themes: R&B / Soul (silk slide, velvet rise, glow bloom, groove sway, sheen, smoke-out; silk waves, light through blinds, candlelight bokeh, spinning record; gold dust, script swash underline, silk wipe, groove camera) and House / Dance (pumping pop-in, strobe in / out, filter sweep, sidechain pump, four-on-the-floor bounce; mirror ball, light-up dance floor, moving-head beams, piano-house keys; strobe, equalizer underline, strobe cut, sidechain camera) / ジャンルに「R&B / ソウル」「ハウス / ダンス」を追加
+- Realistic rain on glass: new screen effect “Rain on the window” that refracts the actual background through every drop (inverted lens view, rim, caustic, highlight), stick-slip sliding drops with wiped trails and residual beads, and a fogged pane; the Water drops / Rain glass shader / Rain backgrounds were rebuilt / 雨の窓ガラスをリアルに作り直し（水滴の屈折・流れる雫と跡・曇り）
+
 ## 1.7.0 — 2026-10-07
 - Edit word (bunsetsu) breaks inside a phrase: “✂ Edit word breaks” in Word timing lets you click between characters to split a word or join it to the previous one; `^` in the lyric marks a manual break (a phrase with `^` is split only at `^`, spaces and line breaks). Stamped word times follow the word that starts on the same character; `^` is removed from subtitle exports / フレーズ内の単語（文節）の区切りを手動で調整（「✂ 区切りを編集」・`^` 記法）
 

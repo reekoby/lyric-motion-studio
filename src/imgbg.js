@@ -120,7 +120,7 @@
     pop: ['push', 'tiles', 'blinds', 'diamond', 'stack', 'doors', 'iris'],
     hard: ['glitch', 'pixelate', 'whip', 'flash', 'rgbSplit', 'zoomThrough', 'spinZoom', 'shatter'],
   };
-  const poolOf = (theme) => (/ballad|ambient|cinematic|artistmv|acoustic|wa|dream|lofi/.test(theme || '') ? THEME_POOL.soft : /vj|edm|vocaloid|thermal|edge|rock|metal|hiphop|anison/.test(theme || '') ? THEME_POOL.hard : THEME_POOL.pop);
+  const poolOf = (theme) => (/ballad|ambient|cinematic|artistmv|acoustic|wa|dream|lofi|rnb/.test(theme || '') ? THEME_POOL.soft : /vj|edm|vocaloid|thermal|edge|rock|metal|hiphop|anison|house/.test(theme || '') ? THEME_POOL.hard : THEME_POOL.pop);
 
   /* ---------- renderer extensions ---------- */
   const P = R.prototype;
