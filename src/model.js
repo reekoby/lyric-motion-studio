@@ -357,7 +357,7 @@ LM.model = (() => {
   const pad = (n, l = 2) => String(n).padStart(l, '0');
   const ts = (t, sep = ',') => { t = Math.max(0, t); const h = Math.floor(t / 3600), m = Math.floor((t % 3600) / 60), s = Math.floor(t % 60), ms = Math.round((t % 1) * 1000) % 1000; return `${pad(h)}:${pad(m)}:${pad(s)}${sep}${pad(ms, 3)}`; };
   const lyr = (p) => p.cues.filter((c) => c.kind !== 'title');
-  const clean = (s) => String(s).replace(/[|｜]([^《|｜]+)《[^》]*》/g, '$1').replace(/《[^》]*》/g, '').replace(/\*/g, '').replace(/\//g, ' ');
+  const clean = (s) => String(s).replace(/[|｜]([^《|｜]+)《[^》]*》/g, '$1').replace(/《[^》]*》/g, '').replace(/[*^]/g, '').replace(/\//g, ' ');
   function toSRT(p) { return lyr(p).map((c, i) => `${i + 1}\n${ts(c.start)} --> ${ts(c.end)}\n${clean(c.text)}\n`).join('\n'); }
   function toVTT(p) { return 'WEBVTT\n\n' + lyr(p).map((c) => `${ts(c.start, '.')} --> ${ts(c.end, '.')}\n${clean(c.text)}\n`).join('\n'); }
   const lts = (t) => { t = Math.max(0, t); const cs = Math.round(t * 100); return `${pad(Math.floor(cs / 6000))}:${pad(Math.floor(cs / 100) % 60)}.${pad(cs % 100)}`; };

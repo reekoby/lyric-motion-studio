@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.7.0 — 2026-10-07
+- Edit word (bunsetsu) breaks inside a phrase: “✂ Edit word breaks” in Word timing lets you click between characters to split a word or join it to the previous one; `^` in the lyric marks a manual break (a phrase with `^` is split only at `^`, spaces and line breaks). Stamped word times follow the word that starts on the same character; `^` is removed from subtitle exports / フレーズ内の単語（文節）の区切りを手動で調整（「✂ 区切りを編集」・`^` 記法）
+
 ## 1.6.0 — 2026-10-07
 - UI-motion pack (techniques inspired by prompt-motion.com — no code copied): typed in with a blinking cursor, accordion from / into a period, scroll in with ease / scroll away, heavy word lands and the line below bends, numbers count up, zoom smear in / out, melt into droplets, morph into a pill and vanish / UIモーション風の文字モーションを追加
 - New effects: glass text (frosted), pixel art, ASCII art / ガラス文字・ドット絵化・ASCIIアート化

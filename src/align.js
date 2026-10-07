@@ -129,7 +129,7 @@ LM.align = (() => {
   function unitsOf(text) {
     let s = String(text || '');
     // ruby: use the reading
-    s = s.replace(/[|｜]?([^|｜《》]+)《([^》]*)》/g, (m, base, rd) => rd || base).replace(/[*/]/g, ' ');
+    s = s.replace(/[|｜]?([^|｜《》]+)《([^》]*)》/g, (m, base, rd) => rd || base).replace(/\^/g, '').replace(/[*/]/g, ' ');
     let u = 0;
     for (const w of s.split(/\s+/)) {
       if (!w) continue;

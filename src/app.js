@@ -7,7 +7,7 @@
   const esc = (s) => String(s ?? '').replace(/[&<>"'`]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;', '`': '&#96;' }[c]));
   const FR = MD.FR;
   const T = (x) => (LM.i18n ? LM.i18n.tx(x) : x), TXT = T;
-  const plain = (t) => String(t ?? '').replace(/[|｜]([^《|｜]+)《[^》]*》/g, '$1').replace(/《[^》]*》/g, '').replace(/\*/g, '').replace(/\s*\/\s*/g, ' ');
+  const plain = (t) => String(t ?? '').replace(/[|｜]([^《|｜]+)《[^》]*》/g, '$1').replace(/《[^》]*》/g, '').replace(/[*^]/g, '').replace(/\s*\/\s*/g, ' ');
 
   /* in-page dialog (native confirm/prompt are unavailable in some hosts) */
   function ask(msg, opts = {}) {
@@ -1239,6 +1239,26 @@
     toast(kind === 'track' ? `字間 ${v > 0 ? '+' : ''}${v.toFixed(2)}em` : `単語間 ${Math.round(v * 100)}%`);
   }
   const BLEND_OPTS = [['normal', '通常'],['screen', 'スクリーン（明るく重ねる）'],['lighter', '加算（光らせる）'],['lighten', '比較（明）'],['color-dodge', '覆い焼きカラー'],['overlay', 'オーバーレイ'],['soft-light', 'ソフトライト'],['hard-light', 'ハードライト'],['multiply', '乗算（暗く重ねる）'],['darken', '比較（暗）'],['difference', '差の絶対値'],['exclusion', '除外'],['luminosity', '輝度（明度だけ重ねる）'],['color', 'カラー（色だけ重ねる）']];
+  // glyph strip with clickable gaps: a gap marked as a boundary starts a new word
+  function segEditorHtml(c) {
+    const P0 = LM.typo.parse(c.text), WR = LM.typo.words(c.text), starts = new Set(WR.list.map((w) => w.a));
+    let k = 0, h = '';
+    P0.segments.forEach((toks, si) => {
+      let fixed = true;
+      toks.forEach((t) => {
+        if (t.space) { fixed = true; h += '<span class="sgsp"></span>'; return; }
+        t.gs.forEach((g) => {
+          if (/^\s+$/.test(g.ch)) return;
+          if (k > 0) h += fixed ? '' : `<button class="sg ${starts.has(k) ? 'on' : ''}" data-k="${k}" title="クリックで区切る／つなげる"></button>`;
+          h += `<span class="sgc" data-noi18n>${esc(g.ch)}</span>`; fixed = false; k++;
+        });
+      });
+      if (si < P0.segments.length - 1) h += '<span class="sgbr">/</span>';
+    });
+    return `<div class="segEd"><div class="segRow" id="iSeg">${h}</div>
+      <p class="hint">文字の間をクリックすると、そこで単語を区切る／前の単語とつなげることができます（空白と改行の位置は常に区切り）。区切った位置には歌詞欄に <b>^</b> が入ります。打刻済みの時刻は、歌い出しの文字が同じ単語に引き継がれます。</p>
+      <div class="row" style="gap:4px;flex-wrap:wrap"><button class="btn sm" id="iSegAuto">自動の区切りに戻す</button><button class="btn sm" id="iSegChars">1文字ずつ区切る</button><span class="sp"></span><button class="btn sm pri" id="iSegDone">完了</button></div></div>`;
+  }
   function renderInspector() {
     view.setProject(P);
     const c = selCue(), b = $('#ibody');
@@ -1264,7 +1284,7 @@
       ${S.multi.size > 1 ? `<div class="multi"><b>${S.multi.size}行を選択中</b><span style="flex-basis:100%;opacity:.85">モーション・レイアウト・トランジション・背景モーションの変更はまとめて適用されます</span><button class="btn sm" id="mPaste">スタイル貼り付け</button><button class="btn sm" id="mReroll">🎲 再抽選</button><button class="btn sm" id="mLock">🔒 固定</button><button class="btn sm" id="mClear">選択解除</button></div>` : ''}
       ${warn.length ? `<div class="warn">${warn.join('<br>')}</div>` : ''}
       <div class="sec"><h3>歌詞</h3><textarea id="iText" rows="2" maxlength="300">${esc(c.text)}</textarea>
-        <p class="hint"><b>*語句*</b> で強調、<b>/</b> で改行、<b>漢字《かんじ》</b> でルビ</p></div>
+        <p class="hint"><b>*語句*</b> で強調、<b>/</b> で改行、<b>漢字《かんじ》</b> でルビ、<b>^</b> で単語の区切り</p></div>
       <div class="sec"><h3>タイミング <span class="sp"></span><button class="btn sm" id="iPlay">▶ この行を再生</button></h3>
         <div class="time2"><span class="hint">開始</span><input type="text" id="iStart"><button class="btn sm" id="iStampS" title="再生位置を開始に (I)"><svg viewBox="0 0 24 24" style="width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2"><circle cx="12" cy="12" r="7"/><path d="M12 2v5M12 17v5M2 12h5M17 12h5"/></svg></button>
         <span></span><button class="btn sm" id="iRipple" style="grid-column:2/4" title="再生中にこの行が始まった瞬間に押す（Shift+I）">▶ 再生位置をここから開始（以降の行もずらす）</button>
@@ -1273,7 +1293,8 @@
         <div class="row" style="margin-top:6px"><span class="hint" id="iDur"></span><span class="sp"></span><div class="nud"><button class="btn sm" data-n="-0.1">−0.1s</button><button class="btn sm" data-n="-0.033">−1f</button><button class="btn sm" data-n="0.033">+1f</button><button class="btn sm" data-n="0.1">+0.1s</button><button class="btn sm" id="iSnap" title="この行の開始を一番近いビートへ">ビートへ</button></div></div></div>
       <div class="sec"><h3>ワードタイミング <span class="sp"></span><span class="hint">${nW ? `${nW} / ${WR.length} 打刻済み` : '未打刻（自動で均等割り）'}</span></h3>
         <div class="wchips" id="iWords">${WR.map((w, k) => `<button data-w="${k}" class="${wset && wset[k] != null ? 'set' : ''}" title="クリック：再生位置をこの単語の歌い出しに（W）／右クリック：解除"><span data-noi18n>${esc(w.text)}</span><small>${wset && wset[k] != null ? '+' + (wset[k] - c.start).toFixed(2) + 's' : '自動'}</small></button>`).join('')}</div>
-        <div class="row" style="margin-top:6px"><button class="btn sm" id="iWEven">均等に割り付け</button><button class="btn sm" id="iWBeat">ビートに割り付け</button><button class="btn sm" id="iWClear">クリア</button></div>
+        <div class="row" style="margin-top:6px;flex-wrap:wrap;gap:4px"><button class="btn sm" id="iWEven">均等に割り付け</button><button class="btn sm" id="iWBeat">ビートに割り付け</button><button class="btn sm" id="iWClear">クリア</button><button class="btn sm ${S.segEdit ? 'on' : ''}" id="iSegEd" title="単語（文節）の区切りを手で直す">✂ 区切りを編集${LM.typo.isManual(c.text) ? ' <b class="ovb">手動</b>' : ''}</button></div>
+        ${S.segEdit ? segEditorHtml(c) : ''}
         <p class="hint">カラオケ塗り・単語ハイライト・単語順に出る動き（ワード系モーション・ワードフラッシュ等）が歌に同期します。下の「単語ごと」タップでも打刻できます。</p></div>
       <div class="sec"><h3>モーション（登場 → 保持 → 強調 → 退場）</h3>
         <div class="tr3 tr4"><button class="mbtn" data-pick="enter"><small>登場</small><span>${esc(M.enter[tr.enter].n)}</span></button><button class="mbtn" data-pick="hold"><small>保持</small><span>${esc(M.hold[tr.hold].n)}</span></button><button class="mbtn" data-pick="emph"><small>強調</small><span>${esc((M.emph[tr.emph] || M.emph.none).n)}</span></button><button class="mbtn" data-pick="exit"><small>退場</small><span>${esc(M.exit[tr.exit].n)}</span></button></div>
@@ -1387,6 +1408,21 @@
       c.words[0] = c.start; commit({ quiet: true }); renderInspector(); S.dirty = true; toast('単語を裏拍までのグリッドに割り付けました');
     };
     $('#iWClear').onclick = () => { delete c.words; commit({ quiet: true }); renderInspector(); S.dirty = true; };
+    // word (bunsetsu) boundary editor
+    $('#iSegEd').onclick = () => { S.segEdit = !S.segEdit; renderInspector(); };
+    const setSeg = (text) => {
+      const oldW = LM.typo.words(c.text).list, oldT = Array.isArray(c.words) && c.words.length === oldW.length ? c.words : null;
+      c.text = text; const nw = LM.typo.words(text).list;
+      if (oldT) { const at = new Map(oldW.map((w, k) => [w.a, oldT[k]])); c.words = nw.map((w) => (at.has(w.a) ? at.get(w.a) : null)); if (c.words.every((x) => x == null)) delete c.words; }
+      view.invalidate(); renderListSoft(); commit({ quiet: true }); renderInspector(); S.dirty = true;
+    };
+    $$('#iSeg .sg').forEach((el) => { el.onclick = () => {
+      const k = +el.dataset.k, st = new Set(LM.typo.words(c.text).list.map((w) => w.a));
+      st.has(k) ? st.delete(k) : st.add(k); setSeg(LM.typo.setBreaks(c.text, [...st]));
+    }; });
+    const segAuto = $('#iSegAuto'); if (segAuto) segAuto.onclick = () => setSeg(LM.typo.stripBreaks(c.text));
+    const segChars = $('#iSegChars'); if (segChars) segChars.onclick = () => { const n = LM.typo.words(c.text).n; setSeg(LM.typo.setBreaks(c.text, Array.from({ length: n }, (_, i) => i))); };
+    const segDone = $('#iSegDone'); if (segDone) segDone.onclick = () => { S.segEdit = false; renderInspector(); };
     // transform / durations
     const tfBind = (id, fn, fmt) => { const el = $('#' + id); el.addEventListener('input', () => { fn(+el.value); $('#' + id + 'V').textContent = fmt(+el.value); S.dirty = true; commitSoon(); }); el.addEventListener('dblclick', () => { el.value = el.getAttribute('min') === '30' ? 100 : 0; el.dispatchEvent(new Event('input')); }); };
     const T = () => (c.tf = c.tf || {});

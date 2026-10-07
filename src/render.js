@@ -304,7 +304,7 @@ void main(){
       const needSpec = list.concat(prevList).some((id) => id === 'eqBars' || id === 'circleSpectrum' || (LM.bgm.lib[id] && LM.bgm.lib[id].spec));
       const needWave = list.concat(prevList).some((id) => LM.bgm.lib[id] && LM.bgm.lib[id].wave);
       const au = this.bands(t);
-      const R = { W: this.W, H: this.H, S: this.S, minD: this.minD, t, pal, beat: p.beatSync === false ? 0 : beat, bass: au.bass, mid: au.mid, high: au.high, spec: needSpec && this.audio && this.audio.spectrum ? this.audio.spectrum(t) : null, wave: needWave && this.audio && this.audio.waveAt ? this.audio.waveAt(t, 160) : null, bpm: this.bpm() || 120, title: p.title || '', text: cur ? String(cur.c.text).replace(/[|｜]([^《|｜]+)《[^》]*》/g, '$1').replace(/《[^》]*》/g, '').replace(/[*]/g, '').replace(/\s*\/\s*/g, ' ') : '' };
+      const R = { W: this.W, H: this.H, S: this.S, minD: this.minD, t, pal, beat: p.beatSync === false ? 0 : beat, bass: au.bass, mid: au.mid, high: au.high, spec: needSpec && this.audio && this.audio.spectrum ? this.audio.spectrum(t) : null, wave: needWave && this.audio && this.audio.waveAt ? this.audio.waveAt(t, 160) : null, bpm: this.bpm() || 120, title: p.title || '', text: cur ? String(cur.c.text).replace(/[|｜]([^《|｜]+)《[^》]*》/g, '$1').replace(/《[^》]*》/g, '').replace(/[*^]/g, '').replace(/\s*\/\s*/g, ' ') : '' };
       const cfg = { amt: p.bgmAmt == null ? 1 : p.bgmAmt, speed: (p.bgmSpeed || 1) * this.tempo() };
       const run = (ids, a) => { if (a <= 0.01) return; ids.forEach((id) => {
         const b = LM.bgm.lib[id]; if (!b || ((transparent || this.imgActive) && b.full)) return;
@@ -489,7 +489,7 @@ void main(){
         const per = 60 / (this.bpm() || 120), left = g.t1 - t, span = Math.min(per * 3, len * 0.8);
         if (left <= span + 0.4) {
           const k = clamp((span + 0.4 - left) / 0.3), n = 3, lit = Math.min(n, Math.floor((span - left) / (span / n)) + 1);
-          const nx = String(this.cues[g.next].text || '').replace(/[|｜]([^《|｜]+)《[^》]*》/g, '$1').replace(/《[^》]*》/g, '').replace(/[*]/g, '').replace(/\s*\/\s*/g, ' ');
+          const nx = String(this.cues[g.next].text || '').replace(/[|｜]([^《|｜]+)《[^》]*》/g, '$1').replace(/《[^》]*》/g, '').replace(/[*^]/g, '').replace(/\s*\/\s*/g, ' ');
           ctx.save(); ctx.globalAlpha = k; const y = H * 0.82, r = md * 0.012;
           for (let i = 0; i < n; i++) { ctx.fillStyle = i < n - lit ? pal.accent : rgba(pal.text, 0.35); ctx.beginPath(); ctx.arc(W / 2 + (i - 1) * r * 3.2, y, r, 0, TAU); ctx.fill(); }
           ctx.font = F(600, md * 0.024); ctx.textAlign = 'center'; ctx.textBaseline = 'top'; ctx.fillStyle = pal.text; ctx.globalAlpha = k * 0.75; ctx.fillText('NEXT ▸ ' + nx, W / 2, y + r * 2.2);

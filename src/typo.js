@@ -61,7 +61,7 @@ LM.typo = (() => {
     raw = String(raw || '').replace(/\r/g, '');
     const gsAll = graphemes(raw);
     const segs = [[]];
-    let emph = false, anyEmph = false, bar = -1, rubyBuf = null, rid = 0, hasRuby = false;
+    let emph = false, anyEmph = false, brk = false, manual = false, bar = -1, rubyBuf = null, rid = 0, hasRuby = false;
     for (const ch of gsAll) {
       const seg = segs[segs.length - 1];
       if (rubyBuf != null) {
@@ -77,11 +77,12 @@ LM.typo = (() => {
       if (ch === '《') { rubyBuf = ''; continue; }
       if (ch === '|' || ch === '｜') { bar = seg.length; continue; }
       if (ch === '*') { emph = !emph; continue; }
-      if (ch === '/' || ch === '\n') { segs.push([]); bar = -1; continue; }
-      seg.push({ ch, emph });
+      if (ch === '^') { brk = true; manual = true; continue; }
+      if (ch === '/' || ch === '\n') { segs.push([]); bar = -1; brk = false; continue; }
+      seg.push(brk ? { ch, emph, br: true } : { ch, emph }); brk = false;
       if (emph) anyEmph = true;
     }
-    const segments = segs.filter((s) => s.length).map((gl) => tokenize(gl));
+    const segments = segs.filter((s) => s.length).map((gl) => (manual ? tokenizeManual(gl) : tokenize(gl)));
     const plain = segs.map((s) => s.map((g) => g.ch).join('')).join('');
     // auto key token: longest content token (kanji/katakana/latin)
     if (!anyEmph) {
@@ -96,6 +97,18 @@ LM.typo = (() => {
     }
     const units = segments.reduce((a, s) => a + s.reduce((b, t) => b + t.gs.reduce((u, g) => u + (g.cls === 'L' ? 0.45 : g.cls === 'P' || g.cls === 'S' ? 0.3 : 1), 0), 0), 0);
     return { segments, plain, anyEmph, hasRuby, units, count: segments.reduce((a, s) => a + s.reduce((b, t) => b + t.gs.length, 0), 0) };
+  }
+
+  // manual word boundaries: a phrase containing ^ is split only at ^ marks, spaces and line breaks
+  function tokenizeManual(gl) {
+    classify(gl);
+    const out = []; let cur = null;
+    for (const g of gl) {
+      const sp = reSpace.test(g.ch);
+      if (!cur || sp !== cur.space || (!sp && g.br)) { cur = { gs: [], space: sp }; out.push(cur); }
+      cur.gs.push(g);
+    }
+    return out;
   }
 
   function tokenize(gl) {
@@ -413,5 +426,26 @@ LM.typo = (() => {
     v = { list: out, n: k }; trCache.set(text, v); if (trCache.size > 800) trCache.delete(trCache.keys().next().value);
     return v;
   }
-  return { parse, fit, place, adv, metrics, clearCache, isLatinG, isLatinCh, setOpts, classify, words: wordRanges };
+  // word-start indices (non-space glyph index) of a phrase, and rewriting a phrase with manual boundaries
+  const isManual = (text) => String(text || '').replace(/《[^》]*》/g, '').includes('^');
+  const stripBreaks = (text) => { let out = '', rb = false; for (const ch of graphemes(String(text || ''))) { if (ch === '《') rb = true; else if (ch === '》') rb = false; if (ch === '^' && !rb) continue; out += ch; } return out; };
+  function setBreaks(text, starts) {
+    const raw = stripBreaks(text), set = new Set(starts), out = [];
+    let k = 0, rb = false, prev = '';
+    for (const ch of graphemes(raw)) {
+      if (rb) { out.push(ch); if (ch === '》') rb = false; continue; }
+      if (ch === '《') { rb = true; out.push(ch); continue; }
+      if (ch === '|' || ch === '｜' || ch === '*') { out.push(ch); continue; }
+      if (ch === '/' || ch === '\n') { out.push(ch); prev = ch; continue; }
+      if (/^\s+$/.test(ch)) { out.push(ch); prev = ch; continue; }
+      if (k > 0 && set.has(k) && !/^\s+$/.test(prev) && prev !== '/' && prev !== '\n') {
+        // put the mark before any | or * that opens this word
+        let j = out.length; while (j > 0 && /^[|｜*]$/.test(out[j - 1])) j--;
+        out.splice(j, 0, '^');
+      }
+      out.push(ch); prev = ch; k++;
+    }
+    return out.join('');
+  }
+  return { parse, fit, place, adv, metrics, clearCache, isLatinG, isLatinCh, setOpts, classify, words: wordRanges, setBreaks, stripBreaks, isManual };
 })();
