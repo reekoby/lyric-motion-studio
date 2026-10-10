@@ -272,4 +272,110 @@
       ctx.fillStyle = g; ctx.beginPath(); ctx.ellipse(x - r * 0.4, y - r * 0.45, r * 0.3, r * 0.18, -0.7, 0, TAU); ctx.fill();
     }
   });
+
+  /* ---------- synthwave scene: sky, slit sun with glow, ridge silhouettes, glowing perspective grid ---------- */
+  LM.synth = (() => {
+    function draw(ctx, R, o) {
+      o = o || {};
+      const W = R.W, H = R.H, S = R.S, t = R.t, pal = R.pal, hy = H * (o.hor || 0.6), minD = R.minD || Math.min(W, H), b = R.beat || 0, cx = W / 2;
+      const glowC = mix(pal.accent, '#ff5fa2', 0.25), lineC = mix(pal.accent, pal.sub, 0.35);
+      // sky (shared gradient also paints the sun's slits so they read as gaps)
+      const sky = ctx.createLinearGradient(0, 0, 0, hy);
+      sky.addColorStop(0, mix(pal.bg, '#000000', 0.35)); sky.addColorStop(0.55, mix(pal.bg, pal.sub, 0.35)); sky.addColorStop(1, mix(mix(pal.accent, pal.sub, 0.45), '#ffffff', 0.08));
+      if (o.sky !== false) {
+        ctx.fillStyle = sky; ctx.fillRect(0, 0, W, hy + 1);
+        for (let i = 0; i < 90; i++) { const x = hash(i, 1, 81) * W, y = hash(i, 2, 81) * hy * 0.75, tw = 0.35 + 0.65 * Math.pow(0.5 + 0.5 * Math.sin(t * (1 + hash(i, 3, 81) * 2) + i), 3); ctx.globalAlpha = tw * (1 - y / (hy * 0.9)); ctx.fillStyle = '#ffffff'; const s = S * (0.8 + hash(i, 4, 81) * 1.6); ctx.fillRect(x, y, s, s); }
+        ctx.globalAlpha = 1;
+      }
+      // sun
+      if (o.sun) {
+        const r = minD * 0.27, cy = hy - r * 0.42;
+        ctx.save(); ctx.globalCompositeOperation = 'lighter';
+        const gl = ctx.createRadialGradient(cx, cy, r * 0.8, cx, cy, r * 2.8); gl.addColorStop(0, rgba(glowC, 0.42 + 0.1 * b)); gl.addColorStop(1, rgba(glowC, 0));
+        ctx.fillStyle = gl; ctx.fillRect(0, 0, W, hy); ctx.restore();
+        ctx.save(); ctx.beginPath(); ctx.arc(cx, cy, r, 0, TAU); ctx.clip(); ctx.beginPath(); ctx.rect(0, 0, W, hy); ctx.clip();
+        const sg = ctx.createLinearGradient(0, cy - r, 0, cy + r); sg.addColorStop(0, '#fff6c2'); sg.addColorStop(0.45, mix(pal.accent, '#ffd36a', 0.45)); sg.addColorStop(1, mix(pal.accent, '#ff3d7f', 0.4));
+        ctx.fillStyle = sg; ctx.fillRect(cx - r, cy - r, r * 2, r * 2);
+        ctx.fillStyle = sky;
+        for (let i = 0; i < 9; i++) { const u = wrap(i / 9 + t * 0.03, 1), y = cy - r * 0.15 + u * r * 1.1, h = r * (0.02 + 0.13 * u * u); ctx.fillRect(cx - r, y, r * 2, h); }
+        ctx.restore();
+      }
+      // ridges with glowing rim
+      const ridge = (base, amp, sc, sp, seed, dark, rimA) => {
+        const Y = (x) => hy - H * amp * (0.55 * Math.abs(noise1((x / W) * sc + t * sp, seed)) + 0.45 * Math.abs(noise1((x / W) * sc * 2.7 + t * sp, seed + 3))) * (0.35 + 0.65 * sm(0, 0.35, Math.abs(x / W - 0.5)));
+        const g = ctx.createLinearGradient(0, hy - H * amp, 0, hy); g.addColorStop(0, mix(pal.bg, pal.sub, 0.25)); g.addColorStop(1, dark);
+        ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(0, hy + 1); for (let x = 0; x <= W + 1; x += W / 120) ctx.lineTo(x, Y(x)); ctx.lineTo(W, hy + 1); ctx.closePath(); ctx.fill();
+        ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = rgba(glowC, rimA); ctx.lineWidth = S * 1.4; ctx.beginPath(); for (let x = 0; x <= W + 1; x += W / 120) { const y = Y(x); x ? ctx.lineTo(x, y) : ctx.moveTo(x, y); } ctx.stroke(); ctx.restore();
+      };
+      if (o.ridges !== false) { ridge(hy, 0.13, 2.2, 0.004, 11, mix(pal.bg, '#000000', 0.3), 0.35); ridge(hy, 0.07, 3.6, 0.01, 17, mix(pal.bg, '#000000', 0.5), 0.55); }
+      // floor
+      const fl = ctx.createLinearGradient(0, hy, 0, H); fl.addColorStop(0, mix(pal.bg, glowC, 0.3)); fl.addColorStop(0.25, mix(pal.bg, '#000000', 0.35)); fl.addColorStop(1, mix(pal.bg, '#000000', 0.6));
+      ctx.fillStyle = fl; ctx.fillRect(0, hy, W, H - hy);
+      ctx.save(); ctx.beginPath(); ctx.rect(0, hy, W, H - hy); ctx.clip(); ctx.globalCompositeOperation = 'lighter';
+      if (o.sun) { const rg = ctx.createRadialGradient(cx, hy, 0, cx, hy, (H - hy) * 1.1); rg.addColorStop(0, rgba(glowC, 0.35)); rg.addColorStop(1, rgba(glowC, 0)); ctx.save(); ctx.translate(cx, hy); ctx.scale(0.45, 1); ctx.translate(-cx, -hy); ctx.fillStyle = rg; ctx.fillRect(cx - W, hy, W * 2, H); ctx.restore(); }
+      // grid: glow pass + core pass
+      const far = 34, ph = wrap(t * (o.speed || 1.6), 1), spread = W * 0.16, vg = ctx.createLinearGradient(0, hy, 0, H); vg.addColorStop(0, rgba(lineC, 0)); vg.addColorStop(0.12, rgba(lineC, 0.35)); vg.addColorStop(1, rgba(lineC, 1));
+      for (const [lw, al] of [[S * 7, 0.12 + 0.08 * b], [S * 1.6, 0.85]]) {
+        ctx.lineWidth = lw; ctx.strokeStyle = vg; ctx.globalAlpha = al;
+        ctx.beginPath(); for (let i = -24; i <= 24; i++) { ctx.moveTo(cx + i * spread / far, hy + (H - hy) / far); ctx.lineTo(cx + i * spread * 1.15, H + (H - hy) * 0.15); } ctx.stroke();
+        for (let k = 0; k < far; k++) { const z = k + 1 - ph; if (z < 0.6) continue; const y = hy + (H - hy) / z; ctx.globalAlpha = al * clamp(1.2 - z / far) * (0.4 + 0.6 * Math.min(1, 2 / z)); ctx.strokeStyle = lineC; ctx.lineWidth = lw * Math.min(1.6, 0.5 + 1.2 / z); ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
+      }
+      ctx.restore();
+      // horizon haze
+      const hz = ctx.createLinearGradient(0, hy - H * 0.06, 0, hy + H * 0.05); hz.addColorStop(0, rgba(glowC, 0)); hz.addColorStop(0.55, rgba(glowC, 0.45)); hz.addColorStop(1, rgba(glowC, 0));
+      ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = hz; ctx.fillRect(0, hy - H * 0.06, W, H * 0.11); ctx.restore();
+    }
+    return { draw };
+  })();
+  re('retroSun', (ctx, R) => LM.synth.draw(ctx, R, { sun: true, hor: 0.62 }));
+
+  /* ---------- GPU backgrounds: synthwave terrain, glossy checker floor, lit 3D tubes ---------- */
+  const SL = LM.shaderbg && LM.shaderbg.list;
+  const SKY = `
+      float hz=HZ; vec3 sky=mix(mix(C0,C3,.4)*1.15,C0*.45,smoothstep(hz,.75,p.y));
+      vec3 glowC=mix(C2,vec3(1.,.36,.64),.25); sky+=glowC*exp(-abs(p.y-hz)*8.)*.55;
+      vec2 sg=floor(p*90.); sky+=vec3(step(.986,h21(sg))*smoothstep(hz+.05,.6,p.y)*(.45+.55*sin(T*2.+h21(sg+1.)*40.)))*.8;
+      vec3 c=sky;`;
+  if (SL && SL.terrain) SL.terrain[2] = SKY.replace('HZ', '.1') + `
+      vec2 sp=p-vec2(0.,hz+.12); float sr=.22, sd=length(sp);
+      float u=clamp((-sp.y+sr*.05)/sr,0.,1.); float gap=step(fract(sp.y*20.+T*.35),u*.6)*step(sp.y,sr*.05);
+      vec3 sunC=mix(mix(C2,vec3(1.,.25,.5),.35),vec3(1.,.95,.7),smoothstep(-sr,sr,sp.y));
+      c+=glowC*exp(-max(sd-sr,0.)*6.)*.5; c=mix(c,sunC,smoothstep(sr,sr-.004,sd)*(1.-gap));
+      bool hit=false; float zh=0., wx=0., wz=0., hh=0., zp=.3, ch=1.15;
+      for(int i=0;i<80;i++){ float fi=float(i); float z=.4+fi*.1+fi*fi*.007; float x=p.x*z; float zz=z+T*2.2;
+        float m=smoothstep(1.4,5.,abs(x)); float h=m*(noise(vec2(x,zz)*.18)*2.4+noise(vec2(x,zz)*.5)*.7)*smoothstep(.5,4.,z);
+        if(p.y<hz+(h-ch)/z){ hit=true; zh=z; break; } zp=z; }
+      if(hit){ float lo=zp, hi=zh;
+        for(int j=0;j<7;j++){ float z=(lo+hi)*.5; float x=p.x*z; float zz=z+T*2.2; float m=smoothstep(1.4,5.,abs(x)); float h=m*(noise(vec2(x,zz)*.18)*2.4+noise(vec2(x,zz)*.5)*.7)*smoothstep(.5,4.,z); if(p.y<hz+(h-ch)/z) hi=z; else lo=z; }
+        zh=hi; wx=p.x*zh; wz=zh+T*2.2; float m=smoothstep(1.4,5.,abs(wx)); hh=m*(noise(vec2(wx,wz)*.18)*2.4+noise(vec2(wx,wz)*.5)*.7)*smoothstep(.5,4.,zh);
+        vec2 gv=abs(fract(vec2(wx,wz))-.5); float w=.03+zh*.006; float ln=smoothstep(w,w*.3,.5-max(gv.x,gv.y));
+        vec3 lc=mix(C2,C3,clamp(hh*.4,0.,1.))*(1.2+BASS*.8); vec3 fill=mix(C0*.15,C0*.3,clamp(hh*.3,0.,1.));
+        vec3 tc=fill+lc*ln*1.2; float fog=smoothstep(8.,52.,zh); c=mix(tc,mix(C0,glowC,.35)*.9,fog); }
+      else if(p.y<hz) c=mix(C0,glowC,.3)*.8;
+      c+=glowC*exp(-abs(p.y-hz)*70.)*.35;
+      gl_FragColor=vec4(c+grain(gl_FragCoord.xy)*.025,1.);`;
+  if (SL && SL.checker) SL.checker[2] = SKY.replace('HZ', '.05') + `
+      vec2 sp=p-vec2(0.,hz+.2); c+=glowC*exp(-length(sp)*3.5)*.45; vec3 sunC=mix(mix(C2,vec3(1.,.3,.55),.35),vec3(1.,.95,.72),smoothstep(-.13,.13,sp.y)); float gap=step(fract(sp.y*26.+T*.3),clamp(-sp.y/.13,0.,1.)*.55)*step(sp.y,0.); c=mix(c,sunC,smoothstep(.13,.126,length(sp))*(1.-gap));
+      if(p.y<hz){ float y=hz-p.y; float z=.42/y; vec2 g=vec2(p.x*z*2.,z*1.8+T*3.); vec2 s2=sin(g*PI); float w=clamp(z*.03,.012,1.);
+        float ch=.5+.5*clamp(s2.x*s2.y/w,-1.,1.);
+        vec3 fc=mix(C0*.22,mix(C0,C2,.7),ch);
+        float refl=exp(-abs(p.x)*2.5)*exp(-y*3.);
+        fc+=mix(C2,vec3(1.,.9,.7),.4)*refl*(.25+.5*ch)+glowC*refl*.25;
+        fc+=vec3(1.)*pow(max(0.,1.-abs(p.x-.0)*1.2),10.)*exp(-y*14.)*.35;
+        float fog=smoothstep(5.,34.,z); c=mix(fc,mix(C0,glowC,.35),fog); }
+      c+=glowC*exp(-abs(p.y-hz)*80.)*.6;
+      gl_FragColor=vec4(c+grain(gl_FragCoord.xy)*.02,1.);`;
+  if (SL && SL.tubes) SL.tubes[2] = `
+      vec2 q=p*2.8+vec2(T*.12,T*.07); vec2 id=floor(q), f=fract(q)-.5; bool fl=h21(id)>.5; if(fl)f.x=-f.x;
+      vec2 o1=f-vec2(.5), o2=f+vec2(.5); float l1=length(o1), l2=length(o2); float d1=abs(l1-.5), d2=abs(l2-.5);
+      bool A=d1<d2; float d=A?d1:d2; float sd=(A?l1:l2)-.5; vec2 rad=normalize(A?o1:o2); if(fl)rad.x=-rad.x;
+      float an=A?atan(o1.y,o1.x):atan(o2.y,o2.x);
+      float R0=.2; float s=clamp(sd/R0,-1.,1.); float tube=smoothstep(R0,R0-.012,d);
+      float nz=sqrt(max(0.,1.-s*s)); vec3 n=normalize(vec3(rad*s,nz));
+      vec3 L=normalize(vec3(-.45,.55,.7)); float dif=max(dot(n,L),0.); float spec=pow(max(dot(reflect(-L,n),vec3(0.,0.,1.)),0.),36.);
+      vec3 base=pal4(.08+.84*(.5+.5*sin(dot(q,vec2(.5,.33))+T*.3)));
+      vec3 col=base*(.18+.9*dif)+vec3(1.)*spec*.75+base*pow(1.-nz,2.5)*.35;
+      vec3 bg=mix(C0*.7,C0*1.05,uv.y); bg*=1.-smoothstep(R0+.13,R0,d)*.5;
+      vec3 c=mix(bg,col,tube);
+      gl_FragColor=vec4(c,1.);`;
 })();

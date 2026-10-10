@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.8.2 — 2026-10-10
+- Synthwave backgrounds rebuilt: Sunset (80s), Retro grid and Retro sun + grid now share one scene — starry gradient sky, slit sun with glow, ridge silhouettes with glowing rims, a glowing perspective grid with depth fade, sun reflection and horizon haze / サンセット（80s）・レトログリッド・レトロサンを作り直し
+- Wireframe mountains: proper height-field raymarch (no more stair artifacts), valley road, neon grid with fog; Checker floor: anti-aliased glossy tiles with reflection, slit sun and horizon glow; Gradient tubes: lit 3D tubes with specular highlight, soft shadows and continuous colour / ワイヤーフレーム山脈・チェッカー床・グラデーションチューブを作り直し
+
 ## 1.8.1 — 2026-10-10
 - Quality pass on background motions that looked flat: silk (per-pixel shaded satin folds with a sharp sheen), brush strokes (paint body with bristle streaks and dry-brush tails), record (turntable with platter, grooves and track gaps, printed label, fixed light reflection and tonearm), rising liquid (meniscus, depth, bubbles, caustics), train-window view (sky, hills, town, poles and wires, bevelled frame), lava lamp (lit metaballs with glow), morphing blob (glossy, layered), ocean (shaded swells, foam crests, glints), petals and leaves (real shapes tumbling in 3D), bubbles (rim, film tint, highlight) / チープだった背景モーションを作り直し（シルク・筆のストローク・レコード・液体・車窓・ラバランプ・ブロブ・波・花びら・葉・泡）
 

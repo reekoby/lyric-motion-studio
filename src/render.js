@@ -754,23 +754,8 @@ void main(){
             ctx.fillStyle = rgba(cols[j], 0.08); ctx.fill();
           }
         }
-      } else if (type === 'sunset') {
-        const g = ctx.createLinearGradient(0, 0, 0, H);
-        g.addColorStop(0, pal.bg); g.addColorStop(0.62, mix(pal.bg, pal.accent, 0.55)); g.addColorStop(1, mix(pal.accent, pal.sub, 0.4));
-        ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
-        const cx = W / 2, cy = H * 0.62, r = this.minD * 0.26;
-        ctx.save(); ctx.beginPath(); ctx.arc(cx, cy, r, PI, 0); ctx.closePath(); ctx.clip();
-        const sg = ctx.createLinearGradient(0, cy - r, 0, cy); sg.addColorStop(0, mix(pal.sub, '#ffffff', 0.3)); sg.addColorStop(1, pal.accent);
-        ctx.fillStyle = sg; ctx.fillRect(cx - r, cy - r, r * 2, r);
-        ctx.fillStyle = mix(pal.bg, pal.accent, 0.5);
-        for (let i = 0; i < 6; i++) { const yy = cy - r * 0.08 - i * r * 0.14; ctx.fillRect(cx - r, yy, r * 2, r * 0.02 + i * S * 0.9); }
-        ctx.restore();
-        ctx.globalAlpha = 0.18; this.drawGrid3d(ctx, pal, t, 0.62); ctx.globalAlpha = 1;
-      } else if (type === 'grid3d') {
-        const g = ctx.createLinearGradient(0, 0, 0, H);
-        g.addColorStop(0, pal.bg); g.addColorStop(0.55, mix(pal.bg, pal.accent, 0.25)); g.addColorStop(1, pal.bg);
-        ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
-        this.drawGrid3d(ctx, pal, t, 0.55);
+      } else if (type === 'sunset' || type === 'grid3d') {
+        LM.synth.draw(ctx, { W, H, S, minD: this.minD, t, pal, beat }, type === 'sunset' ? { sun: true, hor: 0.62 } : { sun: false, hor: 0.55 });
       } else if (type === 'image' && bg.image && this.images[bg.image]) {
         const img = this.images[bg.image];
         const k = Math.max(W / img.width, H / img.height) * (1 + 0.04 * Math.sin(t * 0.1));
