@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.8.1 — 2026-10-10
+- Quality pass on background motions that looked flat: silk (per-pixel shaded satin folds with a sharp sheen), brush strokes (paint body with bristle streaks and dry-brush tails), record (turntable with platter, grooves and track gaps, printed label, fixed light reflection and tonearm), rising liquid (meniscus, depth, bubbles, caustics), train-window view (sky, hills, town, poles and wires, bevelled frame), lava lamp (lit metaballs with glow), morphing blob (glossy, layered), ocean (shaded swells, foam crests, glints), petals and leaves (real shapes tumbling in 3D), bubbles (rim, film tint, highlight) / チープだった背景モーションを作り直し（シルク・筆のストローク・レコード・液体・車窓・ラバランプ・ブロブ・波・花びら・葉・泡）
+
 ## 1.8.0 — 2026-10-07
 - New genre themes: R&B / Soul (silk slide, velvet rise, glow bloom, groove sway, sheen, smoke-out; silk waves, light through blinds, candlelight bokeh, spinning record; gold dust, script swash underline, silk wipe, groove camera) and House / Dance (pumping pop-in, strobe in / out, filter sweep, sidechain pump, four-on-the-floor bounce; mirror ball, light-up dance floor, moving-head beams, piano-house keys; strobe, equalizer underline, strobe cut, sidechain camera) / ジャンルに「R&B / ソウル」「ハウス / ダンス」を追加
 - Realistic rain on glass: new screen effect “Rain on the window” that refracts the actual background through every drop (inverted lens view, rim, caustic, highlight), stick-slip sliding drops with wiped trails and residual beads, and a fogged pane; the Water drops / Rain glass shader / Rain backgrounds were rebuilt / 雨の窓ガラスをリアルに作り直し（水滴の屈折・流れる雫と跡・曇り）

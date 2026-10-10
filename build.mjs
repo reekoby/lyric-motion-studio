@@ -1,7 +1,7 @@
 import fs from 'fs';
 import crypto from 'crypto';
 const src = (f) => fs.readFileSync('src/' + f, 'utf8');
-const order = ['core.js','typo.js','motion.js','motion2.js','motion3.js','motion4.js','layout.js','layout2.js','layout3.js','data.js','tone.js','bgmotion.js','bgshader.js','gfx.js','gfx2.js','trans.js','tone2.js','edge.js','motion5.js','bgfx.js','fx.js','vocalo.js','imgfirst.js','msys.js','pm.js','genre2.js','render.js','imgbg.js','video.js','align.js','audio.js','model.js','director.js','fonts.js','export.js','manual.js','i18n.js','app.js'];
+const order = ['core.js','typo.js','motion.js','motion2.js','motion3.js','motion4.js','layout.js','layout2.js','layout3.js','data.js','tone.js','bgmotion.js','bgshader.js','gfx.js','gfx2.js','trans.js','tone2.js','edge.js','motion5.js','bgfx.js','fx.js','vocalo.js','imgfirst.js','msys.js','pm.js','genre2.js','polish.js','render.js','imgbg.js','video.js','align.js','audio.js','model.js','director.js','fonts.js','export.js','manual.js','i18n.js','app.js'];
 let mb = fs.readFileSync('node_modules/mediabunny/dist/bundles/mediabunny.min.cjs','utf8');
 mb = mb.replace(/if \(typeof module === "object"[^\n]*\n?$/,'') + '\nwindow.Mediabunny=Mediabunny;';
 let gif = fs.readFileSync('node_modules/gifenc/dist/gifenc.js','utf8').replace(/\/\/# sourceMappingURL.*$/m,'');
