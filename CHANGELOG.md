@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.8.3 — 2026-10-11
+- Lyrics stay readable on whatever is actually behind them: the renderer samples the finished background (image, background motion, shapes) under the phrase each frame and, when the emphasis or body colour would blend in, switches to a readable colour — one colour per group so a word never changes colour letter by letter, and emphasis keeps a colour distinct from the body text / 強調文字・本文が背景の色と重なって読めなくなる場合に自動で読める色へ切り替え
+- Layout decorations (ring text, marquees, shapes) get the same treatment / レイアウトの飾り文字（円環の文字など）も背景と同化しない色に
+
 ## 1.8.2 — 2026-10-10
 - Synthwave backgrounds rebuilt: Sunset (80s), Retro grid and Retro sun + grid now share one scene — starry gradient sky, slit sun with glow, ridge silhouettes with glowing rims, a glowing perspective grid with depth fade, sun reflection and horizon haze / サンセット（80s）・レトログリッド・レトロサンを作り直し
 - Wireframe mountains: proper height-field raymarch (no more stair artifacts), valley road, neon grid with fog; Checker floor: anti-aliased glossy tiles with reflection, slit sun and horizon glow; Gradient tubes: lit 3D tubes with specular highlight, soft shadows and continuous colour / ワイヤーフレーム山脈・チェッカー床・グラデーションチューブを作り直し

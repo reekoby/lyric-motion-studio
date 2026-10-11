@@ -607,7 +607,7 @@ void main(){
 
     /* ---------- main render ---------- */
     render(t, mode = {}) {
-      this.mode = mode;
+      this.mode = mode; this._rs = (this._rs || 0) + 1;
       const p = this.p; if (!p) return;
       const info = this.paint(this.sctx, t, mode);
       const tr = this.p.transOff ? null : this.transAt(t);
@@ -794,6 +794,25 @@ void main(){
     }
 
     /* ---------- cue ---------- */
+    // what is actually behind the lyrics this frame (background, image, background motion), sampled small
+    surfSampler(ctx) {
+      if (this._sfStamp === this._rs && this._sf) return this._sf;
+      this._sfStamp = this._rs; this._sf = null;
+      try {
+        const sw = 64, sh = Math.max(8, Math.round((64 * this.H) / this.W));
+        const c = this._sfCv || (this._sfCv = document.createElement('canvas')); if (c.width !== sw || c.height !== sh) { c.width = sw; c.height = sh; }
+        const x = c.getContext('2d', { willReadFrequently: true }); x.globalCompositeOperation = 'copy'; x.imageSmoothingQuality = 'medium'; x.drawImage(ctx.canvas, 0, 0, sw, sh);
+        const d = x.getImageData(0, 0, sw, sh).data, W = this.W, H = this.H;
+        this._sf = (cx, cy, r) => {
+          const x0 = Math.max(0, Math.floor(((cx - r) / W) * sw)), x1 = Math.min(sw - 1, Math.floor(((cx + r) / W) * sw)), y0 = Math.max(0, Math.floor(((cy - r) / H) * sh)), y1 = Math.min(sh - 1, Math.floor(((cy + r) / H) * sh));
+          let R = 0, G = 0, B = 0, A = 0, n = 0;
+          for (let j = y0; j <= y1; j++) for (let i = x0; i <= x1; i++) { const k = (j * sw + i) * 4; R += d[k]; G += d[k + 1]; B += d[k + 2]; A += d[k + 3]; n++; }
+          if (!n || A / n < 128) return null;
+          return U.rgb2hex(R / n, G / n, B / n);
+        };
+      } catch (e) { this._sf = null; }
+      return this._sf;
+    }
     drawCue(ctx, v, t, beat, mode) {
       const p = this.p, { c, L, ph } = v;
       const W = this.W, H = this.H, S = this.S;
@@ -837,12 +856,33 @@ void main(){
       const keyColor = p.keyColor !== false;
       // colors per glyph
       const onAcc = (c.gfx || []).some((id) => id === 'boxSlam' || id === 'splat');
+      // the colour actually behind each glyph without a plate of its own (layout bands, shapes, background motion, image);
+      // one decision per group (accent / normal) so a word never changes colour letter by letter
+      const SF = this.surfSampler(ctx);
+      const isAcc = (g) => g.col === 'accent' || g.emph || (keyColor && g.key && !g.col);
+      const grp = { A: [], N: [] };
+      if (SF) L.glyphs.forEach((g) => { if (g.on || g.x == null || !g.ch || /^\s$/.test(g.ch)) return; const s2 = SF(g.x, g.y, (g.size || 40) * 0.5); if (s2) grp[isAcc(g) ? 'A' : 'N'].push(s2); });
+      // first candidate that is readable on every sampled surface (and, for emphasis, still differs from the body text)
+      const pick = (list, first, cands, need, avoid) => {
+        if (!list.length) return null;
+        const worst = (c0) => list.reduce((m, s2) => Math.min(m, contrast(c0, s2)), 99);
+        const ok = (c0) => worst(c0) >= need && (!avoid || contrast(c0, avoid) >= 1.45);
+        if (ok(first)) return first;
+        for (const c0 of cands) if (ok(c0)) return c0;
+        let best = first, bv = worst(first);
+        for (const c0 of cands.concat(['#ffffff', '#111111'])) { const v = worst(c0); if (v >= need) return c0; if (v > bv) { bv = v; best = c0; } }
+        return best;
+      };
+      const fillN = pick(grp.N, pal.text, [pal.bg, pal.sub], 2.0);
+      const bodyC = fillN || pal.text;
+      const fillA = pick(grp.A, pal.accent, [pal.sub, mix(pal.accent, '#000000', 0.35), mix(pal.accent, '#ffffff', 0.7), mix(pal.sub, '#000000', 0.4), mix(pal.accent, '#000000', 0.6), '#ffffff', '#111111', pal.text, pal.bg], 2.4, bodyC);
       const colorOf = (g0) => {
         const g = onAcc && !g0.on ? Object.assign({}, g0, { on: 'accent' }) : g0;
         const surf = g.on === 'accent' ? pal.accent : g.on === 'sub' ? pal.sub : pal.bg;
-        const wantAccent = g.col === 'accent' || g.emph || (keyColor && g.key && !g.col);
+        const wantAccent = isAcc(g);
         let want = wantAccent ? (g.on === 'accent' ? pal.bg : pal.accent) : g.on === 'accent' ? pal.bg : pal.text;
-        if (contrast(want, surf) < 2.3) want = readable(surf, [g.on === 'accent' ? pal.bg : pal.text, pal.text, pal.bg, pal.sub]);
+        if (!g.on && (wantAccent ? fillA : fillN)) want = wantAccent ? fillA : fillN;
+        else if (contrast(want, surf) < 2.3) want = readable(surf, [g.on === 'accent' ? pal.bg : pal.text, pal.text, pal.bg, pal.sub]);
         const acc = contrast(pal.accent, surf) >= 2.3 ? pal.accent : readable(surf, [pal.sub, pal.text, pal.bg]);
         return { fill: want, acc, surf };
       };
@@ -851,7 +891,13 @@ void main(){
       const px = ph.xd > 0 ? clamp((tt - ph.exitStart) / ph.xd) : (tt >= c.end ? 1 : 0);
       const knock = fl.has('knockout');
       if (knock) { lx.save(); lx.setTransform(1, 0, 0, 1, 0, 0); lx.globalAlpha = 1 - (px > 0 ? E.inQuad(px) : 0); lx.fillStyle = pal.accent; lx.fillRect(0, 0, W, H); lx.restore(); }
-      this.drawDecos(lx, L, pal, pe, px, t, ph.tr.exit === 'cut' ? 0 : 1);
+      // decorations (ring text, marquees, shapes) get a palette that stays visible on what is actually behind the layout
+      let dPal = pal;
+      if (SF && L.bbox) {
+        const bb = L.bbox, sAround = SF(bb.cx, bb.cy, Math.max(bb.w, bb.h) * 0.75);
+        if (sAround) { dPal = Object.assign({}, pal); ['accent', 'sub', 'text'].forEach((k) => { if (contrast(pal[k], sAround) < 1.9) dPal[k] = readable(sAround, [k === 'text' ? pal.bg : pal.text, pal.sub, pal.accent, pal.bg, mix(pal[k], '#ffffff', 0.7), mix(pal[k], '#000000', 0.6)].filter((c0) => c0 !== pal[k]), 2.2); }); }
+      }
+      this.drawDecos(lx, L, dPal, pe, px, t, ph.tr.exit === 'cut' ? 0 : 1);
       const gfxIds = (c.gfx || []).filter((id) => LM.gfx.lib[id]);
       const GR = gfxIds.length ? { W, H, S, minD: this.minD, pal, bb: L.seq && L._k >= 0 ? L.seqBB[L._k] : L.bbox, kb: L.keyBB, e: clamp(lt / 0.65), lt, hp, beat, x: ph.tr.exit === 'cut' ? 0 : px, seed: U.strHash(c.id) & 1023, title: p.title || '', tAbs: t } : null;
       if (GR) LM.gfx.draw(gfxIds.filter((id) => !LM.gfx.lib[id].top), lx, GR);
