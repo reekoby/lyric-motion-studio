@@ -118,7 +118,7 @@ LM.Renderer = (() => {
   const VS = 'attribute vec2 p;varying vec2 v;void main(){v=p*0.5+0.5;gl_Position=vec4(p,0.,1.);}';
   const FS = `precision highp float;varying vec2 v;
 uniform sampler2D T0,T1,T2,T3;uniform vec2 R;uniform float time,seed,S;
-uniform float rgb,glitch,block,vhs,scan,noise,vig,pix,poster,half_,bloom,inv,blurMix,zblur,crt,chrom,duo,dither,sepia,heat,hue,tilt,mirror,fish,trgb,psort,slice,liquid,thermal,mono,monoInv,quad,bzoom,lineart,ascii;
+uniform float rgb,glitch,block,vhs,scan,noise,vig,pix,poster,half_,bloom,inv,blurMix,zblur,crt,chrom,duo,dither,sepia,heat,hue,tilt,mirror,fish,trgb,psort,slice,liquid,thermal,mono,monoInv,quad,bzoom,lineart,ascii,melt;
 uniform vec3 duoA,duoB,grade,bgc;uniform vec4 key;uniform vec2 mblur;
 float h1(vec2 p){return fract(sin(dot(p,vec2(12.9898,78.233)))*43758.5453);}
 float b2(vec2 p){p=floor(mod(p,2.0));return mod(2.0*p.x+3.0*p.y,4.0);}
@@ -130,6 +130,9 @@ void main(){
  if(fish>0.0){vec2 c=u-0.5;float r2=dot(c,c);u=0.5+c*(1.0-fish*0.7*r2)/(1.0-fish*0.7*0.25);}
  if(crt>0.0){vec2 cc=u*2.0-1.0;cc*=1.0+crt*0.09*vec2(cc.y*cc.y,cc.x*cc.x);u=cc*0.5+0.5;}
  if(liquid>0.0){u.x+=sin(u.y*9.0+time*2.6)*0.014*liquid+sin(u.y*23.0-time*3.4)*0.005*liquid;u.y+=sin(u.x*7.0+time*2.1)*0.012*liquid;}
+ if(melt>0.0){float cx=u.x*R.x/(46.0*S);float i0=floor(cx);float f=fract(cx);f=f*f*(3.0-2.0*f);float n=mix(h1(vec2(i0,seed+1.0)),h1(vec2(i0+1.0,seed+1.0)),f);
+  float cx2=u.x*R.x/(170.0*S);float j0=floor(cx2);float f2=fract(cx2);f2=f2*f2*(3.0-2.0*f2);float n2=mix(h1(vec2(j0,seed+5.0)),h1(vec2(j0+1.0,seed+5.0)),f2);
+  float d=melt*(0.06+0.6*n*n*(0.35+0.65*n2));u.y=min(u.y+d,0.999);}
  if(slice>0.0){float sb=floor(u.y*7.0);float sd=mod(sb,2.0)*2.0-1.0;u.x=fract(u.x+sd*slice*0.09*(0.45+h1(vec2(sb,floor(time*2.0)+seed))));}
  if(psort>0.0){float row=floor(u.y*R.y/(5.0*S));float st=floor(time*10.0);if(h1(vec2(row*0.37,st+seed))<psort*0.5){float ax=h1(vec2(row,st+3.0));float ln=0.1+0.55*h1(vec2(row,st+7.0));if(u.x>ax&&u.x<ax+ln)u.x=ax+(u.x-ax)*0.03;}}
  if(heat>0.0)u.x+=sin(u.y*38.0+time*5.0)*0.0025*heat+sin(u.y*91.0-time*7.0)*0.001*heat;
@@ -175,7 +178,7 @@ void main(){
  c=clamp(c,0.0,1.0);
  if(key.a>0.5)gl_FragColor=vec4(mix(key.rgb,c,a),1.0);else gl_FragColor=vec4(c*a,a);
 }`;
-  const UNI = ['rgb', 'glitch', 'block', 'vhs', 'scan', 'noise', 'vig', 'pix', 'poster', 'half_', 'bloom', 'inv', 'blurMix', 'zblur', 'crt', 'chrom', 'duo', 'dither', 'sepia', 'heat', 'hue', 'tilt', 'mirror', 'fish', 'trgb', 'psort', 'slice', 'liquid', 'thermal', 'mono', 'monoInv', 'quad', 'bzoom', 'lineart', 'ascii'];
+  const UNI = ['rgb', 'glitch', 'block', 'vhs', 'scan', 'noise', 'vig', 'pix', 'poster', 'half_', 'bloom', 'inv', 'blurMix', 'zblur', 'crt', 'chrom', 'duo', 'dither', 'sepia', 'heat', 'hue', 'tilt', 'mirror', 'fish', 'trgb', 'psort', 'slice', 'liquid', 'thermal', 'mono', 'monoInv', 'quad', 'bzoom', 'lineart', 'ascii', 'melt'];
 
   class Renderer {
     constructor(opt = {}) {
@@ -573,7 +576,7 @@ void main(){
       if (o.rgb) u.rgb = Math.max(u.rgb, o.rgb * S); if (o.pix) u.pix = Math.max(u.pix, o.pix * S); if (o.blur) u.blurMix = Math.max(u.blurMix, o.blur);
       if (o.zblur) u.zblur = Math.max(u.zblur, o.zblur); if (o.inv) u.inv = 1;
       if (o.mblur) u.mblur = o.mblur;
-      if (o.psort) u.psort = Math.max(u.psort, o.psort); if (o.slice) u.slice = Math.max(u.slice, o.slice); if (o.liquid) u.liquid = Math.max(u.liquid, o.liquid); if (o.thermal) u.thermal = Math.max(u.thermal, o.thermal);
+      if (o.psort) u.psort = Math.max(u.psort, o.psort); if (o.slice) u.slice = Math.max(u.slice, o.slice); if (o.liquid) u.liquid = Math.max(u.liquid, o.liquid); if (o.melt) u.melt = Math.max(u.melt || 0, o.melt); if (o.thermal) u.thermal = Math.max(u.thermal, o.thermal);
     }
 
     /* ---------- beat envelope ---------- */

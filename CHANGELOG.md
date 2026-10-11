@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.8.5 — 2026-10-11
+- Rebuilt hand-made / liquid effects: liquid drip (two-layer paint with long drips, heavy glossy tips and a sheen), splash (paint splats with spikes and thrown droplets), colour burst (powder-paint explosion with streaking particles and soft clouds), ink blob (dark ink with a feathered bleed edge and density variation), marker scribble (streaky hatching with pooled corners), torn paper (fibrous rip with a white torn core, paper grain and curl shading), melt (the frame sags and drips down in columns — new post-shader effect), paint splat accent (spiky splat with droplets and wet shading) and the script swash (broad-nib calligraphic ribbon with an entry hook and end loop) / リキッド・ドリップ・スプラッシュ・カラーバースト・インク・手描きスクリブル・紙を破る・メルト・ペイントの飛沫・筆記体のスワッシュを作り直し
+
 ## 1.8.4 — 2026-10-11
 - Readability check now also sees what the layout and accent graphics draw on the lyric layer (cards, pills, plates), and the accent colour used by motions (colour wave, colour flash, karaoke-style highlights) is checked against the real background too / 文字の後ろに描かれるカード・ピル等のグラフィックや、色が流れる動き等で使う強調色も、実際の背景に対して読める色に
 - Marker and underline are drawn as one thin, continuous, smoothed line per run that follows the glyphs — it bends around ring / arc layouts and wavy motions instead of scattering a rotated block under every letter, and runs down the right side of vertical text / マーカー・下線を文字に沿った1本の帯で描画（円環・弧・縦書きでも崩れない）
