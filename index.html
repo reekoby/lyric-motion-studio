@@ -8,7 +8,7 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-eAkmWXvQRYrGD+QKdl/xfBji5JTGd6+JE2fcyWl6pRw=' 'sha256-KObWzwW/3KYEn/kneRDldpoeTuRMYhQVqN71+aP4mi0=' 'sha256-NVW6I1JuqeDKvafB/4PNYxBc9ozHWiG8uoskkCChhZU='; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com data: blob:; img-src data: blob:; media-src blob: data:; worker-src blob:; connect-src blob: data:; base-uri 'none'; form-action 'none'; object-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-eAkmWXvQRYrGD+QKdl/xfBji5JTGd6+JE2fcyWl6pRw=' 'sha256-KObWzwW/3KYEn/kneRDldpoeTuRMYhQVqN71+aP4mi0=' 'sha256-zY1R+1IW7WK4ZVDTy5+r0BvUJMvqOIj04Y14mIsu+So='; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com data: blob:; img-src data: blob:; media-src blob: data:; worker-src blob:; connect-src blob: data:; base-uri 'none'; form-action 'none'; object-src 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Lyric Motion Studio</title>
@@ -8449,13 +8449,13 @@ void main(){
 
     /* ---------- cue ---------- */
     // what is actually behind the lyrics this frame (background, image, background motion), sampled small
-    surfSampler(ctx) {
-      if (this._sfStamp === this._rs && this._sf) return this._sf;
-      this._sfStamp = this._rs; this._sf = null;
+    surfSampler(ctx, layer) {
+      if (!layer && this._sfStamp === this._rs && this._sf) return this._sf;
+      if (!layer) { this._sfStamp = this._rs; } this._sf = null;
       try {
         const sw = 64, sh = Math.max(8, Math.round((64 * this.H) / this.W));
         const c = this._sfCv || (this._sfCv = document.createElement('canvas')); if (c.width !== sw || c.height !== sh) { c.width = sw; c.height = sh; }
-        const x = c.getContext('2d', { willReadFrequently: true }); x.globalCompositeOperation = 'copy'; x.imageSmoothingQuality = 'medium'; x.drawImage(ctx.canvas, 0, 0, sw, sh);
+        const x = c.getContext('2d', { willReadFrequently: true }); x.globalCompositeOperation = 'copy'; x.imageSmoothingQuality = 'medium'; x.drawImage(ctx.canvas, 0, 0, sw, sh); if (layer) { x.globalCompositeOperation = 'source-over'; x.drawImage(layer.canvas || layer, 0, 0, sw, sh); }
         const d = x.getImageData(0, 0, sw, sh).data, W = this.W, H = this.H;
         this._sf = (cx, cy, r) => {
           const x0 = Math.max(0, Math.floor(((cx - r) / W) * sw)), x1 = Math.min(sw - 1, Math.floor(((cx + r) / W) * sw)), y0 = Math.max(0, Math.floor(((cy - r) / H) * sh)), y1 = Math.min(sh - 1, Math.floor(((cy + r) / H) * sh));
@@ -8512,10 +8512,7 @@ void main(){
       const onAcc = (c.gfx || []).some((id) => id === 'boxSlam' || id === 'splat');
       // the colour actually behind each glyph without a plate of its own (layout bands, shapes, background motion, image);
       // one decision per group (accent / normal) so a word never changes colour letter by letter
-      const SF = this.surfSampler(ctx);
       const isAcc = (g) => g.col === 'accent' || g.emph || (keyColor && g.key && !g.col);
-      const grp = { A: [], N: [] };
-      if (SF) L.glyphs.forEach((g) => { if (g.on || g.x == null || !g.ch || /^\s$/.test(g.ch)) return; const s2 = SF(g.x, g.y, (g.size || 40) * 0.5); if (s2) grp[isAcc(g) ? 'A' : 'N'].push(s2); });
       // first candidate that is readable on every sampled surface (and, for emphasis, still differs from the body text)
       const pick = (list, first, cands, need, avoid) => {
         if (!list.length) return null;
@@ -8527,17 +8524,29 @@ void main(){
         for (const c0 of cands.concat(['#ffffff', '#111111'])) { const v = worst(c0); if (v >= need) return c0; if (v > bv) { bv = v; best = c0; } }
         return best;
       };
-      const fillN = pick(grp.N, pal.text, [pal.bg, pal.sub], 2.0);
-      const bodyC = fillN || pal.text;
-      const fillA = pick(grp.A, pal.accent, [pal.sub, mix(pal.accent, '#000000', 0.35), mix(pal.accent, '#ffffff', 0.7), mix(pal.sub, '#000000', 0.4), mix(pal.accent, '#000000', 0.6), '#ffffff', '#111111', pal.text, pal.bg], 2.4, bodyC);
+      // decided once per cue, on first use — by then the layout decorations and accent graphics are on the lyric layer too
+      let SF = null, dec = null;
+      const decide = () => {
+        if (dec) return dec;
+        SF = this.surfSampler(ctx, lx);
+        const grp = { A: [], N: [] };
+        if (SF) L.glyphs.forEach((g) => { if (g.on || g.x == null || !g.ch || /^\s$/.test(g.ch)) return; const s2 = SF(g.x, g.y, (g.size || 40) * 0.5); if (s2) grp[isAcc(g) ? 'A' : 'N'].push(s2); });
+        const fillN = pick(grp.N, pal.text, [pal.bg, pal.sub], 2.0), bodyC = fillN || pal.text;
+        const fillA = pick(grp.A, pal.accent, [pal.sub, mix(pal.accent, '#000000', 0.35), mix(pal.accent, '#ffffff', 0.7), mix(pal.sub, '#000000', 0.4), mix(pal.accent, '#000000', 0.6), '#ffffff', '#111111', pal.text, pal.bg], 2.4, bodyC);
+        // accent used by motions (colour flash, karaoke fill, highlight holds) must also stay visible
+        const all = grp.A.concat(grp.N), accS = pick(all, pal.accent, [pal.sub, mix(pal.accent, '#ffffff', 0.7), mix(pal.accent, '#000000', 0.4), fillA || pal.accent, '#ffffff', '#111111'], 2.2, bodyC);
+        let surfAvg = null; if (all.length) { const rgb = all.map(U.hex2rgb); surfAvg = U.rgb2hex(...[0, 1, 2].map((k) => rgb.reduce((m, c0) => m + c0[k], 0) / rgb.length)); }
+        return (dec = { fillA, fillN, accS, surfAvg });
+      };
       const colorOf = (g0) => {
         const g = onAcc && !g0.on ? Object.assign({}, g0, { on: 'accent' }) : g0;
-        const surf = g.on === 'accent' ? pal.accent : g.on === 'sub' ? pal.sub : pal.bg;
+        const D0 = g.on ? null : decide();
+        const surf = g.on === 'accent' ? pal.accent : g.on === 'sub' ? pal.sub : (D0 && D0.surfAvg) || pal.bg;
         const wantAccent = isAcc(g);
         let want = wantAccent ? (g.on === 'accent' ? pal.bg : pal.accent) : g.on === 'accent' ? pal.bg : pal.text;
-        if (!g.on && (wantAccent ? fillA : fillN)) want = wantAccent ? fillA : fillN;
+        if (D0 && (wantAccent ? D0.fillA : D0.fillN)) want = wantAccent ? D0.fillA : D0.fillN;
         else if (contrast(want, surf) < 2.3) want = readable(surf, [g.on === 'accent' ? pal.bg : pal.text, pal.text, pal.bg, pal.sub]);
-        const acc = contrast(pal.accent, surf) >= 2.3 ? pal.accent : readable(surf, [pal.sub, pal.text, pal.bg]);
+        const acc = D0 && D0.accS ? D0.accS : contrast(pal.accent, surf) >= 2.3 ? pal.accent : readable(surf, [pal.sub, pal.text, pal.bg]);
         return { fill: want, acc, surf };
       };
       // decos
@@ -8547,8 +8556,9 @@ void main(){
       if (knock) { lx.save(); lx.setTransform(1, 0, 0, 1, 0, 0); lx.globalAlpha = 1 - (px > 0 ? E.inQuad(px) : 0); lx.fillStyle = pal.accent; lx.fillRect(0, 0, W, H); lx.restore(); }
       // decorations (ring text, marquees, shapes) get a palette that stays visible on what is actually behind the layout
       let dPal = pal;
-      if (SF && L.bbox) {
-        const bb = L.bbox, sAround = SF(bb.cx, bb.cy, Math.max(bb.w, bb.h) * 0.75);
+      const SFb = this.surfSampler(ctx);
+      if (SFb && L.bbox) {
+        const bb = L.bbox, sAround = SFb(bb.cx, bb.cy, Math.max(bb.w, bb.h) * 0.75);
         if (sAround) { dPal = Object.assign({}, pal); ['accent', 'sub', 'text'].forEach((k) => { if (contrast(pal[k], sAround) < 1.9) dPal[k] = readable(sAround, [k === 'text' ? pal.bg : pal.text, pal.sub, pal.accent, pal.bg, mix(pal[k], '#ffffff', 0.7), mix(pal[k], '#000000', 0.6)].filter((c0) => c0 !== pal[k]), 2.2); }); }
       }
       this.drawDecos(lx, L, dPal, pe, px, t, ph.tr.exit === 'cut' ? 0 : 1);
@@ -8584,7 +8594,10 @@ void main(){
       const copies = fl.has('rainbowStack') ? (() => { const cs = [pal.accent, pal.sub, mix(pal.accent, pal.text, 0.5), mix(pal.sub, pal.bg, 0.35), pal.text]; const a = t * 1.3; return [5, 4, 3, 2, 1].map((k) => [Math.cos(a) * k * 0.04, Math.sin(a) * k * 0.03 + k * 0.022, cs[(k - 1) % cs.length], 1]); })() : fl.has('stackColor') ? [[4, pal.sub], [3, pal.accent], [2, pal.sub], [1, pal.accent]].map(([k, col]) => [k * 0.035, k * 0.035, col, 1]) : fl.has('misprint') ? [[0.045, 0.02, pal.accent, 0.9], [-0.035, -0.025, pal.sub, 0.9]] : null;
       if (copies && !knock) copies.forEach(([dx, dy, col, a]) => L.glyphs.forEach((g, gi) => { const T2 = Object.assign({}, Ts[gi], { x: (Ts[gi].x || 0) + g.size * dx, y: (Ts[gi].y || 0) + g.size * dy }); this.drawGlyph(lx, g, T2, { plain: true, alphaMul: a }, L.font.tmpl, col, { fill: col, acc: col, surf: pal.bg }, pal); }));
       if (knock) lx.globalCompositeOperation = 'destination-out';
-      L.glyphs.forEach((g, gi) => { const cc = colorOf(g); this.drawGlyph(lx, g, Ts[gi], knock ? { plain: true } : st, L.font.tmpl, g.style === 'outline' && !knock ? null : cc.fill, cc, pal); });
+      // marker / underline: one continuous band per run that follows the glyphs (bends along arcs and rings)
+      let stG = st;
+      if (!knock && (st.marker || st.underline)) { this.drawTextBands(lx, L.glyphs, Ts, st, colorOf); stG = Object.assign({}, st, { marker: false, underline: false }); }
+      L.glyphs.forEach((g, gi) => { const cc = colorOf(g); this.drawGlyph(lx, g, Ts[gi], knock ? { plain: true } : stG, L.font.tmpl, g.style === 'outline' && !knock ? null : cc.fill, cc, pal); });
       lx.globalCompositeOperation = 'source-over';
       if (p.ruby !== false) this.drawRuby(lx, L, Ts, pal, colorOf);
       if (GR) LM.gfx.draw(gfxIds.filter((id) => LM.gfx.lib[id].top), lx, GR);
@@ -8699,6 +8712,37 @@ void main(){
       return out;
     }
 
+    drawTextBands(ctx, glyphs, Ts, st, colorOf) {
+      // local point → frame point using the same transform order as drawGlyph (position, layout rotation, motion rotation / skew / scale)
+      const P = (g, T, lx, ly) => {
+        let x = lx, y = ly; const sx = T.sx == null ? 1 : T.sx, sy = T.sy == null ? 1 : T.sy; x *= sx; y *= sy;
+        if (T.skx) x += Math.tan(T.skx) * y;
+        if (T.rot) { const c = Math.cos(T.rot), s = Math.sin(T.rot); [x, y] = [x * c - y * s, x * s + y * c]; }
+        if (g.rot) { const c = Math.cos(g.rot), s = Math.sin(g.rot); [x, y] = [x * c - y * s, x * s + y * c]; }
+        return [x + g.x + (T.x || 0), y + g.y + (T.y || 0)];
+      };
+      const kinds = []; if (st.marker) kinds.push({ off: 0.38, w: 0.13, a: 0.6, pad: 0.02 }); if (st.underline) kinds.push({ off: 0.6, w: 0.035, a: 0.9, pad: 0.03 });
+      for (const K of kinds) {
+        const runs = []; let run = null, last = null;
+        glyphs.forEach((g, i) => {
+          const T = Ts[i] || {}, a = (T.a == null ? 1 : T.a) * (g.alpha == null ? 1 : g.alpha);
+          if (!g.ch || /^\s$/.test(g.ch) || T.vis === false || a < 0.05) { run = null; return; }
+          const pad = g.size * K.pad, L0 = st.vert && !g.rot ? P(g, T, g.size * K.off, -g.size / 2 - pad) : P(g, T, -g.w / 2 - pad, g.size * K.off), R0 = st.vert && !g.rot ? P(g, T, g.size * K.off, g.size / 2 + pad) : P(g, T, g.w / 2 + pad, g.size * K.off);
+          const gap = last ? Math.hypot(L0[0] - last.R[0], L0[1] - last.R[1]) : 0;
+          if (!run || (g.line || 0) !== (last.g.line || 0) || gap > g.size * 0.75) { run = { pts: [], a: 0, n: 0, size: g.size, g }; runs.push(run); }
+          const C0 = [(L0[0] + R0[0]) / 2, (L0[1] + R0[1]) / 2]; if (!run.pts.length) run.pts.push(L0); run.pts.push(C0); run.end = R0; run.a += a; run.n++; run.size = Math.max(run.size, g.size); last = { g, R: R0 };
+        });
+        runs.forEach((r) => {
+          if (r.end) r.pts.push(r.end); if (r.pts.length < 2) return;
+          const cc = colorOf(r.g), col = K.w > 0.2 ? (cc.acc === cc.fill ? cc.fill : cc.acc) : cc.acc;
+          ctx.save(); ctx.globalAlpha = (r.a / r.n) * K.a; ctx.strokeStyle = col; ctx.lineWidth = Math.max(1, r.size * K.w); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+          ctx.beginPath(); ctx.moveTo(r.pts[0][0], r.pts[0][1]);
+          // smooth through the glyph endpoints (midpoint quadratic) so rings and arcs read as one curve
+          for (let i = 1; i < r.pts.length - 1; i++) { const p0 = r.pts[i], p1 = r.pts[i + 1]; ctx.quadraticCurveTo(p0[0], p0[1], (p0[0] + p1[0]) / 2, (p0[1] + p1[1]) / 2); }
+          const e = r.pts[r.pts.length - 1]; ctx.lineTo(e[0], e[1]); ctx.stroke(); ctx.restore();
+        });
+      }
+    }
     drawGlyph(ctx, g, T, st, tmpl, fill, cc, pal) {
       if (T.vis === false && !(st.genko && T.cellA)) return;
       if (st.genko) {

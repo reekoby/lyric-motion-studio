@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.8.4 — 2026-10-11
+- Readability check now also sees what the layout and accent graphics draw on the lyric layer (cards, pills, plates), and the accent colour used by motions (colour wave, colour flash, karaoke-style highlights) is checked against the real background too / 文字の後ろに描かれるカード・ピル等のグラフィックや、色が流れる動き等で使う強調色も、実際の背景に対して読める色に
+- Marker and underline are drawn as one thin, continuous, smoothed line per run that follows the glyphs — it bends around ring / arc layouts and wavy motions instead of scattering a rotated block under every letter, and runs down the right side of vertical text / マーカー・下線を文字に沿った1本の帯で描画（円環・弧・縦書きでも崩れない）
+
 ## 1.8.3 — 2026-10-11
 - Lyrics stay readable on whatever is actually behind them: the renderer samples the finished background (image, background motion, shapes) under the phrase each frame and, when the emphasis or body colour would blend in, switches to a readable colour — one colour per group so a word never changes colour letter by letter, and emphasis keeps a colour distinct from the body text / 強調文字・本文が背景の色と重なって読めなくなる場合に自動で読める色へ切り替え
 - Layout decorations (ring text, marquees, shapes) get the same treatment / レイアウトの飾り文字（円環の文字など）も背景と同化しない色に
