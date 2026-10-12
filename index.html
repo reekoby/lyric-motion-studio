@@ -8,7 +8,7 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-eAkmWXvQRYrGD+QKdl/xfBji5JTGd6+JE2fcyWl6pRw=' 'sha256-KObWzwW/3KYEn/kneRDldpoeTuRMYhQVqN71+aP4mi0=' 'sha256-r8rxIofEuj0JgG1SGcouQDsbQ/5l71PBs0S+Zqt07IQ='; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com data: blob:; img-src data: blob:; media-src blob: data:; worker-src blob:; connect-src blob: data:; base-uri 'none'; form-action 'none'; object-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-eAkmWXvQRYrGD+QKdl/xfBji5JTGd6+JE2fcyWl6pRw=' 'sha256-KObWzwW/3KYEn/kneRDldpoeTuRMYhQVqN71+aP4mi0=' 'sha256-RLFcCF7cFT3iz7D7q/oNX564e6HR5KaW3wCr3VhWExU='; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com data: blob:; img-src data: blob:; media-src blob: data:; worker-src blob:; connect-src blob: data:; base-uri 'none'; form-action 'none'; object-src 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Lyric Motion Studio</title>
@@ -34,7 +34,7 @@
 }
 *{box-sizing:border-box}
 [hidden]{display:none!important}
-html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font:13px/1.45 var(--ui);-webkit-font-smoothing:antialiased}
+html,body{margin:0;height:100%;overflow-anchor:none;background:var(--bg);color:var(--text);font:13px/1.45 var(--ui);-webkit-font-smoothing:antialiased}
 button,input,select,textarea{font:inherit;color:inherit}
 button{cursor:pointer}
 ::-webkit-scrollbar{width:10px;height:10px}::-webkit-scrollbar-thumb{background:var(--line2);border-radius:10px;border:3px solid transparent;background-clip:content-box}
@@ -232,7 +232,7 @@ input[type=color]{width:30px;height:28px;padding:0;border:1px solid var(--line);
 /* inspector */
 .ihead{display:flex;align-items:center;gap:6px;padding:10px 12px;border-bottom:1px solid var(--line)}
 .ihead b{flex:1}
-.ibody{overflow:auto;flex:1;padding:12px 12px 30px}
+.ibody{overflow:auto;flex:1;padding:12px 12px 30px;overflow-anchor:none}
 .empty{color:var(--faint);text-align:center;padding:40px 16px;line-height:1.7}
 .tr3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px}
 .tr4{grid-template-columns:1fr 1fr 1fr 1fr}
@@ -12989,7 +12989,33 @@ LM.i18n = (() => {
       <p class="hint">文字の間をクリックすると、そこで単語を区切る／前の単語とつなげることができます（空白と改行の位置は常に区切り）。区切った位置には歌詞欄に <b>^</b> が入ります。打刻済みの時刻は、歌い出しの文字が同じ単語に引き継がれます。</p>
       <div class="row" style="gap:4px;flex-wrap:wrap"><button class="btn sm" id="iSegAuto">自動の区切りに戻す</button><button class="btn sm" id="iSegChars">1文字ずつ区切る</button><span class="sp"></span><button class="btn sm pri" id="iSegDone">完了</button></div></div>`;
   }
+  // rebuilding the inspector must not move anything on screen: keep the control the user touched where it was,
+  // otherwise keep the panel's scroll offset, and never let the page itself scroll
+  let inspAnchor = null;
+  document.addEventListener('pointerdown', (e) => { const ib = $('#ibody'); inspAnchor = ib && ib.contains(e.target) ? e.target : null; }, true);
+  const keyOf = (el, root) => {
+    if (!el || !root.contains(el)) return null;
+    for (let n = el; n && n !== root; n = n.parentElement) {
+      if (n.id) return { sel: '#' + CSS.escape(n.id) };
+      const da = [...n.attributes].find((a) => a.name.startsWith('data-') && a.name !== 'data-noi18n');
+      if (da) return { sel: `${n.tagName.toLowerCase()}[${da.name}="${CSS.escape(da.value)}"]` };
+    }
+    const all = [...root.querySelectorAll(el.tagName)]; return { tag: el.tagName, i: all.indexOf(el) };
+  };
+  const findKey = (k, root) => (!k ? null : k.sel ? root.querySelector(k.sel) : root.querySelectorAll(k.tag)[k.i] || null);
   function renderInspector() {
+    const ib = $('#ibody'), wy = window.scrollY, de = document.scrollingElement, dy = de ? de.scrollTop : 0;
+    if (!ib) return renderInspectorRaw();
+    const st = ib.scrollTop, a0 = document.activeElement && ib.contains(document.activeElement) ? document.activeElement : inspAnchor && ib.contains(inspAnchor) ? inspAnchor : null;
+    const key = keyOf(a0, ib), top0 = a0 ? a0.getBoundingClientRect().top : 0;
+    renderInspectorRaw();
+    const a1 = findKey(key, ib);
+    if (a1 && a1.isConnected) { ib.scrollTop = st; const d = a1.getBoundingClientRect().top - top0; if (Math.abs(d) > 0.5) ib.scrollTop += d; }
+    else ib.scrollTop = st;
+    if (window.scrollY !== wy) window.scrollTo(window.scrollX, wy);
+    if (de && de.scrollTop !== dy) de.scrollTop = dy;
+  }
+  function renderInspectorRaw() {
     view.setProject(P);
     const c = selCue(), b = $('#ibody');
     // while the phrase text is being typed (incl. IME composition), keep the textarea alive: no rebuild until it loses focus

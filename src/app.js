@@ -1259,7 +1259,33 @@
       <p class="hint">文字の間をクリックすると、そこで単語を区切る／前の単語とつなげることができます（空白と改行の位置は常に区切り）。区切った位置には歌詞欄に <b>^</b> が入ります。打刻済みの時刻は、歌い出しの文字が同じ単語に引き継がれます。</p>
       <div class="row" style="gap:4px;flex-wrap:wrap"><button class="btn sm" id="iSegAuto">自動の区切りに戻す</button><button class="btn sm" id="iSegChars">1文字ずつ区切る</button><span class="sp"></span><button class="btn sm pri" id="iSegDone">完了</button></div></div>`;
   }
+  // rebuilding the inspector must not move anything on screen: keep the control the user touched where it was,
+  // otherwise keep the panel's scroll offset, and never let the page itself scroll
+  let inspAnchor = null;
+  document.addEventListener('pointerdown', (e) => { const ib = $('#ibody'); inspAnchor = ib && ib.contains(e.target) ? e.target : null; }, true);
+  const keyOf = (el, root) => {
+    if (!el || !root.contains(el)) return null;
+    for (let n = el; n && n !== root; n = n.parentElement) {
+      if (n.id) return { sel: '#' + CSS.escape(n.id) };
+      const da = [...n.attributes].find((a) => a.name.startsWith('data-') && a.name !== 'data-noi18n');
+      if (da) return { sel: `${n.tagName.toLowerCase()}[${da.name}="${CSS.escape(da.value)}"]` };
+    }
+    const all = [...root.querySelectorAll(el.tagName)]; return { tag: el.tagName, i: all.indexOf(el) };
+  };
+  const findKey = (k, root) => (!k ? null : k.sel ? root.querySelector(k.sel) : root.querySelectorAll(k.tag)[k.i] || null);
   function renderInspector() {
+    const ib = $('#ibody'), wy = window.scrollY, de = document.scrollingElement, dy = de ? de.scrollTop : 0;
+    if (!ib) return renderInspectorRaw();
+    const st = ib.scrollTop, a0 = document.activeElement && ib.contains(document.activeElement) ? document.activeElement : inspAnchor && ib.contains(inspAnchor) ? inspAnchor : null;
+    const key = keyOf(a0, ib), top0 = a0 ? a0.getBoundingClientRect().top : 0;
+    renderInspectorRaw();
+    const a1 = findKey(key, ib);
+    if (a1 && a1.isConnected) { ib.scrollTop = st; const d = a1.getBoundingClientRect().top - top0; if (Math.abs(d) > 0.5) ib.scrollTop += d; }
+    else ib.scrollTop = st;
+    if (window.scrollY !== wy) window.scrollTo(window.scrollX, wy);
+    if (de && de.scrollTop !== dy) de.scrollTop = dy;
+  }
+  function renderInspectorRaw() {
     view.setProject(P);
     const c = selCue(), b = $('#ibody');
     // while the phrase text is being typed (incl. IME composition), keep the textarea alive: no rebuild until it loses focus

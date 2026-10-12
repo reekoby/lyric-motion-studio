@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.8.6 — 2026-10-12
+- The right-hand panel no longer jumps while you change settings: after each rebuild the control you touched stays at the same place on screen (or the panel keeps its scroll offset), the page itself never scrolls, and browser scroll anchoring is turned off for the panel / 右パネルの設定を変えても画面が勝手にスクロールしないように
+
 ## 1.8.5 — 2026-10-11
 - Rebuilt hand-made / liquid effects: liquid drip (two-layer paint with long drips, heavy glossy tips and a sheen), splash (paint splats with spikes and thrown droplets), colour burst (powder-paint explosion with streaking particles and soft clouds), ink blob (dark ink with a feathered bleed edge and density variation), marker scribble (streaky hatching with pooled corners), torn paper (fibrous rip with a white torn core, paper grain and curl shading), melt (the frame sags and drips down in columns — new post-shader effect), paint splat accent (spiky splat with droplets and wet shading) and the script swash (broad-nib calligraphic ribbon with an entry hook and end loop) / リキッド・ドリップ・スプラッシュ・カラーバースト・インク・手描きスクリブル・紙を破る・メルト・ペイントの飛沫・筆記体のスワッシュを作り直し
 
