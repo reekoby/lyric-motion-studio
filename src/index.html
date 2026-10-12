@@ -94,6 +94,8 @@ input[type=range]{flex:1;accent-color:var(--acc);min-width:60px}
 input[type=color]{width:30px;height:28px;padding:0;border:1px solid var(--line);border-radius:6px;background:none;cursor:pointer}
 .num{width:64px;text-align:right;font-variant-numeric:tabular-nums}
 .val{width:44px;text-align:right;color:var(--dim);font-variant-numeric:tabular-nums;font-size:12px}
+.val.valNum{cursor:text;border-radius:4px}.val.valNum:hover{color:var(--text);background:var(--panel2);box-shadow:inset 0 -1px 0 var(--faint)}
+.valEdit{width:100%;min-width:44px;box-sizing:border-box;font:inherit;font-size:12px;text-align:right;padding:1px 3px;border:1px solid var(--acc);border-radius:4px;background:var(--panel);color:var(--text);outline:none}
 .tg{display:inline-flex;align-items:center;gap:8px;cursor:pointer;user-select:none;font-size:12.5px}
 .tg input{display:none}
 .tg i{width:30px;height:18px;border-radius:9px;background:var(--line2);position:relative;transition:.15s;flex:none}

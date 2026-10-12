@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.9.0 — 2026-10-12
+- Type exact values: click the number next to any slider to type a value (Enter applies, Esc cancels, ↑↓ step by 1, Shift by 10). Values are typed in the unit shown (%, seconds, degrees, em…) and converted to the slider automatically; the inspector waits for you to finish before it refreshes / スライダーの数値をクリックして直接入力できるように（表示の単位のまま入力）
+
 ## 1.8.6 — 2026-10-12
 - The right-hand panel no longer jumps while you change settings: after each rebuild the control you touched stays at the same place on screen (or the panel keeps its scroll offset), the page itself never scrolls, and browser scroll anchoring is turned off for the panel / 右パネルの設定を変えても画面が勝手にスクロールしないように
 

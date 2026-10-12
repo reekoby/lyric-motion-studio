@@ -1274,6 +1274,8 @@
   };
   const findKey = (k, root) => (!k ? null : k.sel ? root.querySelector(k.sel) : root.querySelectorAll(k.tag)[k.i] || null);
   function renderInspector() {
+    if (S.valEditing && $('#ibody') && $('#ibody').contains(document.activeElement)) { S.inspPending = true; return; }
+    S.inspPending = false;
     const ib = $('#ibody'), wy = window.scrollY, de = document.scrollingElement, dy = de ? de.scrollTop : 0;
     if (!ib) return renderInspectorRaw();
     const st = ib.scrollTop, a0 = document.activeElement && ib.contains(document.activeElement) ? document.activeElement : inspAnchor && ib.contains(inspAnchor) ? inspAnchor : null;
@@ -2265,5 +2267,54 @@
     if (a && a.blob && (!P.audioName || a.name === P.audioName)) loadAudio(new File([a.blob], a.name), true);
   }
   window.LMApp = { get P() { return P; }, set P(v) { P = MD.normalize(v); afterLoad(); commit(); }, S, seek, play, pause, view, commit, loadAudio, openExport, selectCue, openManual, clickSel, setTap, tapPress, tapRelease, addSection, copyStyle, pasteStyle, renderInspector };
+
+  // ---- type a value: click the number next to any slider, type, Enter (Esc cancels; ↑↓ step) ----
+  (() => {
+    const num = (t) => { const m = String(t || '').replace(/−/g, '-').replace(/,/g, '.').match(/[-+]?\d*\.?\d+/); return m ? parseFloat(m[0]) : NaN; };
+    const rangeOf = (val) => { const row = val.closest('.row') || val.parentElement; if (!row) return null; const r = row.querySelector('input[type=range]'); return r && !r.disabled ? r : null; };
+    const fire = (r, ev) => r.dispatchEvent(new Event(ev, { bubbles: true }));
+    const clampR = (r, v) => { const lo = +r.min || 0, hi = r.max === '' ? 100 : +r.max, st = r.step === 'any' ? 0 : +r.step || 1; v = Math.min(hi, Math.max(lo, v)); if (st) v = lo + Math.round((v - lo) / st) * st; return +v.toFixed(6); };
+    // map a typed display value to the slider: measure the label at two slider positions (handles %, ×100, offsets),
+    // then one secant correction for displays that are not linear
+    function apply(r, val, want) {
+      const read = () => num(val.textContent), v0 = +r.value, d0 = read();
+      const set = (v) => { r.value = String(v); fire(r, 'input'); return read(); };
+      const lo = +r.min || 0, hi = r.max === '' ? 100 : +r.max;
+      // two slider positions whose labels show numbers (labels such as 「自動」 at one end are skipped)
+      const pts = []; if (isFinite(d0)) pts.push([v0, d0]);
+      for (const f of [1, 0, 0.5, 0.75, 0.25]) { if (pts.length >= 2) break; const v = clampR(r, lo + (hi - lo) * f); if (pts.some((q) => Math.abs(q[0] - v) < 1e-9)) continue; const d = set(v); if (isFinite(d) && !pts.some((q) => Math.abs(q[1] - d) < 1e-9)) pts.push([v, d]); }
+      const [va, da] = pts[0] || [v0, NaN], [vb, db] = pts[1] || [v0, NaN];
+      if (!r.isConnected || !val.isConnected) return;
+      let v = isFinite(da) && isFinite(db) && Math.abs(db - da) > 1e-9 ? va + ((want - da) * (vb - va)) / (db - da) : want;
+      v = clampR(r, v); let d = set(v);
+      if (isFinite(d) && Math.abs(d - want) > 1e-6 && Math.abs(d - db) > 1e-9) { const v2 = clampR(r, v + ((want - d) * (vb - v)) / (db - d)); if (v2 !== v) set(v2); }
+      fire(r, 'change');
+    }
+    function edit(val) {
+      const r = rangeOf(val); if (!r || val.querySelector('input')) return;
+      const shown = val.textContent, d = num(shown);
+      const inp = document.createElement('input'); inp.type = 'text'; inp.className = 'valEdit'; inp.inputMode = 'decimal';
+      inp.value = isFinite(d) ? String(d) : ''; inp.setAttribute('aria-label', LM.i18n && LM.i18n.tx ? LM.i18n.tx('数値を入力') : '数値を入力');
+      val.textContent = ''; val.appendChild(inp); S.valEditing = true; inp.focus({ preventScroll: true }); inp.select();
+      let done = false;
+      const finish = (ok) => {
+        if (done) return; done = true; S.valEditing = false;
+        const want = num(inp.value); inp.remove(); val.textContent = shown;
+        if (ok && isFinite(want) && r.isConnected) apply(r, val, want);
+        if (S.inspPending) renderInspector();
+      };
+      inp.addEventListener('keydown', (e) => {
+        e.stopPropagation();
+        if (e.key === 'Enter') { e.preventDefault(); finish(true); }
+        else if (e.key === 'Escape') { e.preventDefault(); finish(false); }
+        else if (e.key === 'ArrowUp' || e.key === 'ArrowDown') { e.preventDefault(); const x = num(inp.value); const stp = e.shiftKey ? 10 : 1; inp.value = String(+((isFinite(x) ? x : 0) + (e.key === 'ArrowUp' ? stp : -stp)).toFixed(4)); }
+      });
+      inp.addEventListener('blur', () => finish(true));
+      inp.addEventListener('pointerdown', (e) => e.stopPropagation());
+    }
+    document.addEventListener('click', (e) => { const val = e.target.closest && e.target.closest('.val'); if (!val || !rangeOf(val)) return; e.preventDefault(); edit(val); });
+    // mark editable numbers so they look clickable (rows are rebuilt often, so check on hover)
+    document.addEventListener('pointerover', (e) => { const val = e.target.closest && e.target.closest('.val'); if (val && !val.classList.contains('valNum') && rangeOf(val)) { val.classList.add('valNum'); if (!val.title) val.title = LM.i18n && LM.i18n.tx ? LM.i18n.tx('クリックで数値を入力') : 'クリックで数値を入力'; } });
+  })();
   boot();
 })();
