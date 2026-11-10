@@ -266,7 +266,7 @@ void main(){
       const dsx = (T.sx ?? 1) - (T0.sx ?? 1), dsy = (T.sy ?? 1) - (T0.sy ?? 1), dr = (T.rot || 0) - (T0.rot || 0);
       const m = lx.getTransform(), ks = Math.hypot(m.a, m.b) || 1;
       const d = (Math.hypot(dx, dy) + Math.abs(dsx) * Math.max(g.w, sz) * 0.5 + Math.abs(dsy) * sz * 0.5 + Math.abs(dr) * sz * 0.6) * ks;
-      if (d < 2.2 * S || T.vis === false || T.ch !== T0.ch || T.erode || st.erode || T.shard != null || T.flap || T.dust || T.burn || T.pen || T.caret || T.dot || T.boxB > T.boxA || T.liq != null) return this.drawGlyph(lx, g, T, st, tmpl, fill, cc, pal);
+      if (d < 2.2 * S || T.vis === false || T.ch !== T0.ch || T.erode || st.erode || T.shard != null || T.flap || T.dust || T.burn || T.pen || T.caret || T.dot || T.boxB > T.boxA || T.liq != null || T.paint) return this.drawGlyph(lx, g, T, st, tmpl, fill, cc, pal);
       const N = Math.max(3, Math.min(32, Math.ceil(d / (2.4 * S))));
       const sc = this.scratch(0), sx = sc.getContext('2d');
       // screen-space bounds of the smear
@@ -584,6 +584,14 @@ void main(){
       const z = u < 0.5 ? lerp(from.z, zm, u * 2) : lerp(zm, to.z, (u - 0.5) * 2);
       return { x: lerp(from.x, to.x, u), y: lerp(from.y, to.y, u), rot: from.rot + dr * u, z: z * (1 + 0.02 * (lt - this.seqStart(L, k, dur))) };
     }
+    bgMove(ctx, o) {
+      const W = this.W, H = this.H, sc = this.scratch(4), sx = sc.getContext('2d');
+      sx.setTransform(1, 0, 0, 1, 0, 0); sx.globalAlpha = 1; sx.filter = 'none'; sx.globalCompositeOperation = 'copy'; sx.drawImage(ctx.canvas, 0, 0, W, H); sx.globalCompositeOperation = 'source-over';
+      const s = Math.max(o.s || 1, 1 + (2 * Math.abs(o.x || 0)) / W + 0.01, 1 + (2 * Math.abs(o.y || 0)) / H + 0.01) + (o.blur > 0.3 ? 0.04 : 0);
+      ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'copy';
+      if (o.blur > 0.3) ctx.filter = `blur(${(o.blur * this.S).toFixed(1)}px)`;
+      ctx.translate(W / 2 + (o.x || 0), H / 2 + (o.y || 0)); ctx.scale(s, s); ctx.drawImage(sc, -W / 2, -H / 2); ctx.restore();
+    }
     /* audio features at t (analysed song → LM.audio.frame; otherwise a BPM-locked synthetic frame) */
     auf(t) {
       if (this._auT === t && this._au) return this._au;
@@ -778,6 +786,8 @@ void main(){
         }
         if (mix && bOp > 0.001) { ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = bOp; ctx.globalCompositeOperation = BLEND[bMode]; ctx.drawImage(Lc, 0, 0); ctx.restore(); }
       }
+      // 3D cameras move / defocus everything behind the lyric (parallax, dolly zoom, rack focus, lyric space)
+      if (!transparent && cur && LM.cam3d) { const bc = LM.cam3d.bgFor(this, cur, t); if (bc) this.bgMove(ctx, bc); }
       if (gap && !mode.noOverlay) this.drawGapFx(ctx, t, beat, bgPal, gap);
       const lt = cur ? t - cur.c.start : 0;
       const bbox = cur ? cur.L.bbox : { x: W * 0.3, y: H * 0.4, w: W * 0.4, h: H * 0.2, cx: W / 2, cy: H / 2 };
@@ -905,6 +915,9 @@ void main(){
       const pal = palOf(p, c);
       const two = fl.has('twoFrame');
       let tt = two ? Math.floor(t * 15) / 15 : t;
+      this._c3 = null;
+      const cam0 = (c.scene && c.scene.camera) || p.camera;
+      if (cam0 === 'bulletTime' && LM.cam3d) tt = LM.cam3d.freezeT(tt, c, ph);
       const lt = tt - c.start;
       const amp = (p.intensity || 1);
       let lx = this.lctx;
@@ -928,6 +941,7 @@ void main(){
       else if (cam === 'pump') { const z = 1 - 0.035 * beat * camAmp; lx.scale(z, z); }
       else if (cam === 'groove') { const w = Math.sin(t * PI * (this.bpm() || 100) / 60 / 2); lx.translate(w * S * 16 * camAmp, Math.abs(w) * S * 5 * camAmp); lx.rotate(w * 0.008 * camAmp); }
       else if (cam === 'punch') { const b = Math.max(beat, Math.max(0, 1 - lt / 0.3)); const k = 1 + 0.045 * b * camAmp; lx.scale(k, k); }
+      else if (LM.cam3d && LM.cam3d.has(cam)) this._c3 = LM.cam3d.params(cam, this, v, t, beat);
       else if (LM.cam2 && LM.cam2[cam]) LM.cam2[cam](lx, { t, lt, hp, dur: ph.dur, S, W, H, amp: camAmp, beat, bpm: this.bpm() || 120, seed: U.strHash(c.id), au: this.auf(t) });
       if (L.drift) lx.translate(-hp * W * L.drift * 3, 0);
       L._k = L.seq ? this.seqIndex(L, lt, ph.dur) : -1;
@@ -1075,7 +1089,7 @@ void main(){
       const lt = t - c.start;
       const N = L.glyphs.length;
       const cx = L.bbox.cx, cy = L.bbox.cy;
-      const C = { W: this.W, H: this.H, S: this.S, amp, cx, cy, N, gl: L.glyphs, beat, seed: idx, W_: Math.max(1, L.words), tempo: this.tempo(), bb: L.bbox, lt: t - c.start, dur: ph.dur, ct: L._ct || this.charTimes(c), tAbs: t, mb: this.mbAmt(), au: this.auf(t), scope: ph.tr.hold === 'auWave' ? this.scopeAt(t) : null };
+      const C = { W: this.W, H: this.H, S: this.S, amp, cx, cy, N, gl: L.glyphs, beat, seed: idx, W_: Math.max(1, L.words), tempo: this.tempo(), bb: L.bbox, lt: t - c.start, dur: ph.dur, ct: L._ct || this.charTimes(c), tAbs: t, mb: this.mbAmt(), au: this.auf(t), scope: ph.tr.hold === 'auWave' ? this.scopeAt(t) : null, bpm: this.bpm() || 120, ed: ph.ed, xd: ph.xd };
       // Motion System parameters (intensity / variation / seed / easing / stagger / delay) per track
       const MS = LM.MS, pE = MS && MS.par(c, 'enter'), pH = MS && MS.par(c, 'hold'), pM = MS && MS.par(c, 'emph'), pX = MS && MS.par(c, 'exit');
       const seedV = (U.strHash(c.id) ^ (((c.mp && c.mp.seed) || 0) * 7919) ^ ((this.p.seed || 0) * 31)) >>> 0;
@@ -1136,6 +1150,7 @@ void main(){
           if (A.flap) T.flap = A.flap; if (A.liq != null) T.liq = A.liq;
           if (A.scanX != null) { T.scanX = A.scanX; T.scanW = A.scanW; }
           if (A.dust != null) T.dust = Math.max(T.dust || 0, A.dust); if (A.burn != null) T.burn = Math.max(T.burn || 0, A.burn);
+          if (A.paint) { T.paint = A.paint; T.pd = A.pd; }
           if (A.strike != null) T.strike = A.strike; if (A.uline != null) T.uline = A.uline; if (A.drain != null) T.drain = Math.max(T.drain || 0, A.drain);
         };
         // enter
@@ -1287,7 +1302,8 @@ void main(){
         else { ctx.moveTo(x0, -size * 0.7); const n = 8; for (let k = 0; k <= n; k++) { const yy = -size * 0.7 + (size * 1.4 * k) / n; ctx.lineTo(x0 + hw * pr + Math.sin(k * 2.1 + g.i) * size * 0.05 * (1 - pr), yy); } ctx.lineTo(x0, size * 0.7); ctx.closePath(); }
         ctx.clip();
       }
-      if (T.shard != null && T.shard > 0.001) this.inkShards(ctx, g, T, draw, size, a);
+      if (T.paint) T.paint(ctx, { g, T, draw, size, col, cc, ch, r: this, a, st });
+      else if (T.shard != null && T.shard > 0.001) this.inkShards(ctx, g, T, draw, size, a);
       else if (T.shard != null) draw();
       else if (T.flap) this.inkFlap(ctx, g, T, col, cc, size);
       else if (T.liq != null) this.inkLiquid(ctx, g, T, ch, col, cc, size, draw);
@@ -1639,7 +1655,8 @@ void main(){
       if (fl.has('shake')) { const a = fl.get('shake'); const k = Math.max(0.35, beat, 1 - ep); tx = U.noise1(t * 14, 7) * S * 16 * a * k; ty = U.noise1(t * 14, 9) * S * 16 * a * k; }
       if (fl.has('warp')) { const w = (1 - e) * 0.6 + x * 0.6 + Math.sin(t * 2) * 0.02; ctx.translate(W / 2, H / 2); ctx.transform(1, 0, w * 0.4, 1 + w * 0.4, 0, 0); ctx.translate(-W / 2, -H / 2); }
       ctx.translate(tx, ty);
-      const drawL = () => ctx.drawImage(L, 0, 0);
+      const c3 = this._c3; this._c3 = null;
+      const drawL = () => (c3 ? LM.cam3d.draw(ctx, L, c3, this) : ctx.drawImage(L, 0, 0));
       const clipDraw = (fn) => { ctx.save(); ctx.beginPath(); fn(); ctx.clip(); drawL(); ctx.restore(); };
       const tr = ['wipe', 'splitHorizontal', 'splitVertical', 'blinds', 'checker', 'clockWipe', 'irisWipe', 'diagonalWipe', 'mosaic', 'glass', 'shred'].find((k) => fl.has(k));
       const inT = ep < 1, outT = xp > 0;

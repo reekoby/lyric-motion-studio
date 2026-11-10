@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.15.0 — 2026-11-11
+- Physics for lyrics, pre-computed so preview and export match / 歌詞の物理演算（事前計算でプレビューと書き出しが一致）:
+  - Enter: animation principles in one move (wind-up, arc, stretch along the motion, squash on landing, follow-through), rigid letters dropped onto the baseline (gravity, collision, friction, tumble, settle), a flock that flies in and lines up (boids) / アニメの原則・剛体の落下・群れ
+  - Hold: flag / cloth, letters hanging on ropes (pendulums kicked by the beat), spring chain with overlapping action, floating on water, Brownian drift, magnetic field, IK arm reaching for a moving target / 布・ロープ・ばね・水面・ブラウン運動・磁場・IK
+  - Exit: rigid fall with bounces, domino knock-over, wind through a curl-noise field, vortex / 剛体の落下・ドミノ・風・渦
+- Particles made from the lyric: particles gather into the letters, the previous line's particles morph into the next, letters burst into particles on the wind, sparks rise from the outline / 歌詞そのものの粒子（集まって文字に・前の歌詞から変形・散る・輪郭から火の粉）
+- 3D cameras: the lyric is projected as a plane through a real perspective camera on the GPU, with depth-of-field blur — top-down, low angle, arc, orbit, fly-through, FPV drone, bullet time (time freezes while the camera circles), rack focus, dolly zoom, multiplane parallax, Droste infinite zoom, line-to-line travel in 3D space, one shot / 3Dカメラ13種（GPUで透視投影・被写界深度）
+- Solid 3D letters: extruded blocks with shaded sides that turn, tilt on the beat, flip in and flip out / 厚みのある立体文字
+- Particle backgrounds: GPU Lorenz attractor (150k), spiral galaxy (140k), curl-noise flow, attractor swarm; plexus network, fountain, feathers, leaves / パーティクル背景8種（GPU 4種）
+- Auto direction uses the new vocabulary where it fits each style / おまかせが各スタイルに合わせて使用
+
 ## 1.14.0 — 2026-11-11
 - Audio analysis, done once when a song is loaded so preview and export always match: kick / snare / hi-hat hits, bass / mid / high / vocal levels, a smoothed 64-band spectrum with falling peaks, sung pitch, stereo position and width, ambience, key and major / minor mood, song intensity, breaths, beat tracking that follows tempo drift, and song structure from repetition (intro, verses, pre-chorus, chorus, interlude, outro) / 音源の詳細解析（キック・スネア・ハイハット、帯域と歌声の強さ、スペクトラム、音程、定位、残響感、キーと長短、盛り上がり、息継ぎ、テンポのゆれに追従するビート、繰り返しから曲構成を推定）
 - Audio link in the Effects tab: the whole lyric pumps with the kick and brightens with the loudness (strength set per style, adjustable), with a smoothness control / エフェクトタブに「音声連動」（強さ・なめらかさ）

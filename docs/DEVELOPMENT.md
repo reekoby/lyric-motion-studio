@@ -2,6 +2,15 @@
 
 最終更新：2026-11-11
 
+## 実装済み（2026-11-11）— フェーズ5（3Dと物理）— `src/phys.js` / `src/gpts.js` / `src/cam3d.js`
+- グリフ描画の差し込み口 `T.paint(ctx, {g, T, draw, size, col, cc, ch, r, a, st})` と `T.pd`（モーションが返す `{paint, pd}`）。`drawGlyph` の最初に呼ばれ、文字は原点（グリフ中心・変形済み）。`LM.glyphPaint` に form / burst / morph / emit / cloth / rope / extrude
+- 物理：`simOf(C, key, build)` がレイアウトのグリフ配列（`C.gl`）をキーに1回だけシミュレーション（120Hz）。登場・退場は進行度 p を物理時間に写像、保持は経過時間。剛体は箱と床の撃力解法（反発・クーロン摩擦）、登場は最後に整列へブレンド。群れはボイド、IK は行ごとの FABRIK
+- 文字の粒子：グリフをオフスクリーンに描いて点群化（文字・フォント・サイズでキャッシュ、輪郭点も）。`morph: true` の登場は前の行のレイアウト（`C.prevL`）を参照
+- `C` に `bpm / ed / xd` を追加
+- GPU粒子（gpts.js）：独立したWebGLコンテキストで、頂点シェーダーが (粒子ID, 時間) から位置を計算（状態なし）。lorenz（CPUで15万点を積分してVBO）、galaxy、curl（10ステップの流線積分を線で描画）、swarm
+- 3Dカメラ（cam3d.js）：`LM.cam3d.params(id, r, v, t, beat)` が `{R(mat3), T, s, fov, focus, dof, blur, alpha, bg, bgBlur, droste}` を返す。`drawCue` が `this._c3` に保存し、`compositeLayer` が文字レイヤーをGPUで24×24分割の平面に透視投影（被写界深度は奥行き差に比例する24タップのぼかし）。背景側は `bgFor` → `bgMove`（文字を描く前にシーンを平行移動・拡大・ぼかし）。バレットタイムは `freezeT` で文字の時間を止める。space3d / oneShot は行ごとの姿勢とカメラ経路から相対変換を計算
+- 立体文字は側面をずらして重ねる押し出し（傾きに応じたずれと陰影、表面のハイライト）
+
 ## 実装済み（2026-11-11）— フェーズ4（音声連動）— `src/audio2.js` / `src/react.js`
 - `audio2.js`：`LM.audio.analyze` を包み、基本解析（BPM・ビート）のあとに86fps固定グリッドで特徴量を事前計算（`LM.audio.feat`）。プレビューも書き出しも同じ数値を読むので決定論的
   - 2048点FFT（中央=re・サイド=im を1回のFFTに詰めて分離）→ 64帯域の対数スペクトル（+3dB/oct の傾き補正、パーセンタイル正規化）、アタック/リリースの平滑化と落下するピークキャップを Uint8 で保持
