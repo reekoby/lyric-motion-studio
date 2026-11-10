@@ -586,6 +586,13 @@ input[type=color]{width:30px;height:28px;padding:0;border:1px solid var(--line);
           <p class="hint">空欄なら音源の簡易解析結果を使います（目安）。合わない場合はBPMを手入力してください。</p>
         </div>
         <div class="sec">
+          <h3>音声連動</h3>
+          <div class="row"><label>反応の強さ</label><input type="range" id="react" min="0" max="100" step="1"><span class="val" id="reactV"></span><button class="btn sm" id="reactAuto" title="スタイル（テーマ）ごとの標準に戻す">自動</button></div>
+          <div class="row"><label>なめらかさ</label><input type="range" id="reactSmooth" min="0" max="100" step="1"><span class="val" id="reactSmoothV"></span></div>
+          <p class="hint" id="auInfo">音源を読み込むと、キック・スネア・ハイハット・歌声・音程・左右の定位・曲の構成を解析し、文字・背景・フィルターが音に反応します。</p>
+          <p class="hint">歌詞全体がキックで脈打ち、音量で明るくなります。行ごとの「保持」や背景・フィルターの「音に反応」グループでより強い連動を選べます。強調の「きっかけ」をキック・スネアにすると、拍ではなく実際の音に合わせて弾みます。</p>
+        </div>
+        <div class="sec">
           <h3>トランジション</h3>
           <label class="tg"><input type="checkbox" id="transOn"><i></i>フレーズ間のトランジションを使う</label>
           <p class="hint">カラーブロック・図形ワイプ・ホイップ（モーションブラー）・ズームスルー・スピン・グリッチカットなど30種。曲のBPMに合わせて半拍で切り替えます。行ごとの指定は右の詳細パネル「カット・グラフィック」から。</p>

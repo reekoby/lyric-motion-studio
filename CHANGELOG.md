@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.14.0 — 2026-11-11
+- Audio analysis, done once when a song is loaded so preview and export always match: kick / snare / hi-hat hits, bass / mid / high / vocal levels, a smoothed 64-band spectrum with falling peaks, sung pitch, stereo position and width, ambience, key and major / minor mood, song intensity, breaths, beat tracking that follows tempo drift, and song structure from repetition (intro, verses, pre-chorus, chorus, interlude, outro) / 音源の詳細解析（キック・スネア・ハイハット、帯域と歌声の強さ、スペクトラム、音程、定位、残響感、キーと長短、盛り上がり、息継ぎ、テンポのゆれに追従するビート、繰り返しから曲構成を推定）
+- Audio link in the Effects tab: the whole lyric pumps with the kick and brightens with the loudness (strength set per style, adjustable), with a smoothness control / エフェクトタブに「音声連動」（強さ・なめらかさ）
+- 11 audio-reactive holds: kick pump, loudness, vocal tremor, hi-hat glints, ride the waveform, spectrum stretch, sung pitch, melody shape, stereo lean, reverb trails, drum kit / 音に反応する保持モーション11種
+- Emphasis can fire on the actual kick, snare, hi-hat or any onset instead of the beat grid / 強調のきっかけにキック・スネア・ハイハット・音の立ち上がり
+- 11 audio backgrounds: spectrum bars (mirrored, peak caps, reflection) and circular spectrum rebuilt; spectrum ridges, phase-locked oscilloscope, Lissajous, ridgeline history, scrolling spectrogram, kick rings, hi-hat sparks, melody line, level meters / 音の可視化の背景11種（イコライザー・円形スペクトラムを作り直し）
+- 11 audio-reactive filters: kick zoom, bass shockwave, loudness bloom, snare flash, chord colour temperature, reverb trails, stereo RGB split, song-driven effect intensity, hi-hat glints; audio bars / wave overlays rebuilt / 音に反応するフィルター11種
+- 3 audio cameras: bass push, stereo sway, snare shake / 音に反応するカメラ3種
+- Auto direction: uses the estimated structure when no section markers are set, blends song intensity into its energy, triggers accents on kick / snare, and puts sound visualisers on choruses; each style uses the audio vocabulary that suits it / おまかせが解析結果（構成・盛り上がり・ドラム）を使い、スタイルに合う音声連動の演出を選ぶ
+- Song-structure estimation (Auto tab) now uses the new analysis / 曲構成の推定を新しい解析に置き換え
+
 ## 1.13.0 — 2026-11-10
 - Screen filters rebuilt: film grain (luminance-weighted, two-scale, mostly monochrome — replaces flat colour noise), bloom with a soft threshold so only highlights glow, VHS (chroma bleed, softened luma, rolling tracking band, head-switch noise), CRT (RGB shadow mask, phosphor glow, rounded bezel) and a spectral 7-tap chromatic aberration / フィルム粒子・光のにじみ・VHS・ブラウン管・色収差を作り直し
 - 40 new filters in four new groups / 新しいフィルター40種（4グループ）:

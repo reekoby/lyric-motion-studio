@@ -1,6 +1,21 @@
 # 開発メモ（Lyric Motion Studio）
 
-最終更新：2026-11-10
+最終更新：2026-11-11
+
+## 実装済み（2026-11-11）— フェーズ4（音声連動）— `src/audio2.js` / `src/react.js`
+- `audio2.js`：`LM.audio.analyze` を包み、基本解析（BPM・ビート）のあとに86fps固定グリッドで特徴量を事前計算（`LM.audio.feat`）。プレビューも書き出しも同じ数値を読むので決定論的
+  - 2048点FFT（中央=re・サイド=im を1回のFFTに詰めて分離）→ 64帯域の対数スペクトル（+3dB/oct の傾き補正、パーセンタイル正規化）、アタック/リリースの平滑化と落下するピークキャップを Uint8 で保持
+  - レベル：rms / bass / mid / high / vocal（中央成分−サイド成分の250Hz〜4kHz）。各々 fast / slow の2系統の包絡線を持ち、`frame(t, smooth)` で混ぜる
+  - オンセット：kick（35–120Hz）、snare（1.8–6kHz のクラック − ハイハット帯 × 0.7、胴鳴りで重み）、hat（7kHz+）、all。移動平均+k·σ の適応しきい値でピーク検出、強さ付き
+  - ステレオ（pan / width）、明るさ（重心）、ambience（space）、arousal（音量+オンセット密度+明るさ）
+  - 音程：中央チャンネルを11kHzへ間引き、HP110Hz+LP1.6kHz の後 YIN。オクターブ補正・メディアン・短い隙間の補間、`pitchAt(t, raw)` は隙間を埋めた平滑な輪郭
+  - キー（Krumhansl）とコードの長短から mood（−1..1）
+  - DPビートトラッキング（Ellis 2007、テンポのゆれに追従）で `analysis.beats` を置き換え（元は `beatsGrid`）、ダウンビート再推定
+  - 曲構成：1秒ブロック（クロマ12+粗いスペクトル8）の自己類似行列 → チェッカーボード核のノベルティ+音量差で境界 → 小節線に吸着 → 区間を対角方向の類似度+音量差でグループ化 → 繰り返す大きいグループ＝サビ。歌の有無は音程の有声率で判定。`sectionsFor(p)` が歌詞の有無も加味してマーカー形式で返す（`MD.estimateSections` が優先して使う）。息継ぎ（`breaths`）も検出
+  - 参照API：`frame(t, smooth)`（共有オブジェクトを返す）、`pitchAt`、`lastOnset(t, band, minS)`、`onsets(band, t0, t1)`、`scope(t, n, span)`（立ち上がりゼロ交差でトリガー）、`waveLR`、`spectrum(t)`（32帯域、平滑済み）
+- レンダラー：`auf(t)` が特徴量（無ければ `LM.auSynth` のBPM同期の合成値）を返し、`C.au`（グリフ）、`R.au`（背景・装飾）、カメラの `k.au`、`POSTX.params` の `ctx.au` に渡す。`bands()` も特徴量から。強調のきっかけに kick / snare / hat / onset。`p.react`（null=テーマの `react` 値）で全体のキック脈動・音量の明るさ、`p.reactSmooth` で平滑度
+- `react.js`：保持11種（`au*`）、背景11種（カテゴリ「オーディオ」、`eqBars` `circleSpectrum` は作り直し）、フィルター11種（カテゴリ `audio`。ポストは `LM.POSTX` に uv/col を追記し params をラップ）、カメラ3種、テーマ別の配分と `react` 値、`LM.director_OVR` で演出のメタ情報
+- おまかせ：解析済みなら区間マーカー未設定でも推定構成を使う、エネルギーに arousal を混ぜる、強調のきっかけをキック/スネアに、サビの背景に音の可視化を優先
 
 ## 実装済み（2026-11-10）— フェーズ3（画面フィルター）— `src/pro3.js`
 - `LM.POSTX = { uni, v3, decl, uv, smp, col, fin, params }` をレンダラーの後処理シェーダーの差し込み口（`/*X_DECL*/` `/*X_UV*/` `/*X_SMP*/` `/*X_COL*/` `/*X_FIN*/`）に展開。`params(g, u, ctx)` が `postParams` の最後に呼ばれる

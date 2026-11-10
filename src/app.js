@@ -31,7 +31,7 @@
   const S = { sel: -1, t: 0, playing: false, clock0: 0, t0: 0, loop: false, tap: false, tapIdx: 0, tapDown: null, plans: [], planIdx: -1, palCat: 'all', dirty: true, images: {}, audioBlob: null, audioName: null, peaks: null, pvQ: 0.5, pvK: 0.75, rAvg: 0, rAdj: 0, multi: new Set(), tapW: 0, clip: null };
   const hist = { stack: [], idx: -1 };
   const au = $('#au');
-  const view = new R({ canvas: $('#view'), W: 960, H: 540, images: S.images, audio: { get analysis() { return LM.audio.analysis; }, spectrum: LM.audio.spectrum, waveAt: LM.audio.waveAt } });
+  const view = new R({ canvas: $('#view'), W: 960, H: 540, images: S.images, audio: LM.audio });
 
   /* ---------------- utils ---------------- */
   const toastEl = $('#toast');
@@ -99,7 +99,8 @@
       }
       commit();
       const an = await LM.audio.analyze();
-      $('#audioBpm').textContent = an && an.bpm ? `BPM ≈ ${an.bpm}` : 'BPM –';
+      $('#audioBpm').textContent = an && an.bpm ? `BPM ≈ ${an.bpm}` + (an.key ? ` · ${an.key}` : '') : 'BPM –';
+      auInfo();
       S.dirty = true; drawTL();
       if (!silent) toast('音源を読み込みました' + (an && an.bpm ? `（テンポ目安 ${an.bpm} BPM）` : ''));
     } catch (e) {
@@ -1051,6 +1052,16 @@
   }
   $('#fxClear').onclick = () => { P.filters = []; commit(); };
   $('#beatSync').onchange = (e) => { P.beatSync = e.target.checked; commit(); };
+  const reactEff = () => (P.react != null ? P.react : ((D.themeById[P.theme] || {}).react || 0));
+  const syncReact = () => { $('#react').value = reactEff(); $('#reactV').textContent = Math.round(reactEff()) + (P.react == null ? T('（自動）') : ''); $('#reactSmooth').value = P.reactSmooth == null ? 50 : P.reactSmooth; $('#reactSmoothV').textContent = P.reactSmooth == null ? 50 : P.reactSmooth; };
+  $('#react').oninput = (e) => { P.react = +e.target.value; syncReact(); S.dirty = true; commitSoon(); };
+  $('#reactAuto').onclick = () => { P.react = null; syncReact(); S.dirty = true; commit(); };
+  $('#reactSmooth').oninput = (e) => { P.reactSmooth = +e.target.value; syncReact(); S.dirty = true; commitSoon(); };
+  const auInfo = () => {
+    const an = LM.audio.analysis, F = LM.audio.feat; if (!an || !F) return;
+    const sec = an.sections || [];
+    $('#auInfo').textContent = T('解析済み') + ` — BPM ${an.bpm} · ${T('キー')} ${an.key || '–'} · ${T('キック')} ${F.on.kick.t.length} · ${T('スネア')} ${F.on.snare.t.length} · ${T('サビ')} ×${sec.filter((x) => x.type === 'chorus').length}`;
+  };
   $('#bpm').onchange = (e) => { const v = +e.target.value; P.bpm = v > 0 ? U.clamp(v, 30, 300) : null; commit(); };
   $('#beatOffset').onchange = (e) => { P.beatOffset = +e.target.value || 0; commit(); };
   let taps = [];
@@ -2216,7 +2227,7 @@
     $('#bgDim').value = Math.round(((P.bg && P.bg.dim) ?? 0.45) * 100); $('#bgDimV').textContent = $('#bgDim').value + '%';
     $('#bgBlur').value = (P.bg && P.bg.blur) || 0; $('#bgBlurV').textContent = $('#bgBlur').value;
     $('#pattern').value = P.pattern || 'none'; $('#camera').value = P.camera || '';
-    $('#beatSync').checked = P.beatSync !== false; $('#bpm').value = P.bpm || ''; $('#beatOffset').value = P.beatOffset || 0;
+    syncReact(); $('#beatSync').checked = P.beatSync !== false; $('#bpm').value = P.bpm || ''; $('#beatOffset').value = P.beatOffset || 0;
     pruneMulti();
     $('#rubyOn').checked = P.ruby !== false; $('#softMask').checked = P.softMask !== false;
     buildFxGlobal(); renderList(); renderInspector(); syncFine(); syncBgmUI(); renderSections(); buildLooks(); syncImgUI();

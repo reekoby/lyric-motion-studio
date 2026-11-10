@@ -180,7 +180,8 @@ LM.audio = (() => {
   }
 
   return {
-    decode, setBuffer, peaks, analyze, energyAt, spectrum, waveAt, slice,
+    decode, setBuffer, peaks, analyze, energyAt, spectrum, waveAt, slice, fft,
+    get mono() { return mono; },
     get buffer() { return buffer; }, get analysis() { return analysis; }, set analysis(a) { analysis = a; },
     clear() { buffer = null; mono = null; analysis = null; },
   };

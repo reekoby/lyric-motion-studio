@@ -358,7 +358,7 @@ void main(){
       const needSpec = list.concat(prevList).some((id) => id === 'eqBars' || id === 'circleSpectrum' || (LM.bgm.lib[id] && LM.bgm.lib[id].spec));
       const needWave = list.concat(prevList).some((id) => LM.bgm.lib[id] && LM.bgm.lib[id].wave);
       const au = this.bands(t);
-      const R = { W: this.W, H: this.H, S: this.S, minD: this.minD, t, pal, beat: p.beatSync === false ? 0 : beat, bass: au.bass, mid: au.mid, high: au.high, spec: needSpec && this.audio && this.audio.spectrum ? this.audio.spectrum(t) : null, wave: needWave && this.audio && this.audio.waveAt ? this.audio.waveAt(t, 160) : null, bpm: this.bpm() || 120, title: p.title || '', text: cur ? String(cur.c.text).replace(/[|｜]([^《|｜]+)《[^》]*》/g, '$1').replace(/《[^》]*》/g, '').replace(/[*^]/g, '').replace(/\s*\/\s*/g, ' ') : '' };
+      const R = { W: this.W, H: this.H, S: this.S, minD: this.minD, t, pal, beat: p.beatSync === false ? 0 : beat, bass: au.bass, mid: au.mid, high: au.high, spec: needSpec && this.audio && this.audio.spectrum ? this.audio.spectrum(t) : null, wave: needWave && this.audio && this.audio.waveAt ? this.audio.waveAt(t, 160) : null, bpm: this.bpm() || 120, au: this.auf(t), title: p.title || '', text: cur ? String(cur.c.text).replace(/[|｜]([^《|｜]+)《[^》]*》/g, '$1').replace(/《[^》]*》/g, '').replace(/[*^]/g, '').replace(/\s*\/\s*/g, ' ') : '' };
       const cfg = { amt: p.bgmAmt == null ? 1 : p.bgmAmt, speed: (p.bgmSpeed || 1) * this.tempo() };
       const run = (ids, a) => { if (a <= 0.01) return; ids.forEach((id) => {
         const b = LM.bgm.lib[id]; if (!b || ((transparent || this.imgActive) && b.full)) return;
@@ -454,7 +454,7 @@ void main(){
       const au = this.bands(t);
       const needSpec = ids.some((id) => id === 'eqBars' || id === 'circleSpectrum' || (LM.bgm.lib[id] && LM.bgm.lib[id].spec));
       const needWave = ids.some((id) => LM.bgm.lib[id] && LM.bgm.lib[id].wave);
-      const R = { W: this.W, H: this.H, S: this.S, minD: this.minD, t, pal, beat: p.beatSync === false ? 0 : beat, bass: au.bass, mid: au.mid, high: au.high, spec: needSpec && this.audio && this.audio.spectrum ? this.audio.spectrum(t) : null, wave: needWave && this.audio && this.audio.waveAt ? this.audio.waveAt(t, 160) : null, bpm: this.bpm() || 120, title: p.title || '', text: boost.text || p.title || '' };
+      const R = { W: this.W, H: this.H, S: this.S, minD: this.minD, t, pal, beat: p.beatSync === false ? 0 : beat, bass: au.bass, mid: au.mid, high: au.high, spec: needSpec && this.audio && this.audio.spectrum ? this.audio.spectrum(t) : null, wave: needWave && this.audio && this.audio.waveAt ? this.audio.waveAt(t, 160) : null, bpm: this.bpm() || 120, au: this.auf(t), title: p.title || '', text: boost.text || p.title || '' };
       const cfg = { amt: (p.bgmAmt == null ? 1 : p.bgmAmt) * (boost.amt || 1), speed: (p.bgmSpeed || 1) * this.tempo() * (boost.speed || 1) };
       ids.forEach((id) => {
         const b = LM.bgm.lib[id]; if (!b || ((transparent || this.imgActive) && b.full)) return;
@@ -584,7 +584,19 @@ void main(){
       const z = u < 0.5 ? lerp(from.z, zm, u * 2) : lerp(zm, to.z, (u - 0.5) * 2);
       return { x: lerp(from.x, to.x, u), y: lerp(from.y, to.y, u), rot: from.rot + dr * u, z: z * (1 + 0.02 * (lt - this.seqStart(L, k, dur))) };
     }
+    /* audio features at t (analysed song → LM.audio.frame; otherwise a BPM-locked synthetic frame) */
+    auf(t) {
+      if (this._auT === t && this._au) return this._au;
+      const p = this.p || {}, sm = p.reactSmooth == null ? 0.5 : clamp(+p.reactSmooth / 100);
+      let a = this.audio && this.audio.frame && this.audio.feat ? this.audio.frame(t, sm) : null;
+      if (!a && LM.auSynth) a = LM.auSynth(t, this.beatAt(t), this.bpm() || 120, this.lastTrig(t, 1));
+      this._auT = t; this._au = a; return a;
+    }
+    scopeAt(t) { if (this._scT === t) return this._sc; const A = this.audio; this._scT = t; this._sc = A && A.scope && A.feat ? A.scope(t, 96, 0.022) : null; return this._sc; }
+    reactAmt(c) { const p = this.p; if (p.react != null) return clamp(+p.react / 100, 0, 1); const th = LM.data.themeById[p.theme]; return th && th.react != null ? th.react / 100 : 0; }
     bands(t) {
+      const fa = this.audio && this.audio.feat ? this.auf(t) : null;
+      if (fa) return { beat: this.beatAt(t), bass: clamp(fa.bass * 0.55 + fa.kick * 0.6), mid: clamp(fa.mid * 0.8 + fa.vocal * 0.25), high: clamp(fa.high * 0.6 + fa.hat * 0.55) };
       const sp = this.audio && this.audio.spectrum ? this.audio.spectrum(t) : null;
       if (!sp) { const b = this.beatAt(t); return { beat: b, bass: b * 0.8, mid: 0.3, high: 0.2 }; }
       const avg = (a, b) => { let s = 0; for (let i = a; i < b; i++) s += sp[i]; return s / (b - a); };
@@ -769,7 +781,7 @@ void main(){
       if (gap && !mode.noOverlay) this.drawGapFx(ctx, t, beat, bgPal, gap);
       const lt = cur ? t - cur.c.start : 0;
       const bbox = cur ? cur.L.bbox : { x: W * 0.3, y: H * 0.4, w: W * 0.4, h: H * 0.2, cx: W / 2, cy: H / 2 };
-      const R = { W, H, S, minD: this.minD, t, lt, pal, beat, bbox, amt: 1, xp: 0, beatFlash: p.beatSync !== false && (fl.has('flash')) };
+      const R = { W, H, S, minD: this.minD, t, lt, pal, beat, bbox, amt: 1, xp: 0, au: this.auf(t), bpm: this.bpm() || 120, beatFlash: p.beatSync !== false && (fl.has('flash')) };
       if (cur) R.xp = clamp((t - cur.ph.exitStart) / Math.max(0.05, cur.ph.xd));
       const audioFx = fl.has('audioBars') || fl.has('audioWave');
       if (audioFx && this.audio) { R.spec = this.audio.spectrum && this.audio.spectrum(t); R.wave = this.audio.waveAt && this.audio.waveAt(t, 160); }
@@ -916,7 +928,7 @@ void main(){
       else if (cam === 'pump') { const z = 1 - 0.035 * beat * camAmp; lx.scale(z, z); }
       else if (cam === 'groove') { const w = Math.sin(t * PI * (this.bpm() || 100) / 60 / 2); lx.translate(w * S * 16 * camAmp, Math.abs(w) * S * 5 * camAmp); lx.rotate(w * 0.008 * camAmp); }
       else if (cam === 'punch') { const b = Math.max(beat, Math.max(0, 1 - lt / 0.3)); const k = 1 + 0.045 * b * camAmp; lx.scale(k, k); }
-      else if (LM.cam2 && LM.cam2[cam]) LM.cam2[cam](lx, { t, lt, hp, dur: ph.dur, S, W, H, amp: camAmp, beat, bpm: this.bpm() || 120, seed: U.strHash(c.id) });
+      else if (LM.cam2 && LM.cam2[cam]) LM.cam2[cam](lx, { t, lt, hp, dur: ph.dur, S, W, H, amp: camAmp, beat, bpm: this.bpm() || 120, seed: U.strHash(c.id), au: this.auf(t) });
       if (L.drift) lx.translate(-hp * W * L.drift * 3, 0);
       L._k = L.seq ? this.seqIndex(L, lt, ph.dur) : -1;
       if (L.track) { const ct = this.trackCam(L, lt, ph.dur); lx.scale(ct.z, ct.z); lx.rotate(-ct.rot); lx.translate(-ct.x, -ct.y); }
@@ -1063,7 +1075,7 @@ void main(){
       const lt = t - c.start;
       const N = L.glyphs.length;
       const cx = L.bbox.cx, cy = L.bbox.cy;
-      const C = { W: this.W, H: this.H, S: this.S, amp, cx, cy, N, gl: L.glyphs, beat, seed: idx, W_: Math.max(1, L.words), tempo: this.tempo(), bb: L.bbox, lt: t - c.start, dur: ph.dur, ct: L._ct || this.charTimes(c), tAbs: t, mb: this.mbAmt() };
+      const C = { W: this.W, H: this.H, S: this.S, amp, cx, cy, N, gl: L.glyphs, beat, seed: idx, W_: Math.max(1, L.words), tempo: this.tempo(), bb: L.bbox, lt: t - c.start, dur: ph.dur, ct: L._ct || this.charTimes(c), tAbs: t, mb: this.mbAmt(), au: this.auf(t), scope: ph.tr.hold === 'auWave' ? this.scopeAt(t) : null };
       // Motion System parameters (intensity / variation / seed / easing / stagger / delay) per track
       const MS = LM.MS, pE = MS && MS.par(c, 'enter'), pH = MS && MS.par(c, 'hold'), pM = MS && MS.par(c, 'emph'), pX = MS && MS.par(c, 'exit');
       const seedV = (U.strHash(c.id) ^ (((c.mp && c.mp.seed) || 0) * 7919) ^ ((this.p.seed || 0) * 31)) >>> 0;
@@ -1080,6 +1092,7 @@ void main(){
       let emT0 = null;
       if (emOn && emTrig !== 'word') {
         if (emTrig === 'phrase') emT0 = c.start + ph.ed * 0.9;
+        else if ({ kick: 1, snare: 1, hat: 1, onset: 1 }[emTrig]) { const A = this.audio, ot = A && A.feat && A.lastOnset ? A.lastOnset(t, emTrig === 'onset' ? 'all' : emTrig, emTrig === 'hat' ? 0.35 : 0.45) : null; emT0 = ot != null ? ot : this.lastTrig(t, emTrig === 'hat' ? 2 : 1); }
         else emT0 = this.lastTrig(t, { beat: 1, half: 2, quarter: 4, eighth: 8, two: 0.5, bar: 0.25 }[emTrig] || 1);
         if (emT0 != null && emT0 < c.start) emT0 = null;
       }
@@ -1090,7 +1103,7 @@ void main(){
       const rE = L.rE[rkE], rX = L.rX[rkX];
       const Pe = clamp(lt / ph.ed), Px = ph.xd > 0 ? clamp((t - ph.exitStart) / ph.xd) : (t >= c.end ? 1 : 0);
       const hp = clamp(lt / ph.dur);
-      const out = new Array(N);
+      const out = new Array(N), reK = c.kind === 'title' ? 0 : this.reactAmt(c) * clamp(lt / Math.max(0.05, ph.ed)) * (1 - Px);
       for (let i = 0; i < N; i++) {
         const g = L.glyphs[i];
         const T = { x: 0, y: 0, sx: 1, sy: 1, rot: 0, a: 1, blur: 0 };
@@ -1141,6 +1154,8 @@ void main(){
         }
         // continuous (hold)
         if (mh && ph.tr.hold !== 'none') { const hs = vH ? U.hash(seedV, g.wordIdx || 0, 9) * vH * 3 : 0; add(MS && kH ? MS.scaleT(mh.f(Math.max(0, lt) + hs, g, C, hp), kH) : mh.f(Math.max(0, lt) + hs, g, C, hp)); }
+        // song-wide audio link (AU-01/02): the line pumps on the kick and brightens with loudness
+        if (reK > 0) { const s = 1 + (C.au.kick * 0.05 + C.au.bass * 0.012) * reK; T.x += (g.x - cx) * (s - 1); T.y += (g.y - cy) * (s - 1); T.sx *= s; T.sy *= s; const br = Math.max(0, C.au.rms - 0.5) * 0.35 * reK + C.au.kick * 0.12 * reK; if (br > 0.01) T.bright = Math.max(T.bright || 0, br); }
         // emphasis (accent on beats / word onsets), faded in after the entrance and out before the exit
         if (emOn && (emTgt === 'all' || emTgt === 'word' || (emTgt === 'emph' ? g.emph : anyEmph ? g.emph : true))) {
           const em = M.emph[emId]; let t0 = emT0;
@@ -1739,7 +1754,7 @@ void main(){
       if (fl.has('contrastPop')) gr = [1 + 0.3 * g('contrastPop'), 1 + 0.35 * g('contrastPop'), 0];
       if (fl.has('bleach')) gr = [gr[0] * (1 + 0.25 * g('bleach')), gr[1] * (1 - 0.5 * clamp(g('bleach'))), 0.02];
       u.grade = gr;
-      if (PX) PX.params(g, u, { S, t, beat, burst, pal, has: (id) => fl.has(id), hex3: (h) => U.hex2rgb(h).map((v) => v / 255) });
+      if (PX) PX.params(g, u, { S, t, beat, burst, pal, au: this.auf(t), has: (id) => fl.has(id), hex3: (h) => U.hex2rgb(h).map((v) => v / 255) });
       return u;
     }
 

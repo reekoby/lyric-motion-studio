@@ -20,6 +20,7 @@ LM.director = (() => {
     exit: { cut: [0.4, 'snap kinetic'], fadeOut: [0.08, 'smooth cinema'], blurOut: [0.15, 'cinema'], glitchOut: [0.85, 'glitch'], tvOff: [0.7, 'glitch'], scrambleOut: [0.7, 'glitch kinetic'], explodeOut: [0.8, 'snap'], shatter: [0.8, 'snap'], rushOut: [0.75, 'snap'], zoomThrough: [0.7, 'snap cinema'], popOut: [0.55, 'bounce'], jumpOut: [0.6, 'bounce'], riseOut: [0.2, 'smooth'] },
     cam: { still: [0.05, 'smooth cinema kinetic'], drift: [0.25, 'cinema smooth organic'], push: [0.45, 'cinema snap'], pull: [0.45, 'cinema smooth'], tilt: [0.35, 'organic'], shake: [0.85, 'snap glitch'], punch: [0.9, 'snap bounce'], handheld: [0.45, 'organic cinema'], dutch: [0.4, 'cinema'], snapZoom: [0.75, 'snap kinetic'], kenBurns: [0.15, 'cinema smooth'], crane: [0.25, 'cinema smooth'], orbit: [0.35, 'cinema organic'], spiralDrift: [0.3, 'organic smooth'], beatTilt: [0.65, 'bounce kinetic snap'] },
   };
+  if (LM.director_OVR) for (const k in LM.director_OVR) Object.assign(OVR[k], LM.director_OVR[k]);
   const TRM = [[0.8, 'glitch', 'glitchCut rgbCut pixelCut pixelSortCut sliceCut thermalCut invertCut meltCut'], [0.75, 'snap', 'whipLeft whipRight whipUp whipDown zoomThrough zoomOutIn shakeCut collageSlam shards spin zoomTwist flashWhite'],
     [0.6, 'bounce', 'gridPop colorBlocks hexFlip tileScatter splashFill colorBurst zigzag'], [0.3, 'cinema', 'blurCut dolly filmBurnCut leakBurn flashAccent iris prismFlash filmRoll roll'],
     [0.4, 'smooth', 'liquid ink gradientDiscs ribbonSweep doorsH fan barsH stripesDiag diamond splitClose'], [0.45, 'organic', 'inkBlob scribbleFill dryBrush tornPaper liquidDrip sliceBands'], [0.55, 'kinetic', 'colorBlocks barsH gridPop sliceBands']];
@@ -110,12 +111,14 @@ LM.director = (() => {
     const n = cues.length;
     if (!n) return cues;
     // energy per cue (0..1 ranked)
-    const en = cues.map((c) => LM.audio.energyAt(c.start, c.end));
+    const FA = LM.audio.feat, aroAt = (a, b) => { let s = 0, k = 0; for (let i = Math.max(0, Math.floor(a * FA.fps)); i < Math.min(FA.NF, Math.ceil(b * FA.fps)); i += 4) { s += FA.aro[i]; k++; } return k ? s / k : 0.5; };
+    // energy per cue: loudness, blended with the song's arousal curve (loudness + onset density + brightness) when analysed
+    const en = cues.map((c) => (FA ? LM.audio.energyAt(c.start, c.end) * 0.5 + aroAt(c.start, c.end) * 0.5 : LM.audio.energyAt(c.start, c.end)));
     const sorted = en.slice().sort((a, b) => a - b);
     const rank = en.map((e) => (n > 1 ? sorted.indexOf(e) / (n - 1) : 0.5));
     const energy = an ? rank : cues.map((c, i) => 0.35 + 0.3 * Math.sin((i / Math.max(1, n - 1)) * Math.PI * 2.2 - 0.6) + 0.1);
     // song-structure markers (user or estimated): pull energy toward each section's role
-    const SM = LM.model.SEC, marks = (p.sections || []).filter((x) => SM[x.type]);
+    const SM = LM.model.SEC, marks = ((p.sections && p.sections.length ? p.sections : LM.audio.sectionsFor && LM.audio.sectionsFor(p)) || []).filter((x) => SM[x.type]);
     const secOf = cues.map((c) => { let m = null; for (const x of marks) if (x.t <= c.start + 0.15) m = x; return m; });
     if (marks.length) secOf.forEach((m, i) => { if (m) energy[i] = energy[i] * 0.35 + SM[m.type].e * 0.65; });
     // sections: follow markers when present; otherwise split on energy jumps / length / long gaps
@@ -173,7 +176,10 @@ LM.director = (() => {
         if (secE > 0.6 && rng() < 0.35) { const b2 = rng.weighted(th.bgm, [a]); const B = LM.bgm.lib; if (b2 !== a && !(B[a] && B[a].full && B[b2] && B[b2].full)) secBgm.push(b2); }
       }
       if (remembered) secBgm = remembered.bgm.slice();
-      else if (isChorus && th.bgm && secBgm.length < 2) { const b3 = rng.weighted(th.bgm, secBgm); const B = LM.bgm.lib; if (b3 && !secBgm.includes(b3) && !(secBgm[0] && B[secBgm[0]] && B[secBgm[0]].full && B[b3] && B[b3].full)) secBgm.push(b3); }
+      else if (isChorus && th.bgm && secBgm.length < 2) {
+        // an analysed song gets a sound-reactive visualiser on the chorus more often
+        const auP = FA ? Object.fromEntries(Object.entries(th.bgm).filter(([id]) => LM.bgm.lib[id] && LM.bgm.lib[id].au)) : null;
+        const b3 = auP && Object.keys(auP).length && rng() < 0.6 ? rng.weighted(auP, secBgm) : rng.weighted(th.bgm, secBgm); const B = LM.bgm.lib; if (b3 && !secBgm.includes(b3) && !(secBgm[0] && B[secBgm[0]] && B[secBgm[0]].full && B[b3] && B[b3].full)) secBgm.push(b3); }
       prevBgm = secBgm.slice();
       const secFont = remembered ? remembered.font : th.fonts[(isChorus || secE > 0.72) && th.fonts.length > 1 && rng() < (isChorus ? 0.6 : 0.35) ? 1 : 0];
       const invertSec = remembered ? remembered.inv : secE > 0.7 && rng() < (isChorus ? 0.45 : 0.3);
@@ -232,7 +238,8 @@ LM.director = (() => {
           if (rng() < prob) {
             em = rng() < 0.75 ? mPrim : rng.weighted(emPool, [mPrim]) || mPrim;
             const hasEm = /\*[^*]+\*/.test(c.text || '');
-            mpM = hasEm ? { trig: 'beat', tgt: 'emph', i: 55 } : calm ? { trig: rng() < 0.5 ? 'word' : 'phrase', tgt: rng() < 0.5 ? 'word' : 'all', i: 40 } : energy[ci] > 0.65 ? { trig: rng() < 0.7 ? 'beat' : 'two', tgt: 'all', i: 40 + Math.round(energy[ci] * 25) } : { trig: 'word', tgt: 'word', i: 45 };
+            const onT = FA && !calm && rng() < 0.55 ? (/rock|metal|punk|hiphop|funk|trap/.test(th.id) && rng() < 0.6 ? 'snare' : 'kick') : null;
+            mpM = hasEm ? { trig: onT || 'beat', tgt: 'emph', i: 55 } : calm ? { trig: rng() < 0.5 ? 'word' : 'phrase', tgt: rng() < 0.5 ? 'word' : 'all', i: 40 } : energy[ci] > 0.65 ? { trig: onT || (rng() < 0.7 ? 'beat' : 'two'), tgt: 'all', i: 40 + Math.round(energy[ci] * 25) } : { trig: 'word', tgt: 'word', i: 45 };
           }
         }
         if (M.emph && M.emph[em] && em !== 'none') c.emph = em; else delete c.emph;

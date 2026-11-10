@@ -92,7 +92,7 @@ LM.exporter = (() => {
   async function run0(o) {
     const f = FORMATS[o.fmt];
     const imgs = LM.video ? await LM.video.forExport(o.images, Math.max(o.W, o.H) * 1.2) : o.images;
-    const r = new LM.Renderer({ W: o.W, H: o.H, images: imgs, audio: { analysis: LM.audio.analysis, spectrum: LM.audio.spectrum, waveAt: LM.audio.waveAt } });
+    const r = new LM.Renderer({ W: o.W, H: o.H, images: imgs, audio: LM.audio });
     r.setProject(o.project); run.last = r;
     try { return await runFrames(o, r); } finally { if (imgs && imgs.__dispose) await imgs.__dispose(); }
   }
@@ -208,7 +208,7 @@ LM.exporter = (() => {
 
   async function still(o) {
     const imgs = LM.video ? await LM.video.forExport(o.images, Math.max(o.W, o.H) * 1.2) : o.images;
-    const r = new LM.Renderer({ W: o.W, H: o.H, images: imgs, audio: { analysis: LM.audio.analysis, spectrum: LM.audio.spectrum, waveAt: LM.audio.waveAt } });
+    const r = new LM.Renderer({ W: o.W, H: o.H, images: imgs, audio: LM.audio });
     r.setProject(o.project);
     try { if (r.prepareVideos) await r.prepareVideos(o.t); r.render(o.t, o.mode || {}); } finally { if (imgs && imgs.__dispose) await imgs.__dispose(); }
     const blob = await new Promise((res) => r.out.toBlob(res, 'image/png'));
