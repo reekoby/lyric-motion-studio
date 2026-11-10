@@ -119,7 +119,7 @@ LM.Renderer = (() => {
   const VS = 'attribute vec2 p;varying vec2 v;void main(){v=p*0.5+0.5;gl_Position=vec4(p,0.,1.);}';
   const FS = `precision highp float;varying vec2 v;
 uniform sampler2D T0,T1,T2,T3;uniform vec2 R;uniform float time,seed,S;
-uniform float rgb,glitch,block,vhs,scan,noise,vig,pix,poster,half_,bloom,inv,blurMix,zblur,crt,chrom,duo,dither,sepia,heat,hue,tilt,mirror,fish,trgb,psort,slice,liquid,thermal,mono,monoInv,quad,bzoom,lineart,ascii,melt;
+uniform float rgb,glitch,block,vhs,scan,noise,vig,pix,poster,half_,bloom,inv,blurMix,zblur,crt,chrom,duo,dither,sepia,heat,hue,tilt,mirror,fish,trgb,psort,slice,liquid,thermal,mono,monoInv,quad,bzoom,lineart,ascii,melt,swirl;
 uniform vec3 duoA,duoB,grade,bgc;uniform vec4 key;uniform vec2 mblur;
 float h1(vec2 p){return fract(sin(dot(p,vec2(12.9898,78.233)))*43758.5453);}
 float b2(vec2 p){p=floor(mod(p,2.0));return mod(2.0*p.x+3.0*p.y,4.0);}
@@ -128,6 +128,7 @@ void main(){
  if(mirror>0.5&&u.x>0.5)u.x=1.0-u.x;
  if(quad>0.5){u=abs(u-0.5)+0.25;}
  if(bzoom>0.0)u=(u-0.5)*(1.0-bzoom)+0.5;
+ if(swirl!=0.0){vec2 c=u-0.5;float ar=R.x/R.y;c.x*=ar;float r=length(c);float a=swirl*pow(max(0.0,1.0-r*1.35),2.0);float cs=cos(a),sn=sin(a);c=vec2(c.x*cs-c.y*sn,c.x*sn+c.y*cs);c.x/=ar;u=c+0.5;}
  if(fish>0.0){vec2 c=u-0.5;float r2=dot(c,c);u=0.5+c*(1.0-fish*0.7*r2)/(1.0-fish*0.7*0.25);}
  if(crt>0.0){vec2 cc=u*2.0-1.0;cc*=1.0+crt*0.09*vec2(cc.y*cc.y,cc.x*cc.x);u=cc*0.5+0.5;}
  if(liquid>0.0){u.x+=sin(u.y*9.0+time*2.6)*0.014*liquid+sin(u.y*23.0-time*3.4)*0.005*liquid;u.y+=sin(u.x*7.0+time*2.1)*0.012*liquid;}
@@ -179,7 +180,7 @@ void main(){
  c=clamp(c,0.0,1.0);
  if(key.a>0.5)gl_FragColor=vec4(mix(key.rgb,c,a),1.0);else gl_FragColor=vec4(c*a,a);
 }`;
-  const UNI = ['rgb', 'glitch', 'block', 'vhs', 'scan', 'noise', 'vig', 'pix', 'poster', 'half_', 'bloom', 'inv', 'blurMix', 'zblur', 'crt', 'chrom', 'duo', 'dither', 'sepia', 'heat', 'hue', 'tilt', 'mirror', 'fish', 'trgb', 'psort', 'slice', 'liquid', 'thermal', 'mono', 'monoInv', 'quad', 'bzoom', 'lineart', 'ascii', 'melt'];
+  const UNI = ['rgb', 'glitch', 'block', 'vhs', 'scan', 'noise', 'vig', 'pix', 'poster', 'half_', 'bloom', 'inv', 'blurMix', 'zblur', 'crt', 'chrom', 'duo', 'dither', 'sepia', 'heat', 'hue', 'tilt', 'mirror', 'fish', 'trgb', 'psort', 'slice', 'liquid', 'thermal', 'mono', 'monoInv', 'quad', 'bzoom', 'lineart', 'ascii', 'melt', 'swirl'];
 
   class Renderer {
     constructor(opt = {}) {
@@ -592,15 +593,28 @@ void main(){
         const c = cs[i]; if (c.start > t + 0.5) break;
         const id = c.trans; if (!id || id === 'none' || !LM.trans.lib[id]) continue;
         const w = this.transWin(i);
-        if (Math.abs(t - c.start) < w) return { id, u: (t - (c.start - w)) / (2 * w), pal: palOf(this.p, c), prevPal: palOf(this.p, cs[i - 1]) };
+        if (Math.abs(t - c.start) < w) return { id, w, u: (t - (c.start - w)) / (2 * w), pal: palOf(this.p, c), prevPal: palOf(this.p, cs[i - 1]) };
       }
       return null;
     }
     applyTrans(tr, info, mode) {
       const L = LM.trans.lib[tr.id], ctx = this.sctx, W = this.W, H = this.H;
       if (L.kind === 'cover') {
+        const R = { W, H, S: this.S, minD: this.minD, pal: tr.pal, prev: tr.prevPal };
+        if (!L.mb) { ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = 1; L.f(ctx, tr.u, R); ctx.restore(); return; }
+        /* solid cover wipes: averaged over the shutter (motion blur on fast edges) and laid on the picture with a soft contact shadow */
+        const acc = this.scratch(2), ax = acc.getContext('2d'), smp = this.scratch(3), sx = smp.getContext('2d');
+        const reset = (c2) => { c2.setTransform(1, 0, 0, 1, 0, 0); c2.globalAlpha = 1; c2.filter = 'none'; c2.globalCompositeOperation = 'source-over'; c2.clearRect(0, 0, W, H); };
+        reset(ax);
+        const mb = this.mbAmt(), du = mb / (this.fps || 30) / (2 * (tr.w || 0.25)), N = mb > 0.01 ? 10 : 1;
+        for (let k = 0; k < N; k++) {
+          const uk = clamp(tr.u + (N > 1 ? ((k + 0.5) / N - 1) * du : 0));
+          reset(sx); sx.save(); L.f(sx, uk, R); sx.restore();
+          ax.globalCompositeOperation = 'lighter'; ax.globalAlpha = 1 / N; ax.drawImage(smp, 0, 0);
+        }
         ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = 1;
-        L.f(ctx, tr.u, { W, H, S: this.S, minD: this.minD, pal: tr.pal, prev: tr.prevPal }); ctx.restore(); return;
+        ctx.shadowColor = 'rgba(0,0,0,0.32)'; ctx.shadowBlur = this.minD * 0.035; ctx.shadowOffsetY = this.minD * 0.006;
+        ctx.drawImage(acc, 0, 0); ctx.restore(); return;
       }
       const o = L.f(tr.u) || {};
       if (o.tx || o.ty || o.rot || (o.sc && o.sc !== 1) || o.skew) {
@@ -608,7 +622,13 @@ void main(){
         ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, W, H);
         if (!mode.transparent) { ctx.fillStyle = tr.u < 0.5 ? tr.prevPal.bg : tr.pal.bg; ctx.fillRect(0, 0, W, H); }
         ctx.translate(W / 2 + (o.tx || 0) * W, H / 2 + (o.ty || 0) * H); if (o.rot) ctx.rotate(o.rot); if (o.sc) ctx.scale(o.sc, o.sc); if (o.skew) ctx.transform(1, 0, o.skew, 1, 0, 0);
-        ctx.drawImage(this.tmp, -W / 2, -H / 2); ctx.restore();
+        // mirror-tile the frame around itself so a whip / roll / zoom-out never reveals an empty edge
+        const nx = (o.sc && o.sc < 0.55) || o.rot || o.skew ? 2 : 1;
+        for (let j = -nx; j <= nx; j++) for (let i = -nx; i <= nx; i++) {
+          if ((i || j) && !(o.tx || o.ty || o.rot || o.skew || (o.sc && o.sc < 1))) continue;
+          ctx.save(); ctx.translate(i * W, j * H); ctx.scale(i % 2 ? -1 : 1, j % 2 ? -1 : 1); ctx.drawImage(this.tmp, -W / 2, -H / 2); ctx.restore();
+        }
+        ctx.restore();
       }
       if (o.flash) { ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = o.flash; ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, W, H); ctx.restore(); }
       const u = info.post, S = this.S;
@@ -616,7 +636,7 @@ void main(){
       if (o.rgb) u.rgb = Math.max(u.rgb, o.rgb * S); if (o.pix) u.pix = Math.max(u.pix, o.pix * S); if (o.blur) u.blurMix = Math.max(u.blurMix, o.blur);
       if (o.zblur) u.zblur = Math.max(u.zblur, o.zblur); if (o.inv) u.inv = 1;
       if (o.mblur) u.mblur = o.mblur;
-      if (o.psort) u.psort = Math.max(u.psort, o.psort); if (o.slice) u.slice = Math.max(u.slice, o.slice); if (o.liquid) u.liquid = Math.max(u.liquid, o.liquid); if (o.melt) u.melt = Math.max(u.melt || 0, o.melt); if (o.thermal) u.thermal = Math.max(u.thermal, o.thermal);
+      if (o.psort) u.psort = Math.max(u.psort, o.psort); if (o.slice) u.slice = Math.max(u.slice, o.slice); if (o.liquid) u.liquid = Math.max(u.liquid, o.liquid); if (o.melt) u.melt = Math.max(u.melt || 0, o.melt); if (o.swirl) u.swirl = o.swirl; if (o.quad) u.quad = 1; if (o.bzoom) u.bzoom = Math.max(u.bzoom || 0, o.bzoom); if (o.hue) u.hue = o.hue; if (o.thermal) u.thermal = Math.max(u.thermal, o.thermal);
     }
 
     /* ---------- beat envelope ---------- */
@@ -886,6 +906,7 @@ void main(){
       else if (cam === 'pump') { const z = 1 - 0.035 * beat * camAmp; lx.scale(z, z); }
       else if (cam === 'groove') { const w = Math.sin(t * PI * (this.bpm() || 100) / 60 / 2); lx.translate(w * S * 16 * camAmp, Math.abs(w) * S * 5 * camAmp); lx.rotate(w * 0.008 * camAmp); }
       else if (cam === 'punch') { const b = Math.max(beat, Math.max(0, 1 - lt / 0.3)); const k = 1 + 0.045 * b * camAmp; lx.scale(k, k); }
+      else if (LM.cam2 && LM.cam2[cam]) LM.cam2[cam](lx, { t, lt, hp, dur: ph.dur, S, W, H, amp: camAmp, beat, bpm: this.bpm() || 120, seed: U.strHash(c.id) });
       if (L.drift) lx.translate(-hp * W * L.drift * 3, 0);
       L._k = L.seq ? this.seqIndex(L, lt, ph.dur) : -1;
       if (L.track) { const ct = this.trackCam(L, lt, ph.dur); lx.scale(ct.z, ct.z); lx.rotate(-ct.rot); lx.translate(-ct.x, -ct.y); }
@@ -1092,7 +1113,7 @@ void main(){
           if (A.flap) T.flap = A.flap; if (A.liq != null) T.liq = A.liq;
           if (A.scanX != null) { T.scanX = A.scanX; T.scanW = A.scanW; }
           if (A.dust != null) T.dust = Math.max(T.dust || 0, A.dust); if (A.burn != null) T.burn = Math.max(T.burn || 0, A.burn);
-          if (A.strike != null) T.strike = A.strike; if (A.drain != null) T.drain = Math.max(T.drain || 0, A.drain);
+          if (A.strike != null) T.strike = A.strike; if (A.uline != null) T.uline = A.uline; if (A.drain != null) T.drain = Math.max(T.drain || 0, A.drain);
         };
         // enter
         let pe = delayE ? clamp((lt - delayE) / ph.ed) : Pe;
@@ -1290,6 +1311,7 @@ void main(){
           ctx.translate((hash(g.i, k, Math.floor(this.curT * 20)) - 0.5) * size * 0.5 * T.slice, 0); draw(); ctx.restore();
         }
       } else draw();
+      if (T.uline > 0.001) { ctx.save(); ctx.filter = 'none'; ctx.fillStyle = cc.acc; ctx.globalAlpha = Math.min(1, a * 1.1); const lw = Math.max(1, size * 0.07); if (st.vert) ctx.fillRect(size * 0.58, -size * 0.55, lw, size * 1.1 * clamp(T.uline)); else ctx.fillRect(-g.w / 2 - size * 0.05, size * 0.6, (g.w + size * 0.1) * clamp(T.uline), lw); ctx.restore(); }
       if (T.strike > 0.001) { ctx.save(); ctx.filter = 'none'; ctx.fillStyle = cc.acc; ctx.globalAlpha = Math.min(1, a * 1.1); const sw = (g.w + size * 0.14) * clamp(T.strike); ctx.fillRect(-g.w / 2 - size * 0.07, -size * 0.045, sw, Math.max(1, size * 0.09)); ctx.restore(); }
       if (T.dot > 0.01) { ctx.save(); ctx.filter = 'none'; ctx.globalAlpha = Math.min(1, a * 1.2); ctx.fillStyle = col; ctx.beginPath(); ctx.arc(0, 0, size * 0.9 * E.outBack(clamp(T.dot)), 0, 6.2832); ctx.fill(); ctx.restore(); }
       if (T.pen > 0) {
@@ -1438,7 +1460,14 @@ void main(){
       if (T.fill != null && T.fill < 1) {
         ctx.fillStyle = mix(col, cc.surf, 0.48);
         if (outlineOnly) { ctx.lineWidth = size * 0.03; ctx.strokeStyle = cc.fill; ctx.strokeText(ch, 0, 0); } else ctx.fillText(ch, 0, 0);
-        if (T.fill > 0) { ctx.save(); ctx.beginPath(); ctx.rect(-g.w / 2 - size * 0.1, -size, (g.w + size * 0.2) * T.fill, size * 2); ctx.clip(); ctx.fillStyle = cc.acc; ctx.fillText(ch, 0, 0); ctx.restore(); }
+        if (T.fill > 0 && !outlineOnly) {
+          // soft wipe edge (a feathered gradient, like broadcast karaoke) instead of a hard clip line
+          const e = 0.09, f = clamp(T.fill), x0 = st.vert ? -size * 0.62 : -g.w / 2 - size * 0.1, L0 = st.vert ? size * 1.24 : g.w + size * 0.2;
+          const gr = st.vert ? ctx.createLinearGradient(0, x0, 0, x0 + L0) : ctx.createLinearGradient(x0, 0, x0 + L0, 0), dim = mix(col, cc.surf, 0.48);
+          const p0 = clamp(f * (1 + 2 * e) - 2 * e), p1 = clamp(f * (1 + 2 * e));
+          gr.addColorStop(0, cc.acc); if (p0 > 0) gr.addColorStop(p0, cc.acc); gr.addColorStop(Math.max(p0 + 0.001, Math.min(1, (p0 + p1) / 2)), mix(cc.acc, '#ffffff', 0.35)); gr.addColorStop(Math.max(p0 + 0.002, p1), dim); gr.addColorStop(1, dim);
+          ctx.fillStyle = gr; ctx.fillText(ch, 0, 0);
+        } else if (T.fill > 0) { ctx.save(); ctx.beginPath(); if (st.vert) ctx.rect(-size, -size * 0.62, size * 2, size * 1.24 * T.fill); else ctx.rect(-g.w / 2 - size * 0.1, -size, (g.w + size * 0.2) * T.fill, size * 2); ctx.clip(); ctx.fillStyle = cc.acc; ctx.fillText(ch, 0, 0); ctx.restore(); }
       } else if (T.fill === 1) { ctx.fillStyle = cc.acc; ctx.fillText(ch, 0, 0); }
       else if (T.stroke != null) {
         // write-on: every outline contour is traced from its start point (trim-path style), glowing in the accent while it draws

@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.11.0 — 2026-11-10
+- 12 new auto-direction styles: K-POP, Hyperpop / Y2K, 8-bit / Chiptune, Jazz / Swing, Funk / Disco, Punk / Garage, Trap / Drill, Classical / Orchestral, Horror / Dark, Kids / Nursery songs, Latin / Reggaeton, Techno / Industrial — each with its own palettes, fonts, layouts, entrances / exits, cameras, cuts, accent graphics, backgrounds and emphasis vocabulary / おまかせのスタイルを12種追加
+- Auto direction now uses everything added in 1.10 and 1.11 (split-flap, light scan, shards, dust, burn, strike-through, new cameras, cuts, karaoke holds and accents) in the themes where they fit, and gives each section a motion grammar: one timing curve and stagger order (radial, diagonal, line by line, any angle …) chosen from the style's own vocabulary, repeated in matching sections such as every chorus / おまかせが新しい演出を各スタイルに合わせて使い、区間ごとにタイミングカーブとスタッガーの順番をスタイルらしく統一
+- Transitions: solid colour wipes are motion-blurred and cast a soft shadow on the picture; whip / roll / zoom cuts mirror-extend the frame so no empty edge is revealed; “Glass shards” rebuilt as a real faceted pane that shatters and falls; new page turn, cube turn, halftone wipe, star zoom, swirl, ripple, kaleidoscope, datamosh and snap-zoom cuts / トランジションを作り直し・追加
+- Cameras: handheld (layered natural shake), Dutch angle, crash zoom, Ken Burns, crane, 2.5D orbit, spiral and beat tilt / カメラワークを8種追加
+- Karaoke: the wipe now has a soft glowing edge (also correct in vertical text); new holds — glowing karaoke, sung letter pops, sung text sinks back, progress underline / カラオケの塗り境界をやわらかく、歌詞向けの保持モーションを追加
+- Emphasis accents: pop, drop, skew snap, glow, wobble, spread / 強調アクセントを追加
+- GPU backgrounds: Julia-set fractal, dusk-to-night sky / GPU背景を追加
+
 ## 1.10.0 — 2026-11-10
 - Motion blur for text: moving letters are smeared only along their own motion (a 180° shutter by default, adjustable or off under Motion → “Text motion blur”). Motions that used a round blur to fake speed now rely on it / 文字のモーションブラー（動いた方向だけにぶれる・180°シャッター相当、調整・オフ可）
 - Soft wipe edges: every mask / wipe reveal is feathered like a production matte (toggle under Motion) / ワイプ・マスクの境目をやわらかく

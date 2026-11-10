@@ -18,7 +18,7 @@ LM.director = (() => {
     enter: { weightPunch: [0.78, 'snap kinetic'], springIn: [0.6, 'bounce'], charMask: [0.35, 'cinema smooth kinetic'], wordMask: [0.4, 'cinema kinetic'], none: [0, 'snap'], fade: [0.08, 'smooth cinema'], rise: [0.2, 'smooth'], whip: [0.8, 'snap'], smear: [0.75, 'snap'], slam: [0.92, 'snap'], stamp: [0.88, 'snap'], zoomRush: [0.85, 'snap'], tracking: [0.3, 'cinema smooth'], kernIn: [0.3, 'cinema'], focusPull: [0.15, 'cinema'], typewriter: [0.3, 'kinetic'], glitch: [0.9, 'glitch'], glitchSlice: [0.9, 'glitch'], glitchZoom: [0.92, 'glitch snap'], scramble: [0.7, 'glitch kinetic'], wordGlitch: [0.82, 'glitch kinetic'], tunnel: [0.8, 'snap'], spin: [0.75, 'snap bounce'], stutterIn: [0.9, 'glitch snap'], strokeDraw: [0.3, 'organic'], stopMotion: [0.5, 'organic'] },
     hold: { weightBeat: [0.7, 'snap kinetic'], weightWave: [0.35, 'organic smooth'], none: [0.05, 'smooth cinema snap'], drift: [0.1, 'cinema smooth'], zoomSlow: [0.15, 'cinema'], breathe: [0.2, 'smooth'], jitter: [0.8, 'glitch'], glitchHold: [0.9, 'glitch'], flicker: [0.75, 'glitch'], quake: [0.92, 'snap'], beatPump: [0.72, 'snap'], heartbeat: [0.65, 'bounce'], bounceLoop: [0.7, 'bounce'], jelly: [0.5, 'bounce organic'], pulse: [0.55, 'snap bounce'], spinLetters: [0.8, 'snap'], marchStep: [0.6, 'bounce kinetic'], karaoke: [0.3, 'kinetic'], wordHighlight: [0.35, 'kinetic'] },
     exit: { cut: [0.4, 'snap kinetic'], fadeOut: [0.08, 'smooth cinema'], blurOut: [0.15, 'cinema'], glitchOut: [0.85, 'glitch'], tvOff: [0.7, 'glitch'], scrambleOut: [0.7, 'glitch kinetic'], explodeOut: [0.8, 'snap'], shatter: [0.8, 'snap'], rushOut: [0.75, 'snap'], zoomThrough: [0.7, 'snap cinema'], popOut: [0.55, 'bounce'], jumpOut: [0.6, 'bounce'], riseOut: [0.2, 'smooth'] },
-    cam: { still: [0.05, 'smooth cinema kinetic'], drift: [0.25, 'cinema smooth organic'], push: [0.45, 'cinema snap'], pull: [0.45, 'cinema smooth'], tilt: [0.35, 'organic'], shake: [0.85, 'snap glitch'], punch: [0.9, 'snap bounce'] },
+    cam: { still: [0.05, 'smooth cinema kinetic'], drift: [0.25, 'cinema smooth organic'], push: [0.45, 'cinema snap'], pull: [0.45, 'cinema smooth'], tilt: [0.35, 'organic'], shake: [0.85, 'snap glitch'], punch: [0.9, 'snap bounce'], handheld: [0.45, 'organic cinema'], dutch: [0.4, 'cinema'], snapZoom: [0.75, 'snap kinetic'], kenBurns: [0.15, 'cinema smooth'], crane: [0.25, 'cinema smooth'], orbit: [0.35, 'cinema organic'], spiralDrift: [0.3, 'organic smooth'], beatTilt: [0.65, 'bounce kinetic snap'] },
   };
   const TRM = [[0.8, 'glitch', 'glitchCut rgbCut pixelCut pixelSortCut sliceCut thermalCut invertCut meltCut'], [0.75, 'snap', 'whipLeft whipRight whipUp whipDown zoomThrough zoomOutIn shakeCut collageSlam shards spin zoomTwist flashWhite'],
     [0.6, 'bounce', 'gridPop colorBlocks hexFlip tileScatter splashFill colorBurst zigzag'], [0.3, 'cinema', 'blurCut dolly filmBurnCut leakBurn flashAccent iris prismFlash filmRoll roll'],
@@ -28,16 +28,17 @@ LM.director = (() => {
   // emphasis vocabulary per theme (weights); '_' is the fallback
   const EMPH_POOL = {
     _: { pulse: 2, scalePunch: 1.5, colorFlash: 1, weightHit: 1 },
-    jpop: { bounce: 2, elasticHit: 1.5, scalePunch: 1.5, colorFlash: 1 }, rock: { impact: 2, shake: 1.5, scalePunch: 1.5 }, metal: { impact: 2, shake: 2, rgbHit: 1 },
+    jpop: { bounce: 2, elasticHit: 1.5, scalePunch: 1.5, colorFlash: 1, popHit: 1.2 }, rock: { impact: 2, shake: 1.5, scalePunch: 1.5, skewSnap: 1, dropHit: 1 }, metal: { impact: 2, shake: 2, rgbHit: 1 },
     rnb: { blurPulse: 2, pulse: 1.5, colorFlash: 0.8 }, house: { scalePunch: 2.5, pulse: 1.5, colorFlash: 1.5 },
-    edm: { scalePunch: 2, colorFlash: 1.5, rgbHit: 1, pulse: 1 }, hiphop: { impact: 2, trackCompress: 1.2, weightHit: 1.2, shake: 1 }, ballad: { pulse: 2, blurPulse: 1.5, weightHit: 1 },
+    edm: { scalePunch: 2, colorFlash: 1.5, rgbHit: 1, pulse: 1, glowHit: 1 }, hiphop: { impact: 2, trackCompress: 1.2, weightHit: 1.2, shake: 1, dropHit: 1.2, skewSnap: 1 }, ballad: { pulse: 2, blurPulse: 1.5, weightHit: 1, glowHit: 1.2 },
     lofi: { pulse: 2, waveHit: 1.5, blurPulse: 1 }, citypop: { colorFlash: 1.5, pulse: 1.5, tiltHit: 1 }, vocaloid: { rgbHit: 2, jitterHit: 1.5, colorFlash: 1.5, scalePunch: 1 },
-    anison: { scalePunch: 2, elasticHit: 1.5, impact: 1.2 }, cinematic: { blurPulse: 2, pulse: 1.5, trackExpand: 1.5 }, wa: { weightHit: 2, pulse: 1.5 },
-    acoustic: { pulse: 2, waveHit: 1.5 }, ambient: { blurPulse: 2, pulse: 1.5 }, minimal: { weightHit: 2, trackExpand: 1.5, trackCompress: 1.5 }, dream: { blurPulse: 2, waveHit: 1.5 },
+    anison: { scalePunch: 2, elasticHit: 1.5, impact: 1.2, skewSnap: 1 }, cinematic: { blurPulse: 2, pulse: 1.5, trackExpand: 1.5, glowHit: 1, spreadHit: 0.8 }, wa: { weightHit: 2, pulse: 1.5 },
+    acoustic: { pulse: 2, waveHit: 1.5 }, ambient: { blurPulse: 2, pulse: 1.5 }, minimal: { weightHit: 2, trackExpand: 1.5, trackCompress: 1.5, spreadHit: 1 }, dream: { blurPulse: 2, waveHit: 1.5, glowHit: 1.2, wobbleHit: 0.8 },
     edge: { impact: 1.5, rgbHit: 1.5, trackExpand: 1.2, scalePunch: 1 }, psyche: { rgbHit: 1.5, waveHit: 1.5, elasticHit: 1 }, thermalvj: { rgbHit: 2, impact: 1 }, vj: { scalePunch: 1.5, rgbHit: 1.5, colorFlash: 1 },
     showreel: { trackExpand: 1.5, scalePunch: 1.5, tiltHit: 1 }, artistmv: { pulse: 1.5, weightHit: 1.5, blurPulse: 1 },
   };
-  const CALM = new Set(['rnb', 'ballad', 'ambient', 'acoustic', 'minimal', 'cinematic', 'wa', 'dream', 'lofi']);
+  const CALM = new Set(['rnb', 'ballad', 'ambient', 'acoustic', 'minimal', 'cinematic', 'wa', 'dream', 'lofi', ...(LM.director_CALM || [])]);
+  Object.assign(EMPH_POOL, LM.director_EMPH || {});
   function meta(kind, id) {
     if (kind === 'tr') { const m = TR_META[id]; return m ? { e: m[0], f: m[1] } : { e: 0.5, f: [] }; }
     const o = OVR[kind] && OVR[kind][id];
@@ -159,6 +160,8 @@ LM.director = (() => {
       const xPrim = remembered ? remembered.x : rng.weighted(pools.exit);
       const emPool = EMPH_POOL[th.id] || EMPH_POOL._;
       const mPrim = remembered && remembered.m ? remembered.m : rng.weighted(emPool);
+      // the section's motion grammar: one timing curve / stagger order shared by its phrases
+      const gram = remembered ? remembered.g : LM.MS && LM.MS.grammar ? LM.MS.grammar(th.id, rng, secE) : null;
       const palId = remembered ? remembered.pal : palPool[(si + (seed % palPool.length)) % palPool.length];
       const cam = rng.weighted(tune(th.camera, 'cam', ST, tgt));
       const trPool = th.tr ? tune(th.tr, 'tr', ST, tgt) : null;
@@ -174,7 +177,7 @@ LM.director = (() => {
       prevBgm = secBgm.slice();
       const secFont = remembered ? remembered.font : th.fonts[(isChorus || secE > 0.72) && th.fonts.length > 1 && rng() < (isChorus ? 0.6 : 0.35) ? 1 : 0];
       const invertSec = remembered ? remembered.inv : secE > 0.7 && rng() < (isChorus ? 0.45 : 0.3);
-      if (stype && !remembered) typeLook[stype] = { primary, e: ePrim, h: hPrim, x: xPrim, m: mPrim, bgm: secBgm.slice(), font: secFont, inv: invertSec, pal: palId };
+      if (stype && !remembered) typeLook[stype] = { primary, e: ePrim, h: hPrim, x: xPrim, m: mPrim, g: gram, bgm: secBgm.slice(), font: secFont, inv: invertSec, pal: palId };
       sec.forEach((ci, k) => {
         const c = cues[ci];
         if ((c.locked || c.kind === 'title') && !opts.force) return;
@@ -233,6 +236,7 @@ LM.director = (() => {
           }
         }
         if (M.emph && M.emph[em] && em !== 'none') c.emph = em; else delete c.emph;
+        if (gram && !isKin && c.enter !== 'none' && !(M.enter[c.enter] && (M.enter[c.enter].wt || M.enter[c.enter].per))) { const gg = Object.assign({}, gram); if (M.enter[c.enter].u === 'a' || (M.enter[c.enter].st || 0) < 0.05) { delete gg.so; delete gg.sa; delete gg.se; } mpE = Object.assign(gg, mpE || {}); if (!Object.keys(mpE).length) mpE = null; }
         { const mp = {}; if (mpE) mp.e = mpE; if (mpX) mp.x = mpX; if (em !== 'none' && mpM) mp.m = mpM; const sd = c.mp && c.mp.seed; if (sd) mp.seed = sd; if (Object.keys(mp).length) c.mp = mp; else delete c.mp; }
         // designed cut into this phrase
         if (p.autoTrans !== false) {
