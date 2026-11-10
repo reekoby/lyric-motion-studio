@@ -4,6 +4,7 @@ LM.Renderer = (() => {
   const U = LM.U, E = LM.E, M = LM.motion, FX = LM.fx, D = LM.data;
   const { clamp, lerp, hash, mix, rgba, contrast, readable } = U;
   const PI = Math.PI, TAU = Math.PI * 2;
+  const sstep = (a, b, x) => { const t = clamp((x - a) / (b - a)); return t * t * (3 - 2 * t); };
   // blend modes for the background-motion layer (UI key → canvas globalCompositeOperation)
   // SVG erode filters for faux light weights (quantised radius, created on demand)
   const ERODE = new Set();
@@ -243,6 +244,45 @@ void main(){
       this.cues = (p.cues || []).slice().sort((a, b) => a.start - b.start);
     }
     invalidate() { this.layoutCache.clear(); this.fontCache.clear(); }
+    // per-glyph motion blur: fraction of a frame the shutter stays open (0 = off); off while the exporter averages sub-frames
+    mbAmt() { if (this.subMB) return 0; const v = this.p && this.p.glyphMB; return v == null ? 0.5 : clamp(+v || 0, 0, 1); }
+    scratch(i) {
+      this._scr = this._scr || [];
+      let c0 = this._scr[i]; if (!c0) { c0 = this._scr[i] = mk(); }
+      if (c0.width !== this.W || c0.height !== this.H) { c0.width = this.W; c0.height = this.H; }
+      return c0;
+    }
+    /* draw one glyph, smeared along its own motion: N sub-samples between the transform one shutter-interval ago and now,
+       summed with 'lighter' at 1/N weight (an exact average of premultiplied colour and coverage), then composited */
+    drawGlyphMB(lx, g, T, T0, st, tmpl, fill, cc, pal) {
+      const S = this.S, sz = g.size;
+      const dx = (T.x || 0) - (T0.x || 0), dy = (T.y || 0) - (T0.y || 0);
+      const dsx = (T.sx ?? 1) - (T0.sx ?? 1), dsy = (T.sy ?? 1) - (T0.sy ?? 1), dr = (T.rot || 0) - (T0.rot || 0);
+      const m = lx.getTransform(), ks = Math.hypot(m.a, m.b) || 1;
+      const d = (Math.hypot(dx, dy) + Math.abs(dsx) * Math.max(g.w, sz) * 0.5 + Math.abs(dsy) * sz * 0.5 + Math.abs(dr) * sz * 0.6) * ks;
+      if (d < 2.2 * S || T.vis === false || T.ch !== T0.ch || T.erode || st.erode || T.shard != null || T.flap || T.dust || T.burn || T.pen || T.caret || T.dot || T.boxB > T.boxA || T.liq != null) return this.drawGlyph(lx, g, T, st, tmpl, fill, cc, pal);
+      const N = Math.max(3, Math.min(32, Math.ceil(d / (2.4 * S))));
+      const sc = this.scratch(0), sx = sc.getContext('2d');
+      // screen-space bounds of the smear
+      const ext = (Math.max(g.w, sz) * Math.max(Math.abs(T.sx ?? 1), Math.abs(T0.sx ?? 1), Math.abs(T.sy ?? 1), Math.abs(T0.sy ?? 1), 1) * 1.1 + sz * 0.6 + (T.blur || 0) * 3 + (T.rgb || 0)) * ks;
+      const p1 = m.transformPoint(new DOMPoint(g.x + (T.x || 0), g.y + (T.y || 0))), p0 = m.transformPoint(new DOMPoint(g.x + (T0.x || 0), g.y + (T0.y || 0)));
+      const x0 = Math.max(0, Math.floor(Math.min(p0.x, p1.x) - ext)), y0 = Math.max(0, Math.floor(Math.min(p0.y, p1.y) - ext));
+      const x1 = Math.min(this.W, Math.ceil(Math.max(p0.x, p1.x) + ext)), y1 = Math.min(this.H, Math.ceil(Math.max(p0.y, p1.y) + ext));
+      if (x1 <= x0 || y1 <= y0) return;
+      sx.setTransform(1, 0, 0, 1, 0, 0); sx.globalAlpha = 1; sx.filter = 'none'; sx.globalCompositeOperation = 'source-over'; sx.clearRect(x0, y0, x1 - x0, y1 - y0);
+      sx.save(); sx.beginPath(); sx.rect(x0, y0, x1 - x0, y1 - y0); sx.clip(); sx.setTransform(m);
+      sx.globalCompositeOperation = 'lighter';
+      const keys = ['x', 'y', 'sx', 'sy', 'rot', 'skx', 'a', 'blur'];
+      for (let k = 0; k < N; k++) {
+        const f = (k + 0.5) / N, Tk = Object.assign({}, T);
+        for (const key of keys) { const a = T0[key] ?? (key === 'sx' || key === 'sy' || key === 'a' ? 1 : 0), b = T[key] ?? (key === 'sx' || key === 'sy' || key === 'a' ? 1 : 0); Tk[key] = a + (b - a) * f; }
+        this._mbW = 1 / N;
+        this.drawGlyph(sx, g, Tk, st, tmpl, fill, cc, pal);
+      }
+      this._mbW = 0;
+      sx.restore();
+      lx.save(); lx.setTransform(1, 0, 0, 1, 0, 0); lx.drawImage(sc, x0, y0, x1 - x0, y1 - y0, x0, y0, x1 - x0, y1 - y0); lx.restore();
+    }
 
     /* ---------- layout (cached) ---------- */
     getLayout(cue, idx) {
@@ -825,7 +865,7 @@ void main(){
       let tt = two ? Math.floor(t * 15) / 15 : t;
       const lt = tt - c.start;
       const amp = (p.intensity || 1);
-      const lx = this.lctx;
+      let lx = this.lctx;
       lx.setTransform(1, 0, 0, 1, 0, 0); lx.globalAlpha = 1; lx.filter = 'none'; lx.globalCompositeOperation = 'source-over';
       lx.clearRect(0, 0, W, H);
       // camera
@@ -919,8 +959,11 @@ void main(){
       // glyph pass
       const clipE = M.enter[ph.tr.enter].clip, clipX = M.exit[ph.tr.exit].clip;
       const B = { x: L.bbox.x - L.bbox.h * 0.15, y: L.bbox.y - L.bbox.h * 0.15, w: L.bbox.w + L.bbox.h * 0.3, h: L.bbox.h * 1.3, cx: L.bbox.cx, cy: L.bbox.cy };
+      const clipOn = (clipE && lt < ph.ed) || (clipX && tt >= ph.exitStart);
+      const lx0 = lx, soft = clipOn && p.softMask !== false;
+      if (soft) { const gc = this.scratch(1), gx = gc.getContext('2d'); gx.setTransform(1, 0, 0, 1, 0, 0); gx.globalAlpha = 1; gx.filter = 'none'; gx.globalCompositeOperation = 'source-over'; gx.clearRect(0, 0, W, H); gx.setTransform(lx0.getTransform()); lx = gx; }
       lx.save();
-      if ((clipE && lt < ph.ed) || (clipX && tt >= ph.exitStart)) {
+      if (clipOn && !soft) {
         lx.beginPath();
         if (clipE && lt < ph.ed) clipE(lx, clamp(lt / ph.ed), B);
         else clipX(lx, clamp((tt - ph.exitStart) / Math.max(0.01, ph.xd)), B);
@@ -946,11 +989,38 @@ void main(){
       // marker / underline: one continuous band per run that follows the glyphs (bends along arcs and rings)
       let stG = st;
       if (!knock && (st.marker || st.underline)) { this.drawTextBands(lx, L.glyphs, Ts, st, colorOf); stG = Object.assign({}, st, { marker: false, underline: false }); }
-      L.glyphs.forEach((g, gi) => { const cc = colorOf(g); this.drawGlyph(lx, g, Ts[gi], knock ? { plain: true } : stG, L.font.tmpl, g.style === 'outline' && !knock ? null : cc.fill, cc, pal); });
+      const mbA = knock || two ? 0 : this.mbAmt();
+      const Tp = mbA > 0.01 ? this.glyphTransforms(L, c, ph, tt - mbA / (this.fps || 30), beat, amp, v.i) : null;
+      L.glyphs.forEach((g, gi) => {
+        const cc = colorOf(g), stx = knock ? { plain: true } : stG, fill = g.style === 'outline' && !knock ? null : cc.fill;
+        if (Tp) this.drawGlyphMB(lx, g, Ts[gi], Tp[gi], stx, L.font.tmpl, fill, cc, pal); else this.drawGlyph(lx, g, Ts[gi], stx, L.font.tmpl, fill, cc, pal);
+      });
       lx.globalCompositeOperation = 'source-over';
+      // light-scan beam: one continuous hot line across the phrase at the scan position
+      const scT = !knock && Ts.find((T0) => T0 && T0.scanX != null);
+      if (scT && L.bbox) {
+        const bb = L.bbox, x = scT.scanX, h0 = bb.h + bb.h * 0.3, y0 = bb.y - bb.h * 0.15, k = sstep(bb.x - bb.h, bb.x, x) * (1 - sstep(bb.x + bb.w, bb.x + bb.w + bb.h, x));
+        if (k > 0.01) {
+          lx.save(); lx.globalCompositeOperation = 'lighter'; lx.globalAlpha = k;
+          const gw = Math.max(2, this.S * 26), gr = lx.createLinearGradient(x - gw, 0, x + gw * 0.4, 0);
+          gr.addColorStop(0, 'rgba(255,255,255,0)'); gr.addColorStop(0.72, rgba(pal.accent, 0.35)); gr.addColorStop(0.95, 'rgba(255,255,255,0.9)'); gr.addColorStop(1, 'rgba(255,255,255,0)');
+          lx.fillStyle = gr; lx.fillRect(x - gw, y0, gw * 1.4, h0);
+          lx.fillStyle = 'rgba(255,255,255,0.95)'; lx.fillRect(x - Math.max(1, this.S * 1.5), y0 - h0 * 0.05, Math.max(2, this.S * 3), h0 * 1.1);
+          lx.restore();
+        }
+      }
       if (p.ruby !== false) this.drawRuby(lx, L, Ts, pal, colorOf);
       if (GR) LM.gfx.draw(gfxIds.filter((id) => LM.gfx.lib[id].top), lx, GR);
       lx.restore();
+      if (soft) {
+        // mask with the clip shape, feathered (soft wipe edge like a production matte)
+        const gx = lx, fe = Math.max(1, this.minD * 0.022);
+        gx.save(); gx.globalCompositeOperation = 'destination-in'; gx.filter = `blur(${fe.toFixed(1)}px)`; gx.fillStyle = '#000';
+        gx.beginPath();
+        if (clipE && lt < ph.ed) clipE(gx, clamp(lt / ph.ed), B); else clipX(gx, clamp((tt - ph.exitStart) / Math.max(0.01, ph.xd)), B);
+        gx.fill(); gx.restore();
+        lx = lx0; lx.save(); lx.setTransform(1, 0, 0, 1, 0, 0); lx.drawImage(this.scratch(1), 0, 0); lx.restore();
+      }
       L.ghosts.forEach((gh) => { if (gh.mirrorY != null) this.drawGhost(lx, L, gh, c, ph, tt, pal, colorOf, st); });
       lx.restore();
       // composite layer with transitions
@@ -962,7 +1032,7 @@ void main(){
       const lt = t - c.start;
       const N = L.glyphs.length;
       const cx = L.bbox.cx, cy = L.bbox.cy;
-      const C = { W: this.W, H: this.H, S: this.S, amp, cx, cy, N, gl: L.glyphs, beat, seed: idx, W_: Math.max(1, L.words), tempo: this.tempo(), bb: L.bbox, lt: t - c.start, dur: ph.dur, ct: L._ct || this.charTimes(c), tAbs: t };
+      const C = { W: this.W, H: this.H, S: this.S, amp, cx, cy, N, gl: L.glyphs, beat, seed: idx, W_: Math.max(1, L.words), tempo: this.tempo(), bb: L.bbox, lt: t - c.start, dur: ph.dur, ct: L._ct || this.charTimes(c), tAbs: t, mb: this.mbAmt() };
       // Motion System parameters (intensity / variation / seed / easing / stagger / delay) per track
       const MS = LM.MS, pE = MS && MS.par(c, 'enter'), pH = MS && MS.par(c, 'hold'), pM = MS && MS.par(c, 'emph'), pX = MS && MS.par(c, 'exit');
       const seedV = (U.strHash(c.id) ^ (((c.mp && c.mp.seed) || 0) * 7919) ^ ((this.p.seed || 0) * 31)) >>> 0;
@@ -982,9 +1052,11 @@ void main(){
         else emT0 = this.lastTrig(t, { beat: 1, half: 2, quarter: 4, eighth: 8, two: 0.5, bar: 0.25 }[emTrig] || 1);
         if (emT0 != null && emT0 < c.start) emT0 = null;
       }
-      if (!L.rE[ph.tr.enter]) L.rE[ph.tr.enter] = M.ranks(L.glyphs, me.u || 'g', me.o || 'fwd', 11);
-      if (!L.rX[ph.tr.exit]) L.rX[ph.tr.exit] = M.ranks(L.glyphs, mx.u || 'g', mx.o || 'fwd', 13);
-      const rE = L.rE[ph.tr.enter], rX = L.rX[ph.tr.exit];
+      const rkE = ph.tr.enter + (pE && (pE.so || pE.se) ? '|' + (pE.so || '') + '|' + (pE.sa || 0) + '|' + (pE.se || '') : '');
+      const rkX = ph.tr.exit + (pX && (pX.so || pX.se) ? '|' + (pX.so || '') + '|' + (pX.sa || 0) + '|' + (pX.se || '') : '');
+      if (!L.rE[rkE]) L.rE[rkE] = MS && MS.rank2 ? MS.rank2(L.glyphs, me.u || 'g', me.o || 'fwd', pE) : M.ranks(L.glyphs, me.u || 'g', me.o || 'fwd', 11);
+      if (!L.rX[rkX]) L.rX[rkX] = MS && MS.rank2 ? MS.rank2(L.glyphs, mx.u || 'g', mx.o || 'fwd', pX) : M.ranks(L.glyphs, mx.u || 'g', mx.o || 'fwd', 13);
+      const rE = L.rE[rkE], rX = L.rX[rkX];
       const Pe = clamp(lt / ph.ed), Px = ph.xd > 0 ? clamp((t - ph.exitStart) / ph.xd) : (t >= c.end ? 1 : 0);
       const hp = clamp(lt / ph.dur);
       const out = new Array(N);
@@ -1015,6 +1087,12 @@ void main(){
           if (A.zsm) T.zsm = Math.max(T.zsm || 0, A.zsm); if (A.dot) T.dot = Math.max(T.dot || 0, A.dot); if (A.pillH != null) T.pillH = A.pillH; if (A.textA != null) T.textA = A.textA;
           if (A.pen) T.pen = A.pen; if (A.hand != null) T.hand = A.hand; if (A.caret) T.caret = 1; if (A.cellA != null) T.cellA = A.cellA;
           if (A.strips) { T.strips = A.strips; T.stripOff = (T.stripOff || 0) + (A.stripOff || 0); }
+          if (A.strokeAcc != null) T.strokeAcc = A.strokeAcc;
+          if (A.shard != null) { T.shard = A.shard; if (A.shardIn) T.shardIn = 1; }
+          if (A.flap) T.flap = A.flap; if (A.liq != null) T.liq = A.liq;
+          if (A.scanX != null) { T.scanX = A.scanX; T.scanW = A.scanW; }
+          if (A.dust != null) T.dust = Math.max(T.dust || 0, A.dust); if (A.burn != null) T.burn = Math.max(T.burn || 0, A.burn);
+          if (A.strike != null) T.strike = A.strike; if (A.drain != null) T.drain = Math.max(T.drain || 0, A.drain);
         };
         // enter
         let pe = delayE ? clamp((lt - delayE) / ph.ed) : Pe;
@@ -1105,8 +1183,8 @@ void main(){
         }
         if (T.vis === false) return;
       }
-      const a = (T.a == null ? 1 : T.a) * (g.alpha == null ? 1 : g.alpha) * (st.alphaMul || 1);
-      if (a <= 0.004 && !(T.boxB > T.boxA)) return;
+      const a = (T.a == null ? 1 : T.a) * (g.alpha == null ? 1 : g.alpha) * (st.alphaMul || 1) * (this._mbW || 1);
+      if (a <= 0.004 / (this._mbW ? 30 : 1) && !(T.boxB > T.boxA)) return;
       const S = this.S, size = g.size;
       const ch = T.ch || g.ch;
       ctx.save();
@@ -1131,6 +1209,7 @@ void main(){
       const outlineOnly = !fill;
       if (T.bright) col = mix(col, '#ffffff', clamp(T.bright));
       if (T.dark) col = mix(col, cc.surf, clamp(T.dark));
+      if (T.drain) { const [r0, g0, b0] = U.hex2rgb(col), L0 = Math.round(0.3 * r0 + 0.59 * g0 + 0.11 * b0); col = mix(col, U.rgb2hex(L0, L0, L0), clamp(T.drain * 1.6)); }
       // thinner weight: morphological erode (works with CJK fonts whose outlines overlap, unlike erasing a stroke)
       const er0 = T.wt < -0.01 && fill ? erodeUrl(size * 0.014 * Math.min(1.2, -T.wt) * Math.abs(ctx.getTransform().a || 1)) : '';
       if (T.blur > 0.35 || er0) ctx.filter = (er0 + (T.blur > 0.35 ? ` blur(${T.blur.toFixed(1)}px)` : '')).trim();
@@ -1162,7 +1241,26 @@ void main(){
         else { ctx.moveTo(x0, -size * 0.7); const n = 8; for (let k = 0; k <= n; k++) { const yy = -size * 0.7 + (size * 1.4 * k) / n; ctx.lineTo(x0 + hw * pr + Math.sin(k * 2.1 + g.i) * size * 0.05 * (1 - pr), yy); } ctx.lineTo(x0, size * 0.7); ctx.closePath(); }
         ctx.clip();
       }
-      if (T.wash > 0.01) {
+      if (T.shard != null && T.shard > 0.001) this.inkShards(ctx, g, T, draw, size, a);
+      else if (T.shard != null) draw();
+      else if (T.flap) this.inkFlap(ctx, g, T, col, cc, size);
+      else if (T.liq != null) this.inkLiquid(ctx, g, T, ch, col, cc, size, draw);
+      else if (T.scanX != null) {
+        // light scan: the part behind the beam is revealed, a hot band glows just behind the edge
+        const bx = T.scanX - (g.x + (T.x || 0)), hw = T.scanW || size * 0.5, w2 = g.w / 2 + size;
+        if (bx > -w2) { ctx.save(); ctx.beginPath(); ctx.rect(-w2, -size, bx + w2, size * 2); ctx.clip(); draw(); ctx.restore(); }
+        if (bx > -w2 && bx < w2 + hw) {
+          ctx.save(); ctx.filter = 'none'; ctx.beginPath(); ctx.rect(bx - hw, -size, hw, size * 2); ctx.clip(); ctx.globalCompositeOperation = 'lighter';
+          const gr = ctx.createLinearGradient(bx - hw, 0, bx, 0); gr.addColorStop(0, 'rgba(255,255,255,0)'); gr.addColorStop(0.7, rgba(cc.acc, 0.55)); gr.addColorStop(1, 'rgba(255,255,255,0.95)');
+          ctx.fillStyle = gr; ctx.fillText(ch, 0, 0); ctx.restore();
+        }
+      } else if (T.dust > 0.001 || T.burn > 0.001) this.inkDissolve(ctx, g, T, col, cc, size, draw, a);
+      else if (T.drain > 0.001) {
+        const dr = clamp(T.drain), a0 = ctx.globalAlpha;
+        ctx.globalAlpha = a0 * (1 - sstep(0.45, 1, dr)); draw();
+        ctx.save(); ctx.filter = 'none'; ctx.globalAlpha = a0 * sstep(0.25, 0.75, dr); ctx.lineJoin = 'round'; ctx.lineWidth = Math.max(1, size * 0.028); ctx.strokeStyle = mix(col, '#9a9a9a', 0.5); ctx.strokeText(ch, 0, 0); ctx.restore();
+        ctx.globalAlpha = a0;
+      } else if (T.wash > 0.01) {
         // 水で流れる: horizontal slices drift on a travelling wave, sink and thin out, droplets trail behind
         const w = clamp(T.wash), n = 10, h = (size * 1.4) / n, a0 = ctx.globalAlpha, tt = this.curT || 0;
         if (w > 0.05) ctx.filter = `blur(${(w * size * 0.05 + (T.blur || 0)).toFixed(1)}px)`;
@@ -1192,6 +1290,7 @@ void main(){
           ctx.translate((hash(g.i, k, Math.floor(this.curT * 20)) - 0.5) * size * 0.5 * T.slice, 0); draw(); ctx.restore();
         }
       } else draw();
+      if (T.strike > 0.001) { ctx.save(); ctx.filter = 'none'; ctx.fillStyle = cc.acc; ctx.globalAlpha = Math.min(1, a * 1.1); const sw = (g.w + size * 0.14) * clamp(T.strike); ctx.fillRect(-g.w / 2 - size * 0.07, -size * 0.045, sw, Math.max(1, size * 0.09)); ctx.restore(); }
       if (T.dot > 0.01) { ctx.save(); ctx.filter = 'none'; ctx.globalAlpha = Math.min(1, a * 1.2); ctx.fillStyle = col; ctx.beginPath(); ctx.arc(0, 0, size * 0.9 * E.outBack(clamp(T.dot)), 0, 6.2832); ctx.fill(); ctx.restore(); }
       if (T.pen > 0) {
         // ペン: the nib travels through the glyph in writing order (rows, left → right)
@@ -1219,6 +1318,86 @@ void main(){
         }
         if (er > 0.6) { ctx.globalAlpha = clamp((er - 0.6) / 0.45); ctx.fillRect(-hw - size, -hh - size, (hw + size) * 2, (hh + size) * 2); }
         ctx.globalCompositeOperation = 'source-over';
+      }
+      ctx.restore();
+    }
+    /* shatter / assemble: the glyph is cut into a jittered triangle lattice; each shard flies out from an impact point */
+    inkShards(ctx, g, T, draw, size, a) {
+      const q = clamp(T.shard), shIn = !!T.shardIn, w = Math.max(g.w, size) * 1.2, h = size * 1.34, nx = 4, ny = 3;
+      const P = (i, j) => { const inner = i > 0 && i < nx && j > 0 && j < ny; return [(-0.5 + i / nx) * w + (inner ? (U.hash(g.i, i, j, 1) - 0.5) * (w / nx) * 0.75 : 0), (-0.5 + j / ny) * h + (inner ? (U.hash(g.i, i, j, 2) - 0.5) * (h / ny) * 0.75 : 0)]; };
+      const ix = (U.hash(g.i, 5) - 0.5) * w * 0.35, iy = (U.hash(g.i, 6) - 0.5) * h * 0.35;
+      const tris = [];
+      for (let i = 0; i < nx; i++) for (let j = 0; j < ny; j++) { const p0 = P(i, j), p1 = P(i + 1, j), p2 = P(i, j + 1), p3 = P(i + 1, j + 1); if ((i + j) % 2) tris.push([p0, p1, p3], [p0, p3, p2]); else tris.push([p0, p1, p2], [p1, p3, p2]); }
+      if (!shIn && q < 0.12) {
+        // impact: the glyph cracks along the shard seams before it breaks
+        draw(); const k = q / 0.12; ctx.save(); ctx.filter = 'none'; ctx.globalCompositeOperation = 'source-atop'; ctx.globalAlpha = a * 0.9 * k;
+        ctx.strokeStyle = 'rgba(255,255,255,0.95)'; ctx.lineWidth = Math.max(0.8, size * 0.014); ctx.beginPath();
+        tris.forEach((t3) => { ctx.moveTo(t3[0][0], t3[0][1]); ctx.lineTo(t3[1][0], t3[1][1]); ctx.lineTo(t3[2][0], t3[2][1]); });
+        ctx.stroke(); ctx.restore(); return;
+      }
+      const k = shIn ? q : clamp((q - 0.12) / 0.88), ke = shIn ? k : E.outCubic(k);
+      tris.forEach((t3, n) => {
+        const cx = (t3[0][0] + t3[1][0] + t3[2][0]) / 3, cy = (t3[0][1] + t3[1][1] + t3[2][1]) / 3;
+        let vx = cx - ix, vy = cy - iy; const ln = Math.hypot(vx, vy) || 1; vx /= ln; vy /= ln;
+        const sp = (0.45 + U.hash(g.i, n, 7) * 0.9) * size * (shIn ? 1.5 : 1.25);
+        const ox = vx * sp * ke, oy = vy * sp * ke + (shIn ? 0 : size * 2.6 * k * k), rot = (U.hash(g.i, n, 8) - 0.5) * 2.6 * ke;
+        const al = shIn ? 1 - sstep(0.55, 1, q) : 1 - sstep(0.55, 1, k);
+        if (al <= 0.01) return;
+        ctx.save(); ctx.translate(cx + ox, cy + oy); ctx.rotate(rot); const sc2 = shIn ? 1 - q * 0.3 : 1 - k * 0.25; ctx.scale(sc2, sc2); ctx.translate(-cx, -cy);
+        ctx.beginPath(); ctx.moveTo(t3[0][0], t3[0][1]); ctx.lineTo(t3[1][0], t3[1][1]); ctx.lineTo(t3[2][0], t3[2][1]); ctx.closePath();
+        ctx.lineWidth = 0.6; ctx.clip(); const a0 = ctx.globalAlpha; ctx.globalAlpha = a0 * al; draw(); ctx.globalAlpha = a0; ctx.restore();
+      });
+    }
+    /* split-flap leaf: static top half of the new glyph and bottom half of the old one, the leaf folding over the hinge */
+    inkFlap(ctx, g, T, col, cc, size) {
+      const F = T.flap, cw = g.w + size * (g.cls === 'L' || g.cls === 'P' ? 0.04 : 0.16), chh = size * 1.18, r = Math.min(size * 0.09, cw * 0.18), q = clamp(F.q), ca = F.ca == null ? 1 : F.ca;
+      const card = mix(cc.surf, col, 0.13), cardD = mix(card, '#000000', 0.18);
+      const rr = (x, y, w, h, r0) => { ctx.beginPath(); ctx.moveTo(x + r0, y); ctx.arcTo(x + w, y, x + w, y + h, r0); ctx.arcTo(x + w, y + h, x, y + h, r0); ctx.arcTo(x, y + h, x, y, r0); ctx.arcTo(x, y, x + w, y, r0); ctx.closePath(); };
+      const half = (chX, top, sy, shade) => {
+        ctx.save(); ctx.scale(1, sy); ctx.beginPath(); ctx.rect(-cw / 2 - 1, top ? -chh / 2 - 1 : 0, cw + 2, chh / 2 + 1); ctx.clip();
+        rr(-cw / 2, -chh / 2, cw, chh, r); ctx.fillStyle = top ? card : cardD; const a1 = ctx.globalAlpha; ctx.globalAlpha = a1 * ca; ctx.fill(); ctx.globalAlpha = a1;
+        if (chX && chX !== ' ') { ctx.fillStyle = col; ctx.fillText(chX, 0, 0); }
+        if (shade > 0) { ctx.fillStyle = `rgba(0,0,0,${(shade * 0.55).toFixed(3)})`; ctx.fillRect(-cw / 2, top ? -chh / 2 : 0, cw, chh / 2); }
+        ctx.restore();
+      };
+      ctx.save(); ctx.filter = 'none';
+      if (ca > 0.01) { const a1 = ctx.globalAlpha; ctx.globalAlpha = a1 * ca; ctx.shadowColor = 'rgba(0,0,0,0.35)'; ctx.shadowBlur = size * 0.1; ctx.shadowOffsetY = size * 0.04; rr(-cw / 2, -chh / 2, cw, chh, r); ctx.fillStyle = card; ctx.fill(); ctx.shadowColor = 'transparent'; ctx.globalAlpha = a1; }
+      half(F.b, true, 1, 0); half(q >= 1 ? F.b : F.a, false, 1, q < 0.5 || q >= 1 ? 0 : 0.25 * (1 - q));
+      if (q < 0.5) half(F.a, true, Math.max(0.001, Math.cos(q * PI)), q * 0.9); else if (q < 1) half(F.b, false, Math.max(0.001, -Math.cos(q * PI)), (1 - q) * 0.9);
+      ctx.fillStyle = `rgba(0,0,0,${(0.45 * ca).toFixed(3)})`; ctx.fillRect(-cw / 2, -Math.max(0.6, size * 0.012), cw, Math.max(1.2, size * 0.024));
+      ctx.restore();
+    }
+    /* liquid fill: outline first, then the colour rises with a moving, sloshing surface and a bright meniscus */
+    inkLiquid(ctx, g, T, ch, col, cc, size, draw) {
+      const q = clamp(T.liq), w2 = g.w / 2 + size * 0.2, tt = this.curT || 0;
+      ctx.save(); ctx.filter = 'none'; ctx.lineJoin = 'round'; ctx.lineWidth = Math.max(1, size * 0.026); ctx.strokeStyle = col; ctx.globalAlpha *= 1 - sstep(0.85, 1, q) * 0.7; ctx.strokeText(ch, 0, 0); ctx.restore();
+      if (q <= 0.001) return;
+      const lvl = size * 0.64 - q * size * 1.34, amp = size * 0.07 * Math.sin(PI * q), n = 18;
+      const wave = (k) => lvl + amp * Math.sin((k / n) * PI * 3 + tt * 7 + g.i * 1.7) + amp * 0.5 * Math.sin((k / n) * PI * 7 - tt * 5);
+      ctx.save(); ctx.beginPath(); ctx.moveTo(-w2, size); for (let k = 0; k <= n; k++) ctx.lineTo(-w2 + (2 * w2 * k) / n, wave(k)); ctx.lineTo(w2, size); ctx.closePath(); ctx.clip(); draw();
+      if (q < 0.98) { ctx.beginPath(); for (let k = 0; k <= n; k++) ctx.lineTo(-w2 + (2 * w2 * k) / n, wave(k) + size * 0.07); ctx.lineTo(w2, -size); ctx.lineTo(-w2, -size); ctx.closePath(); ctx.clip(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha *= 0.35; ctx.fillStyle = mix(cc.acc, '#ffffff', 0.5); ctx.fillText(ch, 0, 0); }
+      ctx.restore();
+    }
+    /* dust (disintegrate sideways into drifting specks) and burn (an ember edge eats the glyph from below) */
+    inkDissolve(ctx, g, T, col, cc, size, draw, a) {
+      draw();
+      const burn = T.burn > 0.001, q = clamp(burn ? T.burn : T.dust), cs = Math.max(1.5, size * 0.07), w2 = g.w / 2 + size * 0.12, h2 = size * 0.64;
+      const nx = Math.ceil((2 * w2) / cs), ny = Math.ceil((2 * h2) / cs), front = q * 1.45 - 0.2;
+      const vOf = (i, j) => (burn ? 1 - j / ny : i / nx) + (U.hash(g.i, i, j, 3) - 0.5) * 0.3 + (U.noise1(i * 0.35 + j * 0.2, g.i) * 0.12);
+      ctx.save(); ctx.filter = 'none';
+      if (burn) { // char just ahead of the edge
+        ctx.globalCompositeOperation = 'source-atop'; ctx.fillStyle = '#1a0d06';
+        for (let i = 0; i < nx; i++) for (let j = 0; j < ny; j++) { const v = vOf(i, j) - front; if (v > 0 && v < 0.2) { ctx.globalAlpha = a * (1 - v / 0.2) * 0.85; ctx.fillRect(-w2 + i * cs, -h2 + j * cs, cs + 0.5, cs + 0.5); } }
+      }
+      ctx.globalCompositeOperation = 'destination-out'; ctx.globalAlpha = 1; ctx.fillStyle = '#000';
+      for (let i = 0; i < nx; i++) for (let j = 0; j < ny; j++) if (vOf(i, j) < front) ctx.fillRect(-w2 + i * cs, -h2 + j * cs, cs + 0.5, cs + 0.5);
+      ctx.globalCompositeOperation = burn ? 'lighter' : 'source-over';
+      for (let i = 0; i < nx; i++) for (let j = 0; j < ny; j++) {
+        const dv = front - vOf(i, j); if (dv < 0 || dv > (burn ? 0.07 : 0.55)) continue;
+        if (burn) { ctx.globalAlpha = a * (1 - dv / 0.07); ctx.fillStyle = dv < 0.03 ? '#ffd27a' : '#ff6a1a'; ctx.fillRect(-w2 + i * cs, -h2 + j * cs, cs + 0.5, cs + 0.5); continue; }
+        if (U.hash(g.i, i, j, 9) > 0.55) continue;
+        const k = dv / 0.55, x = -w2 + (i + 0.5) * cs + k * size * (1.4 + U.hash(g.i, i, j, 4)) + U.noise1(k * 3 + i, j) * size * 0.25, y = -h2 + (j + 0.5) * cs - k * size * (0.6 + U.hash(g.i, i, j, 5) * 0.9);
+        ctx.globalAlpha = a * (1 - k) * 0.9; ctx.fillStyle = col; ctx.beginPath(); ctx.arc(x, y, cs * (0.42 - 0.25 * k), 0, 6.2832); ctx.fill();
       }
       ctx.restore();
     }
@@ -1262,9 +1441,13 @@ void main(){
         if (T.fill > 0) { ctx.save(); ctx.beginPath(); ctx.rect(-g.w / 2 - size * 0.1, -size, (g.w + size * 0.2) * T.fill, size * 2); ctx.clip(); ctx.fillStyle = cc.acc; ctx.fillText(ch, 0, 0); ctx.restore(); }
       } else if (T.fill === 1) { ctx.fillStyle = cc.acc; ctx.fillText(ch, 0, 0); }
       else if (T.stroke != null) {
+        // write-on: every outline contour is traced from its start point (trim-path style), glowing in the accent while it draws
         ctx.save(); ctx.shadowColor = 'transparent';
-        const Ld = size * 3; ctx.setLineDash([Ld, Ld]); ctx.lineDashOffset = Ld * (1 - T.stroke);
-        ctx.lineWidth = Math.max(1, size * 0.025); ctx.strokeStyle = outlineOnly ? cc.fill : col; ctx.strokeText(ch, 0, 0); ctx.restore();
+        const Lc = size * 4.2, sa = clamp(T.strokeAcc || 0), base = outlineOnly ? cc.fill : col;
+        ctx.setLineDash([Math.max(0.001, clamp(T.stroke) * Lc), Lc * 8]); ctx.lineDashOffset = 0; ctx.lineCap = 'butt'; ctx.lineJoin = 'round'; if (T.stroke <= 0.002) ctx.globalAlpha = 0;
+        ctx.lineWidth = Math.max(1, size * 0.032);
+        if (sa > 0.05) { ctx.shadowColor = rgba(cc.acc, 0.65 * sa); ctx.shadowBlur = size * 0.14; }
+        ctx.strokeStyle = sa > 0 ? mix(base, cc.acc, sa) : base; ctx.strokeText(ch, 0, 0); ctx.restore();
         if (T.fillA > 0 && !outlineOnly) { ctx.globalAlpha *= T.fillA; ctx.fillStyle = fillStyle; ctx.fillText(ch, 0, 0); }
       } else if (outlineOnly) { ctx.lineWidth = Math.max(0.5, size * 0.03 * (1 + wt * 1.6)); ctx.strokeStyle = T.accent ? cc.acc : cc.fill; ctx.strokeText(ch, 0, 0); }
       else { ctx.fillStyle = fillStyle; ctx.fillText(ch, 0, 0); }

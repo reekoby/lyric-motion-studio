@@ -12,7 +12,7 @@ LM.model = (() => {
       font: null, fontWeight: null, textScale: 1, tracking: 0, intensity: 1, speed: 1,
       filters: [], filterAmt: {}, filterIntensity: 0.6,
       bg: { type: 'gradient', image: null, dim: 0.45, blur: 0 }, pattern: 'none', camera: null,
-      beatSync: true, bpm: null, beatOffset: 0, tapLatency: 0.12, tempoSync: true, autoBgm: true, autoTrans: true, autoGfx: true, transOff: false, bgmDim: 0.22, bgm: [], bgmAmt: 1, bgmSpeed: 1, qGrid: 1, qStrength: 1, qEnd: false, autoQuantize: false, keyColor: true, bgCrossfade: true, ruby: true, mblur: 0, sections: [], images: [], imgMode: 'auto', imgChange: 'auto', imgEvery: 2, imgOrder: 'order', imgTrans: 'auto', imgTransDur: 0, imgKB: true, imgLook: 'natural', imgBeat: true, imgBgmFull: false, bgmOpacity: 1, bgmBlend: 'normal', imgFirst: false, imgOpacity: 1, imgBlend: 'normal', imgDim: null, imgBlur: null, bgmMixSet: false, gapOpacity: null, gapBlend: null, gapAmt: 1.2, gapSpeed: 1.12, gapCam: 1, gapEvery: 'auto', gapFlash: 1, gapVisAmt: 1, gapProgress: true, gapOv: {}, drive: null, feel: 'auto', variety: null, latinFont: 'auto', koreanFont: 'auto', latinTrack: 0, wordSpace: 1, wakanGap: 25, yakuAmt: 1, latinScale: 1, wakan: true, yakumono: true, gapFill: 'auto', gapVisual: true, gapLabel: true, gapVisStyle: 'auto', gapCountdown: false, gapMin: 1.2, gapBgm: [],
+      beatSync: true, bpm: null, beatOffset: 0, tapLatency: 0.12, tempoSync: true, autoBgm: true, autoTrans: true, autoGfx: true, transOff: false, bgmDim: 0.22, bgm: [], bgmAmt: 1, bgmSpeed: 1, qGrid: 1, qStrength: 1, qEnd: false, autoQuantize: false, keyColor: true, bgCrossfade: true, ruby: true, mblur: 0, glyphMB: 0.5, softMask: true, sections: [], images: [], imgMode: 'auto', imgChange: 'auto', imgEvery: 2, imgOrder: 'order', imgTrans: 'auto', imgTransDur: 0, imgKB: true, imgLook: 'natural', imgBeat: true, imgBgmFull: false, bgmOpacity: 1, bgmBlend: 'normal', imgFirst: false, imgOpacity: 1, imgBlend: 'normal', imgDim: null, imgBlur: null, bgmMixSet: false, gapOpacity: null, gapBlend: null, gapAmt: 1.2, gapSpeed: 1.12, gapCam: 1, gapEvery: 'auto', gapFlash: 1, gapVisAmt: 1, gapProgress: true, gapOv: {}, drive: null, feel: 'auto', variety: null, latinFont: 'auto', koreanFont: 'auto', latinTrack: 0, wordSpace: 1, wakanGap: 25, yakuAmt: 1, latinScale: 1, wakan: true, yakumono: true, gapFill: 'auto', gapVisual: true, gapLabel: true, gapVisStyle: 'auto', gapCountdown: false, gapMin: 1.2, gapBgm: [],
       cues: [], audioName: null,
     };
   }
@@ -83,6 +83,7 @@ LM.model = (() => {
     p.title = typeof p.title === 'string' ? p.title.slice(0, 100) : ''; p.artist = typeof p.artist === 'string' ? p.artist.slice(0, 100) : '';
     p.font = typeof p.font === 'string' && (D.fontById[p.font] || /^user\d+$/.test(p.font)) ? p.font : null;
     p.series = typeof p.series === 'string' && D.palCats[p.series] ? p.series : null;
+    p.glyphMB = typeof p.glyphMB === 'number' && isFinite(p.glyphMB) ? U.clamp(p.glyphMB, 0, 1) : 0.5; p.softMask = p.softMask !== false;
     ['intensity', 'speed', 'textScale', 'tracking', 'filterIntensity', 'seed', 'fontWeight'].forEach((k) => { if (p[k] != null && !(typeof p[k] === 'number' && isFinite(p[k]))) p[k] = base[k] ?? null; });
     p.bgm = strArr(p.bgm, (x) => !!(LM.bgm && LM.bgm.lib[x]), 4); p.gapBgm = strArr(p.gapBgm, (x) => !!(LM.bgm && LM.bgm.lib[x]), 4);
     if (!(typeof p.latinFont === 'string' && (p.latinFont === 'auto' || p.latinFont === 'same' || D.fontById[p.latinFont]))) p.latinFont = 'auto';
@@ -129,11 +130,13 @@ LM.model = (() => {
     // Motion System parameters: only known keys, numbers clamped, strings from fixed vocabularies
     if (c.mp != null) {
       const src = c.mp && typeof c.mp === 'object' && !Array.isArray(c.mp) ? c.mp : {}, out = {};
-      const EZ = ['auto', 'linear', 'easeIn', 'easeOut', 'easeInOut', 'cubic', 'expo', 'back', 'elastic', 'spring'], TR = ['beat', 'half', 'quarter', 'eighth', 'two', 'bar', 'word', 'phrase'], TG = ['auto', 'all', 'emph', 'word'];
+      const EZ = (LM.MS && LM.MS.EZ_KEYS) || ['auto', 'linear', 'easeIn', 'easeOut', 'easeInOut', 'cubic', 'expo', 'back', 'elastic', 'spring'], SO = Object.keys((LM.MS && LM.MS.SO_N) || {}), SEK = Object.keys((LM.MS && LM.MS.SE_N) || {}), TR = ['beat', 'half', 'quarter', 'eighth', 'two', 'bar', 'word', 'phrase'], TG = ['auto', 'all', 'emph', 'word'];
       ['e', 'h', 'm', 'x'].forEach((k) => {
         const o = src[k]; if (!o || typeof o !== 'object' || Array.isArray(o)) return; const r = {};
         [['i', 0, 100], ['v', 0, 100], ['st', 0, 100], ['beats', 0, 8], ['delay', 0, 5], ['k', 10, 1000], ['dm', 1, 200], ['ms', 0.1, 10], ['s', 0, 5]].forEach(([n, lo, hi]) => { const v = num(o[n], null, lo, hi); if (v != null) r[n] = v; });
         if (EZ.includes(o.ease)) r.ease = o.ease; if (TR.includes(o.trig)) r.trig = o.trig; if (TG.includes(o.tgt)) r.tgt = o.tgt;
+        if (SO.includes(o.so) && o.so !== 'auto') r.so = o.so; if (SEK.includes(o.se) && o.se !== 'linear') r.se = o.se; { const v = num(o.sa, null, -360, 360); if (v != null) r.sa = v; }
+        if (Array.isArray(o.bz) && o.bz.length === 4 && o.bz.every((x) => typeof x === 'number' && isFinite(x))) r.bz = [U.clamp(o.bz[0], 0, 1), U.clamp(o.bz[1], -2, 3), U.clamp(o.bz[2], 0, 1), U.clamp(o.bz[3], -2, 3)];
         if (Object.keys(r).length) out[k] = r;
       });
       const sd = num(src.seed, null, 0, 1e6); if (sd != null) out.seed = Math.round(sd);

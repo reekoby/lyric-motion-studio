@@ -736,6 +736,7 @@
     slider('#yakuAmt', 'yakuAmt', (x) => (x === 0 ? T('詰めない') : x === 100 ? T('標準') : x + '%'), (x) => x / 100, (p) => (P.yakumono === false ? 0 : Math.round((p == null ? 1 : p) * 100))),
     slider('#intensity', 'intensity', (x) => x + '%', (x) => x / 100, (p) => Math.round((p || 1) * 100)),
     slider('#speed', 'speed', (x) => x + '%', (x) => x / 100, (p) => Math.round((p || 1) * 100)),
+    slider('#glyphMB', 'glyphMB', (x) => (x === 0 ? T('なし') : x === 50 ? T('標準') + '（180°）' : Math.round(x * 3.6) + '°'), (x) => x / 100, (p) => Math.round((p == null ? 0.5 : p) * 100)),
     slider('#fxInt', 'filterIntensity', (x) => x + '%', (x) => (x / 100) * 0.6, (p) => Math.round(((p ?? 0.6) / 0.6) * 100)),
   ];
   function buildBg() {
@@ -1717,7 +1718,7 @@
   })();
 
   /* ---------------- looks (saved design presets) ---------------- */
-  const LOOK_KEYS = ['theme', 'palette', 'colors', 'autoColors', 'series', 'font', 'fontWeight', 'textScale', 'tracking', 'intensity', 'speed', 'tempoSync', 'filters', 'filterAmt', 'filterIntensity', 'autoFilters', 'pattern', 'camera', 'keyColor', 'autoBgm', 'bgm', 'bgmAmt', 'bgmSpeed', 'bgmDim', 'autoTrans', 'autoGfx', 'transOff', 'ruby', 'drive', 'feel', 'variety', 'latinTrack', 'wordSpace', 'wakanGap', 'yakuAmt', 'wakan', 'yakumono', 'bgmOpacity', 'bgmBlend', 'gapFill', 'gapBgm', 'gapVisual', 'gapVisStyle', 'gapLabel', 'gapCountdown', 'gapOpacity', 'gapBlend', 'gapAmt', 'gapSpeed', 'gapCam', 'gapEvery', 'gapFlash', 'gapVisAmt', 'gapProgress'];
+  const LOOK_KEYS = ['theme', 'palette', 'colors', 'autoColors', 'series', 'font', 'fontWeight', 'textScale', 'tracking', 'intensity', 'speed', 'tempoSync', 'filters', 'filterAmt', 'filterIntensity', 'autoFilters', 'pattern', 'camera', 'keyColor', 'autoBgm', 'bgm', 'bgmAmt', 'bgmSpeed', 'bgmDim', 'autoTrans', 'autoGfx', 'transOff', 'ruby', 'glyphMB', 'softMask', 'drive', 'feel', 'variety', 'latinTrack', 'wordSpace', 'wakanGap', 'yakuAmt', 'wakan', 'yakumono', 'bgmOpacity', 'bgmBlend', 'gapFill', 'gapBgm', 'gapVisual', 'gapVisStyle', 'gapLabel', 'gapCountdown', 'gapOpacity', 'gapBlend', 'gapAmt', 'gapSpeed', 'gapCam', 'gapEvery', 'gapFlash', 'gapVisAmt', 'gapProgress'];
   // looks come from localStorage or imported files: validate everything through the project normalizer
   function cleanLook(lk) {
     if (!lk || typeof lk !== 'object' || !lk.v || typeof lk.v !== 'object' || Array.isArray(lk.v)) return null;
@@ -1785,6 +1786,7 @@
     toast(`${r.length}区間を推定しました。「演出を生成」でセクションごとに演出を切り替えます`);
   };
   $('#rubyOn').onchange = (e) => { P.ruby = e.target.checked; view.invalidate(); commit(); };
+  $('#softMask').onchange = (e) => { P.softMask = e.target.checked; commit(); };
 
   /* ---------------- title card ---------------- */
   $('#addTitle').onclick = () => {
@@ -2040,7 +2042,11 @@
       ${rng('mpI', '強さ', o.i, 0, 100, 1, (v) => v, '移動距離・拡大率・回転・ぼかし・行き過ぎの量がモーションに合わせて変わります（50＝標準）')}
       ${rng('mpV', 'ばらつき', o.v, 0, 100, 1, (v) => v, '単語ごとに向き・距離・タイミング・回転を少しずつ変えます（同じシードなら毎回同じ結果）')}
       ${tr ? rng('mpSt', '間隔（スタッガー）', o.st, 0, 100, 1, (v) => v, '一文字・一単語ずつの時間差') : ''}
+      ${tr && MS.SO_N ? sel('mpSo', '順番（スタッガー）', o.so || 'auto', MS.SO_N) : ''}
+      ${tr && o.so === 'angle' ? rng('mpSa', '方向（角度）', o.sa == null ? 0 : o.sa, -180, 180, 5, (v) => v + '°') : ''}
+      ${tr && MS.SE_N ? sel('mpSe', '間隔の変化', o.se || 'linear', MS.SE_N) : ''}
       ${tr ? sel('mpEase', 'タイミングカーブ', ez, MS.EASE_N) : ''}
+      ${tr && ez === 'custom' ? `<div class="row"><label title="${esc(T('CSS の cubic-bezier と同じ4つの値（x1, y1, x2, y2）'))}">${esc(T('ベジェ曲線'))}</label><input type="text" id="mpBz" style="flex:1" spellcheck="false" value="${esc((o.bz || (MS.CURVE && MS.CURVE.smooth) || [0.4, 0, 0.2, 1]).join(', '))}"></div>` : ''}
       ${tr && ez === 'spring' ? rng('mpK', '硬さ（stiffness）', o.k, 20, 600, 5, (v) => v) + rng('mpDm', '減衰（damping）', o.dm, 2, 60, 1, (v) => v) + rng('mpMs', '質量（mass）', o.ms, 0.2, 4, 0.1, (v) => (+v).toFixed(1)) : ''}
       ${tr && ez === 'back' ? rng('mpS', '行き過ぎ（overshoot）', o.s, 0, 5, 0.1, (v) => (+v).toFixed(1)) : ''}
       ${tr ? sel('mpBeats', '長さ（拍に合わせる）', o.beats || 0, { 0: '自動', 0.125: '1/8拍', 0.25: '1/4拍', 0.5: '1/2拍', 1: '1拍', 2: '2拍', 4: '1小節' }) : ''}
@@ -2050,10 +2056,13 @@
       <p class="hint">${esc(T(k === 'm' ? '強調は、表示中の文字を拍や歌い出しに合わせて一瞬だけ動かすアクセントです。登場・保持・退場の動きに重ねて使えます。' : '強さ・ばらつきはこの行のモーションすべてに効きます。複数の行を選んでいれば、まとめて変わります。'))}</p>`;
     const setv = (n, v) => { eachSel((q) => { q.mp = q.mp || {}; const t0 = (q.mp[k] = q.mp[k] || {}); if (v == null || v === '' || v === 'auto' || (n === 'beats' && !+v)) delete t0[n]; else t0[n] = v; if (!Object.keys(t0).length) delete q.mp[k]; if (!Object.keys(q.mp).length) delete q.mp; }); };
     $$('#mpTrk button', host).forEach((bt) => (bt.onclick = () => { S.mpTrk = bt.dataset.v; buildMpPanel(c); }));
-    const RMAP = { mpI: 'i', mpV: 'v', mpSt: 'st', mpK: 'k', mpDm: 'dm', mpMs: 'ms', mpS: 's', mpDelay: 'delay' };
-    Object.entries(RMAP).forEach(([id, n]) => { const el = $('#' + id, host); if (!el) return; el.addEventListener('input', () => { setv(n, +el.value); $('#' + id + 'V', host).textContent = n === 'delay' ? (+el.value).toFixed(2) + 's' : n === 'ms' || n === 's' ? (+el.value).toFixed(1) : el.value; S.dirty = true; commitSoon(); }); });
+    const RMAP = { mpI: 'i', mpV: 'v', mpSt: 'st', mpK: 'k', mpDm: 'dm', mpMs: 'ms', mpS: 's', mpDelay: 'delay', mpSa: 'sa' };
+    Object.entries(RMAP).forEach(([id, n]) => { const el = $('#' + id, host); if (!el) return; el.addEventListener('input', () => { setv(n, +el.value); $('#' + id + 'V', host).textContent = n === 'delay' ? (+el.value).toFixed(2) + 's' : n === 'ms' || n === 's' ? (+el.value).toFixed(1) : n === 'sa' ? el.value + '°' : el.value; S.dirty = true; commitSoon(); }); });
     $$('[data-rs]', host).forEach((bt) => (bt.onclick = () => { setv(RMAP[bt.dataset.rs], null); commit(); }));
     if ($('#mpEase', host)) $('#mpEase', host).onchange = (e) => { setv('ease', e.target.value); commit(); };
+    if ($('#mpSo', host)) $('#mpSo', host).onchange = (e) => { setv('so', e.target.value); commit(); buildMpPanel(c); };
+    if ($('#mpSe', host)) $('#mpSe', host).onchange = (e) => { setv('se', e.target.value === 'linear' ? null : e.target.value); commit(); };
+    if ($('#mpBz', host)) $('#mpBz', host).onchange = (e) => { const v = e.target.value.split(/[,\s]+/).filter(Boolean).map(Number); if (v.length === 4 && v.every((x) => isFinite(x))) { setv('bz', [U.clamp(v[0], 0, 1), U.clamp(v[1], -2, 3), U.clamp(v[2], 0, 1), U.clamp(v[3], -2, 3)]); commit(); } else toast('4つの数値をカンマ区切りで入力してください（例：0.4, 0, 0.2, 1）', true); };
     if ($('#mpBeats', host)) $('#mpBeats', host).onchange = (e) => { setv('beats', +e.target.value); commit(); };
     if ($('#mpTrig', host)) $('#mpTrig', host).onchange = (e) => { setv('trig', e.target.value); commit(); };
     if ($('#mpTgt', host)) $('#mpTgt', host).onchange = (e) => { setv('tgt', e.target.value); commit(); };
@@ -2209,7 +2218,7 @@
     $('#pattern').value = P.pattern || 'none'; $('#camera').value = P.camera || '';
     $('#beatSync').checked = P.beatSync !== false; $('#bpm').value = P.bpm || ''; $('#beatOffset').value = P.beatOffset || 0;
     pruneMulti();
-    $('#rubyOn').checked = P.ruby !== false;
+    $('#rubyOn').checked = P.ruby !== false; $('#softMask').checked = P.softMask !== false;
     buildFxGlobal(); renderList(); renderInspector(); syncFine(); syncBgmUI(); renderSections(); buildLooks(); syncImgUI();
     ensureImages();
     LM.fonts.ensureProject(P).then(() => { view.invalidate(); S.dirty = true; });

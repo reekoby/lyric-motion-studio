@@ -488,6 +488,8 @@ input[type=color]{width:30px;height:28px;padding:0;border:1px solid var(--line);
           <div class="row"><label>動きの強さ</label><input type="range" id="intensity" min="20" max="200" step="5"><span class="val" id="intensityV"></span></div>
           <div class="row"><label>テンポ感</label><select id="tempoSel" style="flex:1"></select></div>
           <div class="row"><label>動きの速さ</label><input type="range" id="speed" min="50" max="200" step="5"><span class="val" id="speedV"></span></div>
+          <div class="row"><label title="動いている文字を、動いた方向にだけなめらかにぶらします（映画のシャッターと同じ考え方）。0で無効">文字のモーションブラー</label><input type="range" id="glyphMB" min="0" max="100" step="5"><span class="val" id="glyphMBV"></span></div>
+          <div class="row"><label class="tg"><input type="checkbox" id="softMask"><i></i>ワイプ・マスクの境目をやわらかくする</label></div>
           <div class="row"><label class="tg"><input type="checkbox" id="tempoSync"><i></i>曲のBPMに動きの長さを合わせる</label></div>
           <p class="hint">オンにすると、登場・退場の長さを 1/4〜3拍 のいちばん近い長さにそろえ、揺れや跳ねの周期も曲のテンポに合わせます。</p>
         </div>

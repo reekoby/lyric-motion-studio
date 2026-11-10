@@ -1,6 +1,14 @@
 # 開発メモ（Lyric Motion Studio）
 
-最終更新：2026-09-27
+最終更新：2026-11-10
+
+## 実装済み（2026-11-10）— エフェクト・カタログ フェーズ1 — `src/pro.js`
+- イージング：Penner 全系統・cubic-bezier（ニュートン法）・業務用カーブ・コマ打ち・ラフ → `MS.EASE_N` / `MS.WARP`（単調なものは時間ワープにも使用）
+- スタッガー：`mp.e|x.so`（順番）・`sa`（角度）・`se`（間隔カーブ）→ `MS.rank2`。レンダラーのランクキャッシュはパラメーター込みのキー
+- 単位ピボット：`MS.uc(g, 'w'|'l'|'a', c)` と `MS.pivotT`。`MS.define` のプリセットは u≠g のとき単位中心で拡大・回転（`track` を使うものは除外）
+- 文字のモーションブラー：`Renderer.drawGlyphMB` — シャッター区間前の変形と現在の変形を補間した N サンプルを `lighter`・重み 1/N で作業キャンバスに積算して合成。`p.glyphMB`（0–1、既定 0.5）。書き出しのサブフレームMB使用時は無効（`r.subMB`）
+- マスクのフェザー：clip 系モーションは作業キャンバスに描いてから、ぼかしたクリップ形状で `destination-in`（`p.softMask`）
+- 新しい変形フィールド：`shard`/`shardIn`（三角片）・`flap`（パタパタ）・`liq`・`scanX`/`scanW`・`dust`・`burn`・`strike`・`drain`・`strokeAcc`
 
 ## 実装済み（2026-09-27）
 ### 背景動画（MP4 / WebM / MOV）— `src/video.js` + `src/imgbg.js`

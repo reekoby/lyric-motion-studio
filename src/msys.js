@@ -63,8 +63,17 @@ LM.MS = (() => {
     const lib = M[kind];
     const ez = def.ease ? ease(def.ease, def.eo) : kind === 'exit' ? E.inCubic : E.outExpo;
     let f = def.f;
-    if (!f && kind === 'enter') f = (p, g, c) => { const q = ez(p); const T = prim(def.from, 1 - q, g, c); if (def.from.a != null) T.a = lerp(def.from.a, 1, A(p, def.aK || 3)); return T; };
-    if (!f && kind === 'exit') f = (p, g, c) => { const q = ez(p); const T = prim(def.to, q, g, c); if (def.to.a != null) { const a0 = def.aStart == null ? 0.35 : def.aStart; T.a = lerp(1, def.to.a, clamp((p - a0) / (1 - a0))); } return T; };
+    // word / line / phrase presets scale and rotate around the unit centre (letters stay together as one block)
+    const PR = def.from || def.to || {}, usePiv = def.u && def.u !== 'g' && PR.track == null;
+    const piv = (T, g, c) => {
+      if (!usePiv || !LM.MS.uc) return T;
+      const sx = T.sx == null ? 1 : T.sx, sy = T.sy == null ? 1 : T.sy, r = T.rot || 0; if (sx === 1 && sy === 1 && !r) return T;
+      const P = LM.MS.uc(g, def.u, c), dx = g.x - P.x, dy = g.y - P.y; let nx = dx * sx, ny = dy * sy;
+      if (r) { const cs = Math.cos(r), sn = Math.sin(r), rx = nx * cs - ny * sn; ny = nx * sn + ny * cs; nx = rx; }
+      T.x = (T.x || 0) + nx - dx; T.y = (T.y || 0) + ny - dy; return T;
+    };
+    if (!f && kind === 'enter') f = (p, g, c) => { const q = ez(p); const T = prim(def.from, 1 - q, g, c); if (def.from.a != null) T.a = lerp(def.from.a, 1, A(p, def.aK || 3)); return piv(T, g, c); };
+    if (!f && kind === 'exit') f = (p, g, c) => { const q = ez(p); const T = prim(def.to, q, g, c); if (def.to.a != null) { const a0 = def.aStart == null ? 0.35 : def.aStart; T.a = lerp(1, def.to.a, clamp((p - a0) / (1 - a0))); } return piv(T, g, c); };
     lib[id] = Object.assign({ n: def.n, c: def.c, d: def.d || 0.6, st: def.st == null ? 0.3 : def.st, u: def.u, o: def.o, f }, def.x || {});
     if (def.meta) META[kind + ':' + id] = def.meta;
     return lib[id];

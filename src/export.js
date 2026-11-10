@@ -105,6 +105,7 @@ LM.exporter = (() => {
     const mb = Math.max(1, Math.min(32, Math.round(o.mblur || 1)));
     const rend = async (t) => { if (r.prepareVideos) await r.prepareVideos(t); r.render(t, mode); };
     let frameAt = async (t) => { await rend(t); return r.out; };
+    r.fps = o.fps; r.subMB = mb > 1;
     if (mb > 1) {
       const sc = document.createElement('canvas'); sc.width = o.W; sc.height = o.H;
       const sx = sc.getContext('2d', { willReadFrequently: true });

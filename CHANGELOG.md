@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.10.0 — 2026-11-10
+- Motion blur for text: moving letters are smeared only along their own motion (a 180° shutter by default, adjustable or off under Motion → “Text motion blur”). Motions that used a round blur to fake speed now rely on it / 文字のモーションブラー（動いた方向だけにぶれる・180°シャッター相当、調整・オフ可）
+- Soft wipe edges: every mask / wipe reveal is feathered like a production matte (toggle under Motion) / ワイプ・マスクの境目をやわらかく
+- Easing library: 34 new timing curves — the full sine / quad / cubic / quart / quint / expo / circ / back / elastic / bounce families, production curves (Material standard / decelerate / accelerate, After Effects easy ease and 80% ease, snappy, swift, glide), slow-mo, stepped 4 / 8 / 12 and a hand-keyed “rough” curve, plus a custom cubic-bezier field / タイミングカーブを34種追加（カスタムのベジェ曲線も入力可）
+- Stagger order and spacing per phrase: left → right across lines, right → left, top → bottom, bottom → top, radial out / in, diagonal, any angle, one line at a time; the spacing can tighten, open up, bunch at the start or rush through the middle / スタッガーの順番（空間的な順番・角度指定）と間隔の変化
+- Quality pass on entrances / exits that looked cheap: word, line and phrase motions now scale and rotate around the word / line / phrase centre instead of piling letters on top of each other (scale punch, zoom out, word slam, word sequence, weight punch, step zoom, heavy landing, rush out …); slides arrive in an order that never drives one letter through another (slide, smear, skew, magnet, slide out); drops start above the frame and no longer hover over the line above before they begin (bounce, zipper, elastic drop); split / strip motions use glyph-sized offsets; the line-drawing write-on traces each outline cleanly with an accent glow; decode and slot reels use random glyphs of the same script (kana stay kana, Latin stays Latin) and lock in with a flash; “Shatter” now really breaks each letter into triangular shards that crack, fly and fall / チープだった登場・退場を作り直し（単語単位の拡大・回転、すり抜けないスライド、落下前の表示、線画の描き順、同じ文字種のデコード、本物の破片に割れるシャッター）
+- New entrances: split-flap display, liquid fill, light scan, shards assemble, clockwise wipe, checkerboard, curtain. New exits: crumble to dust, burn away, strike through, select all → delete, colour drains to an outline, clockwise wipe, curtain / 登場・退場を追加（パタパタ・リキッドフィル・ライトスキャン・破片の組み上げ・時計回り・チェッカー・カーテン／灰化・燃え尽き・取り消し線・全選択して削除・色抜け）
+
 ## 1.9.0 — 2026-10-12
 - Type exact values: click the number next to any slider to type a value (Enter applies, Esc cancels, ↑↓ step by 1, Shift by 10). Values are typed in the unit shown (%, seconds, degrees, em…) and converted to the slider automatically; the inspector waits for you to finish before it refreshes / スライダーの数値をクリックして直接入力できるように（表示の単位のまま入力）
 
