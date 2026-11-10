@@ -2,6 +2,11 @@
 
 最終更新：2026-11-10
 
+## 実装済み（2026-11-10）— リアル化 — `src/glfx.js` / `src/glfx2.js`
+- `LM.glfx.full(ctx, progId, R, o)` が全画面のGPUレイヤーを描く（失敗時は従来の2D描画に戻る）。`LM.glfx.PROG[id] = [prelude, main]`、遅延コンパイル
+- glfx2 の共通GLSL：五次補間のグラディエントノイズ `gn/sfbm`（法線にブロックが出ない）、スタジオ環境 `envS`、光沢マテリアル `glossy(n, base, metal, rough)`、色を保つトーンマップ `tmK`
+- 置き換え：liqflow（OPT.x 0 液体 / 1 クローム / 2 マーブル）、blobs・lava、ink（背景・カバー）、paint・brushCover、liqCover、dripCover、splashCover、splat、sea、disco
+
 ## 実装済み（2026-11-10）— フェーズ2 — `src/pro2.js`
 - トランジション：`LM.trans.lib[id].mb = true` のカバー系は `applyTrans` が作業キャンバス2枚でシャッター区間を平均（N=10）し、接地影付きで合成。カメラ系は変形時に鏡像タイルで周囲を埋める。ポスト側に `swirl`（渦）を追加、`o.quad/o.hue/o.bzoom` も受け付け
 - カメラ：`D.cameras` にキー追加、実装は `LM.cam2[id](lx, k)`（`drawCue` から呼ぶ）

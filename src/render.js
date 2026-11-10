@@ -287,6 +287,11 @@ void main(){
 
     /* ---------- layout (cached) ---------- */
     getLayout(cue, idx) {
+      // a blank phrase (e.g. an instrumental placeholder) lays out a dummy and draws no glyphs
+      if (!String(cue.text || '').replace(/[\s\u3000*^/|｜]/g, '')) {
+        const L0 = this.getLayout(Object.assign({}, cue, { text: '.' }), idx);
+        return Object.assign({}, L0, { glyphs: [], decos: [], ghosts: [], rE: {}, rX: {} });
+      }
       const p = this.p, sc = cue.scene || {};
       const F = fontOf(p, cue);
       const fl = filtersOf(p, cue);

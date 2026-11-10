@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.12.0 — 2026-11-10
+- Realistic GPU rebuild of the graphics that looked cheap / 安っぽかったグラフィックをGPUで作り直し:
+  - Club: a large mirror ball whose facets reflect a lit room (with grout, tilt jitter and glints), fine volumetric beams and drifting light spots; light-up dance floor and moving-head beams / ミラーボール・ダンスフロア・ムービングライト
+  - Horizon: synthwave scene (slit sun, ridge silhouettes with rim light, anti-aliased perspective grid, sun reflection, haze) for Sunset (80s) / Retro grid / Retro sun; a physically lit sea at sunset and at dusk — camera over a wave field, reflected sky with Fresnel, a sun-glitter column on the water and clouds lit from below / 地平線（シンセウェーブ）と、夕日に照らされた海（波に映る空・太陽の光の道・下から照らされた雲）
+  - Liquids: glossy liquid flow, liquid chrome and polished marble share one smooth heightfield with a studio light environment (soft boxes, strip light, Fresnel); metaballs and the lava lamp have sphere-true normals and gloss; ink in water is a subtractive dye cloud; the liquid, paint-pour, ink and splash transitions are thick and glossy and keep the palette colour / 液体・クローム・マーブル・メタボール・ラバランプ・水中のインク、液体系トランジションを光沢のある質感に
+  - Paint: oil-paint strokes with bristle grooves, impasto ridges, smeared two-colour paint, dry-brush breakup and wet gloss (background strokes, dry brush and marker transitions); glossy paint splat accent / 油絵の具の筆跡（ブラシの溝・盛り上がり・かすれ・濡れたつや）
+
 ## 1.11.0 — 2026-11-10
 - 12 new auto-direction styles: K-POP, Hyperpop / Y2K, 8-bit / Chiptune, Jazz / Swing, Funk / Disco, Punk / Garage, Trap / Drill, Classical / Orchestral, Horror / Dark, Kids / Nursery songs, Latin / Reggaeton, Techno / Industrial — each with its own palettes, fonts, layouts, entrances / exits, cameras, cuts, accent graphics, backgrounds and emphasis vocabulary / おまかせのスタイルを12種追加
 - Auto direction now uses everything added in 1.10 and 1.11 (split-flap, light scan, shards, dust, burn, strike-through, new cameras, cuts, karaoke holds and accents) in the themes where they fit, and gives each section a motion grammar: one timing curve and stagger order (radial, diagonal, line by line, any angle …) chosen from the style's own vocabulary, repeated in matching sections such as every chorus / おまかせが新しい演出を各スタイルに合わせて使い、区間ごとにタイミングカーブとスタッガーの順番をスタイルらしく統一
