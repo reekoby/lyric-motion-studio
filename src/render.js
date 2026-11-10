@@ -123,6 +123,7 @@ uniform float rgb,glitch,block,vhs,scan,noise,vig,pix,poster,half_,bloom,inv,blu
 uniform vec3 duoA,duoB,grade,bgc;uniform vec4 key;uniform vec2 mblur;
 float h1(vec2 p){return fract(sin(dot(p,vec2(12.9898,78.233)))*43758.5453);}
 float b2(vec2 p){p=floor(mod(p,2.0));return mod(2.0*p.x+3.0*p.y,4.0);}
+/*X_DECL*/
 void main(){
  vec2 u=v;
  if(mirror>0.5&&u.x>0.5)u.x=1.0-u.x;
@@ -138,6 +139,7 @@ void main(){
  if(slice>0.0){float sb=floor(u.y*7.0);float sd=mod(sb,2.0)*2.0-1.0;u.x=fract(u.x+sd*slice*0.09*(0.45+h1(vec2(sb,floor(time*2.0)+seed))));}
  if(psort>0.0){float row=floor(u.y*R.y/(5.0*S));float st=floor(time*10.0);if(h1(vec2(row*0.37,st+seed))<psort*0.5){float ax=h1(vec2(row,st+3.0));float ln=0.1+0.55*h1(vec2(row,st+7.0));if(u.x>ax&&u.x<ax+ln)u.x=ax+(u.x-ax)*0.03;}}
  if(heat>0.0)u.x+=sin(u.y*38.0+time*5.0)*0.0025*heat+sin(u.y*91.0-time*7.0)*0.001*heat;
+/*X_UV*/
  if(vhs>0.0){u.x+=(h1(vec2(floor(u.y*R.y/(3.0*S)),floor(time*30.0)))-0.5)*0.003*vhs+sin(u.y*9.0+time*2.0)*0.0012*vhs;
   float tb=fract(u.y-time*0.13);if(tb<0.018)u.x+=(h1(vec2(u.y*50.0,time))-0.5)*0.03*vhs;}
  if(block>0.0){vec2 b=floor(u*vec2(10.0,22.0));float r=h1(b+floor(time*15.0)+seed);if(r<block*0.25)u.x+=(h1(b+2.0)-0.5)*0.2*block;}
@@ -145,14 +147,14 @@ void main(){
  if(pix>0.5){vec2 px=vec2(pix)/R;u=(floor(u/px)+0.5)*px;}
  vec2 acell=vec2(0.);vec2 af=vec2(0.);if(ascii>0.5){vec2 cs=vec2(ascii*0.62,ascii)/R;acell=(floor(u/cs)+0.5)*cs;af=fract(u/cs);u=acell;}
  float rs=(rgb+glitch*8.0*S+block*6.0*S)/R.x;vec2 d=vec2(rs,0.0);
- if(chrom>0.0)d+=(u-0.5)*chrom*0.012;
  vec4 cg=texture2D(T0,u);vec4 col=cg;
  if(length(d)>0.00001){vec4 cr=texture2D(T0,u+d),cb=texture2D(T0,u-d);col=vec4(cr.r,cg.g,cb.b,max(cg.a,max(cr.a,cb.a)));}
  if(trgb>0.0){vec4 p1=texture2D(T2,u),p2=texture2D(T3,u);col.g=mix(col.g,p1.g,trgb);col.b=mix(col.b,p2.b,trgb);col.a=max(col.a,max(p1.a,p2.a)*trgb);}
  if(zblur>0.0){vec4 acc=col;for(int i=1;i<12;i++){float k=1.0-float(i)*0.011*zblur;acc+=texture2D(T0,(u-0.5)*k+0.5);}col=acc/12.0;}
  if(length(mblur)>0.0001){vec4 acc=col;for(int i=1;i<16;i++){float k=float(i)/15.-.5;acc+=texture2D(T0,u+mblur*k);}col=acc/16.;}
  if(blurMix>0.0||tilt>0.0){vec4 bl=texture2D(T1,u);float m=blurMix;if(tilt>0.0)m=max(m,smoothstep(0.12,0.42,abs(u.y-0.5))*tilt);col=mix(col,bl,clamp(m,0.0,1.0));}
- if(bloom>0.0){vec4 bl=texture2D(T1,u);col.rgb+=bl.rgb*bloom;col.a=max(col.a,bl.a*bloom*0.7);}
+ if(bloom>0.0){vec4 bl=texture2D(T1,u);vec3 kn=max(bl.rgb-0.5,0.0);kn=kn*kn/(kn+0.2)*1.8+bl.rgb*0.1;col.rgb+=kn*bloom;col.a=max(col.a,bl.a*bloom*0.5);}
+/*X_SMP*/
  float a=clamp(col.a,0.0,1.0);vec3 c=a>0.001?col.rgb/a:vec3(0.0);
  if(ascii>0.5){float L=dot(c,vec3(.299,.587,.114));float lv=floor(L*5.99);vec2 q=af-0.5;float m=0.;
   if(lv>=1.)m=max(m,step(length(q-vec2(0.,0.3)),0.13));
@@ -169,18 +171,21 @@ void main(){
  if(hue!=0.0){float Y=dot(c,vec3(.299,.587,.114));float I=dot(c,vec3(.596,-.274,-.322));float Q=dot(c,vec3(.211,-.523,.312));float hh=atan(Q,I)+hue;float ch=sqrt(I*I+Q*Q);I=ch*cos(hh);Q=ch*sin(hh);c=vec3(Y+.956*I+.621*Q,Y-.272*I-.647*Q,Y-1.106*I+1.703*Q);}
  if(duo>0.0){float L=dot(c,vec3(.299,.587,.114));c=mix(c,mix(duoA,duoB,smoothstep(0.05,0.95,L)),duo);}
  if(thermal>0.0){float L=dot(c,vec3(.299,.587,.114));vec3 hm=L<0.25?mix(vec3(0.03,0.0,0.14),vec3(0.38,0.02,0.62),L*4.0):L<0.5?mix(vec3(0.38,0.02,0.62),vec3(0.96,0.12,0.28),(L-0.25)*4.0):L<0.75?mix(vec3(0.96,0.12,0.28),vec3(1.0,0.66,0.05),(L-0.5)*4.0):mix(vec3(1.0,0.66,0.05),vec3(1.0,1.0,0.86),(L-0.75)*4.0);c=mix(c,hm,thermal);}
+/*X_COL*/
  if(poster>0.5)c=floor(c*poster+0.5)/poster;
  if(half_>0.5){float ang=0.785;mat2 m=mat2(cos(ang),-sin(ang),sin(ang),cos(ang));vec2 pp=m*gl_FragCoord.xy/half_;vec2 f=fract(pp)-0.5;float L=dot(c,vec3(.299,.587,.114));float r=sqrt(clamp(1.0-L,0.0,1.0))*0.66;float dm=1.0-smoothstep(r-0.07,r+0.07,length(f));c=mix(min(c*1.18+0.04,vec3(1.0)),c*0.3,dm);}
  if(dither>0.0){vec2 q=floor(gl_FragCoord.xy/max(1.0,S*2.0));float bay=(4.0*b2(q)+b2(floor(q/2.0))+0.5)/16.0;c=mix(c,step(vec3(bay),c),dither);}
  if(scan>0.0)c*=1.0-scan*0.4*step(0.5,fract(gl_FragCoord.y/max(2.0,3.0*S)));
  if(vhs>0.0){c=mix(c,vec3(dot(c,vec3(0.33))),0.12*vhs);c+=(h1(u*R+time)-0.5)*0.07*vhs;c.r+=0.03*vhs*sin(u.y*R.y*0.5);}
- if(noise>0.0)c+=(h1(u*R+fract(time*7.13)*100.0)-0.5)*0.16*noise;
  if(vig>0.0){float dd=distance(v,vec2(0.5));c*=1.0-smoothstep(0.3,0.85,dd)*vig;}
  if(crt>0.0&&(u.x<0.0||u.x>1.0||u.y<0.0||u.y>1.0)){c=vec3(0.0);if(key.a<0.5&&key.b<-0.5)a=0.0;}
+/*X_FIN*/
  c=clamp(c,0.0,1.0);
  if(key.a>0.5)gl_FragColor=vec4(mix(key.rgb,c,a),1.0);else gl_FragColor=vec4(c*a,a);
 }`;
-  const UNI = ['rgb', 'glitch', 'block', 'vhs', 'scan', 'noise', 'vig', 'pix', 'poster', 'half_', 'bloom', 'inv', 'blurMix', 'zblur', 'crt', 'chrom', 'duo', 'dither', 'sepia', 'heat', 'hue', 'tilt', 'mirror', 'fish', 'trgb', 'psort', 'slice', 'liquid', 'thermal', 'mono', 'monoInv', 'quad', 'bzoom', 'lineart', 'ascii', 'melt', 'swirl'];
+  const PX = LM.POSTX;
+  const FSX = PX ? FS.replace('/*X_DECL*/', PX.decl).replace('/*X_UV*/', PX.uv).replace('/*X_SMP*/', PX.smp).replace('/*X_COL*/', PX.col).replace('/*X_FIN*/', PX.fin) : FS;
+  const UNI = ['rgb', 'glitch', 'block', 'vhs', 'scan', 'noise', 'vig', 'pix', 'poster', 'half_', 'bloom', 'inv', 'blurMix', 'zblur', 'crt', 'chrom', 'duo', 'dither', 'sepia', 'heat', 'hue', 'tilt', 'mirror', 'fish', 'trgb', 'psort', 'slice', 'liquid', 'thermal', 'mono', 'monoInv', 'quad', 'bzoom', 'lineart', 'ascii', 'melt', 'swirl'].concat(PX ? PX.uni : []);
 
   class Renderer {
     constructor(opt = {}) {
@@ -205,13 +210,13 @@ void main(){
         if (!gl) return false;
         const sh = (type, src) => { const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s); if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s)); return s; };
         const pr = gl.createProgram();
-        gl.attachShader(pr, sh(gl.VERTEX_SHADER, VS)); gl.attachShader(pr, sh(gl.FRAGMENT_SHADER, FS)); gl.linkProgram(pr);
+        gl.attachShader(pr, sh(gl.VERTEX_SHADER, VS)); gl.attachShader(pr, sh(gl.FRAGMENT_SHADER, FSX)); gl.linkProgram(pr);
         if (!gl.getProgramParameter(pr, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(pr));
         gl.useProgram(pr);
         const buf = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, buf);
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
         const loc = gl.getAttribLocation(pr, 'p'); gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
-        this.tex = [0, 1, 2, 3].map((i) => {
+        this.tex = [0, 1, 2, 3, 4].map((i) => {
           const t = gl.createTexture(); gl.activeTexture(gl.TEXTURE0 + i); gl.bindTexture(gl.TEXTURE_2D, t);
           gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
           gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
@@ -222,7 +227,7 @@ void main(){
         gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true);
         gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
         this.u = {};
-        UNI.concat(['R', 'time', 'seed', 'S', 'duoA', 'duoB', 'grade', 'bgc', 'key', 'mblur']).forEach((n) => (this.u[n] = gl.getUniformLocation(pr, n)));
+        UNI.concat(['R', 'time', 'seed', 'S', 'duoA', 'duoB', 'grade', 'bgc', 'key', 'mblur'], PX ? PX.v3 : []).forEach((n) => (this.u[n] = gl.getUniformLocation(pr, n)));
         this.gl = gl; this.prog = pr;
         return true;
       } catch (e) {
@@ -1734,13 +1739,14 @@ void main(){
       if (fl.has('contrastPop')) gr = [1 + 0.3 * g('contrastPop'), 1 + 0.35 * g('contrastPop'), 0];
       if (fl.has('bleach')) gr = [gr[0] * (1 + 0.25 * g('bleach')), gr[1] * (1 - 0.5 * clamp(g('bleach'))), 0.02];
       u.grade = gr;
+      if (PX) PX.params(g, u, { S, t, beat, burst, pal, has: (id) => fl.has(id), hex3: (h) => U.hex2rgb(h).map((v) => v / 255) });
       return u;
     }
 
     post(info, t, mode) {
       if (!this.useGL) { this.octx.clearRect(0, 0, this.W, this.H); if (mode.key) { this.octx.fillStyle = mode.key; this.octx.fillRect(0, 0, this.W, this.H); } this.octx.drawImage(this.scene, 0, 0); return; }
       const gl = this.gl, u = info.post, U2 = this.u;
-      if (u.bloom > 0 || u.blurMix > 0 || u.tilt > 0) {
+      if (u.bloom > 0 || u.blurMix > 0 || u.tilt > 0 || u.needBlur) {
         const b = this.bctx; b.clearRect(0, 0, this.blurC.width, this.blurC.height);
         b.filter = `blur(${Math.max(1, this.S * 5).toFixed(1)}px)`;
         b.drawImage(this.scene, 0, 0, this.blurC.width, this.blurC.height); b.filter = 'none';
@@ -1751,6 +1757,10 @@ void main(){
         gl.activeTexture(gl.TEXTURE2); gl.bindTexture(gl.TEXTURE_2D, this.tex[2]); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, this.prev[0]);
         gl.activeTexture(gl.TEXTURE3); gl.bindTexture(gl.TEXTURE_2D, this.tex[3]); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, this.prev[1]);
       }
+      const fbOK = this._fbT != null && Math.abs(t - this._fbT) < 0.25 && t >= this._fbT - 1e-6; this._fbT = u.needFB ? t : null;
+      if (u.needFB && !fbOK) { u.fb = 0; u.moshK = 0; }
+      if (u.needFB) { if (!this.fbC) { this.fbC = mk(); } if (this.fbC.width !== this.W || this.fbC.height !== this.H) { this.fbC.width = this.W; this.fbC.height = this.H; }
+        gl.activeTexture(gl.TEXTURE4); gl.bindTexture(gl.TEXTURE_2D, this.tex[4]); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, this.fbC); }
       gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, this.tex[0]);
       // コマ落ち: only refresh the source texture a few times per second
       const stepK = u.step > 0 ? Math.floor(t * u.step) : null;
@@ -1759,11 +1769,14 @@ void main(){
       UNI.forEach((n) => gl.uniform1f(U2[n], u[n] || 0));
       gl.uniform2f(U2.R, this.W, this.H); gl.uniform1f(U2.time, t); gl.uniform1f(U2.seed, (this.p.seed || 0) % 97); gl.uniform1f(U2.S, this.S);
       gl.uniform2f(U2.mblur, u.mblur ? u.mblur[0] : 0, u.mblur ? -u.mblur[1] : 0);
+      if (PX) PX.v3.forEach((n) => U2[n] && gl.uniform3fv(U2[n], u[n] || [0, 0, 0]));
       gl.uniform3fv(U2.duoA, u.duoA); gl.uniform3fv(U2.duoB, u.duoB); gl.uniform3fv(U2.grade, u.grade); if (U2.bgc) gl.uniform3fv(U2.bgc, u.bgc || [0, 0, 0]);
       if (mode.key) { const k = U.hex2rgb(mode.key).map((v) => v / 255); gl.uniform4f(U2.key, k[0], k[1], k[2], 1); }
       else gl.uniform4f(U2.key, 0, 0, mode.transparent ? -1 : 0, 0);
       gl.clearColor(0, 0, 0, 0); gl.clear(gl.COLOR_BUFFER_BIT);
       gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+      if (u.needFB) { const fx = this.fbC.getContext('2d'); fx.clearRect(0, 0, this.W, this.H); fx.drawImage(this.out, 0, 0); }
+      else if (this.fbC && this.fbC.width > 2) { this.fbC.width = 2; }
     }
   }
   Renderer.BLEND = BLEND; Renderer.palOf = palOf; Renderer.tracksOf = tracksOf; Renderer.filtersOf = filtersOf; Renderer.fontOf = fontOf; Renderer.phases = phases;

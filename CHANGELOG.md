@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.13.0 — 2026-11-10
+- Screen filters rebuilt: film grain (luminance-weighted, two-scale, mostly monochrome — replaces flat colour noise), bloom with a soft threshold so only highlights glow, VHS (chroma bleed, softened luma, rolling tracking band, head-switch noise), CRT (RGB shadow mask, phosphor glow, rounded bezel) and a spectral 7-tap chromatic aberration / フィルム粒子・光のにじみ・VHS・ブラウン管・色収差を作り直し
+- 40 new filters in four new groups / 新しいフィルター40種（4グループ）:
+  - Looks: teal & orange, cross process, infrared, night vision, Game Boy, split tone, keep one colour, gradient map, film look (grain + halation + gate weave + flicker + scratches), solarize, bit crush / ルック
+  - Art media & print: risograph, photocopy, CMYK halftone, oil paint, watercolour, pencil sketch, cross-hatching, cel shading, manga screentone, LED wall, LCD subpixels, e-paper / 画材・印刷
+  - Lens & optics: halation, anamorphic streaks, barrel distortion, dirty lens, spin blur, rolling shutter / レンズ・光学
+  - Digital breakage: feedback trails, datamosh, kaleidoscope, Voronoi mosaic, hexagon pixels, edge glow, analogue signal jam / デジタル崩し
+- Auto direction uses the new filters in the styles they suit (e.g. cinematic → teal & orange / anamorphic, punk → photocopy / risograph, chiptune → Game Boy / LED wall, psychedelic → kaleidoscope / feedback) / おまかせが各スタイルに合うフィルターを使用
+
 ## 1.12.0 — 2026-11-10
 - Realistic GPU rebuild of the graphics that looked cheap / 安っぽかったグラフィックをGPUで作り直し:
   - Club: a large mirror ball whose facets reflect a lit room (with grout, tilt jitter and glints), fine volumetric beams and drifting light spots; light-up dance floor and moving-head beams / ミラーボール・ダンスフロア・ムービングライト

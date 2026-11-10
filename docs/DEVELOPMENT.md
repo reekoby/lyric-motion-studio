@@ -2,6 +2,11 @@
 
 最終更新：2026-11-10
 
+## 実装済み（2026-11-10）— フェーズ3（画面フィルター）— `src/pro3.js`
+- `LM.POSTX = { uni, v3, decl, uv, smp, col, fin, params }` をレンダラーの後処理シェーダーの差し込み口（`/*X_DECL*/` `/*X_UV*/` `/*X_SMP*/` `/*X_COL*/` `/*X_FIN*/`）に展開。`params(g, u, ctx)` が `postParams` の最後に呼ばれる
+- `u.needBlur` で縮小ぼかしテクスチャ（T1）を作る、`u.needFB` で前フレームの出力を T4 に保持（フィードバック・データモッシュ。時間が飛んだフレームでは無効化）
+- フィルターのカテゴリーを追加：look / media / lens / digital（`FX.cats`）
+
 ## 実装済み（2026-11-10）— リアル化 — `src/glfx.js` / `src/glfx2.js`
 - `LM.glfx.full(ctx, progId, R, o)` が全画面のGPUレイヤーを描く（失敗時は従来の2D描画に戻る）。`LM.glfx.PROG[id] = [prelude, main]`、遅延コンパイル
 - glfx2 の共通GLSL：五次補間のグラディエントノイズ `gn/sfbm`（法線にブロックが出ない）、スタジオ環境 `envS`、光沢マテリアル `glossy(n, base, metal, rough)`、色を保つトーンマップ `tmK`
