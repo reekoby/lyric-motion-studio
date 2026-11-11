@@ -2,6 +2,19 @@
 
 最終更新：2026-11-11
 
+## 実装済み（2026-11-11）— フェーズ6（実験）— `src/ml.js` / `src/lfx.js` / `src/exp.js` / `src/sem.js`
+- ML：TensorFlow.js（core + WebGL + converter の UMD、未改変）を同梱し、モデルは別ファイルの ML パック（`tools/build-mlpack.mjs` が `@vladmandic/human-models` から作る。`LMSML1\n` + uint32 ヘッダ長 + JSON ヘッダ + 重み）。パックはデータのみなので CSP（スクリプトはハッシュ固定）を崩さない。IndexedDB の `mlpack` に保存
+  - 推論は同期（`execute` + `dataSync`）でレンダラーから直接呼ぶ。`paint` が文字の背後（背景・画像・背景モーション）を `scratch(5)` に写し、`mlSeg`（256² のセグメンテーション → 半解像度に拡大・シグモイドで縁を締める・連続フレームは時間平滑）、`mlInfo`（顔・骨格：曲全体の解析トラックがあればそれを補間、無ければその場で検出して平滑）
+  - 前後関係：`front` の付いたグリフは `scratch(7)` の前面レイヤーへ。`compositeLayer` で 文字 → 人物の切り抜き → 前面 の順に重ねる
+  - 解析：`render(t, {bgOnly:true})` で背景だけを描いて 10fps で顔・骨格を検出し、信頼度付きガウス平滑と短い欠損の補間。キーは画像設定のハッシュ（`LM.ml.curKey`）
+- 実験フィルター（`k:'layer'`）：`compositeLayer` が文字レイヤーを `LM.lfx.apply` に通す。WebGL2 + float RT。SDF は JFA（RGBA32F）で、クロムは面取りの法線と環境の映り込み、液体はメタボールとの smooth-min。反応拡散は Gray–Scott（迷路の領域、文字の外は死滅、RGBA32F、格子は文字サイズに合わせる）。墨は stable fluids（カールノイズ・浮力・14回の Jacobi）。いずれも行の開始から固定ステップで進め、巻き戻ると再計算。セルオートマトンは CPU（15Hz）
+- 書体モーフ：2つの書体で描いたグリフの符号付き距離場（Felzenszwalb の EDT）を補間して閾値化。32段階でキャッシュ
+- 自作 GLSL：WebGL1（ループ回数が定数）で `effect(uv)` を全画面に適用、ポストフィルターの前
+- 歌詞の意味：日英の小さな辞書（モチーフ15種・感情価・覚醒度）。キーワード選択（`typo.js`）、区間の背景、行のフィルター、エネルギーに反映
+- 進化：テーマ・シード・動きの付け方・激しさ・変化・強さを遺伝子として、選ばれた案の交叉と突然変異で6案を作る（サムネイルはサビの1フレームを実描画）
+- 操作（プレビューのみ）：`view.interactive` と `view.ptr` がグリフを押しのけ、波紋を立てる。書き出しのレンダラーには無い
+- 見送り：MSDF への描画基盤の置き換え（EX-03）、生成フォント・スタイル転写・深度推定・物体認識・平面トラッキング（モデルや大きな UI が必要）、ノードエディタ（EX-21）
+
 ## 実装済み（2026-11-11）— フェーズ5（3Dと物理）— `src/phys.js` / `src/gpts.js` / `src/cam3d.js`
 - グリフ描画の差し込み口 `T.paint(ctx, {g, T, draw, size, col, cc, ch, r, a, st})` と `T.pd`（モーションが返す `{paint, pd}`）。`drawGlyph` の最初に呼ばれ、文字は原点（グリフ中心・変形済み）。`LM.glyphPaint` に form / burst / morph / emit / cloth / rope / extrude
 - 物理：`simOf(C, key, build)` がレイアウトのグリフ配列（`C.gl`）をキーに1回だけシミュレーション（120Hz）。登場・退場は進行度 p を物理時間に写像、保持は経過時間。剛体は箱と床の撃力解法（反発・クーロン摩擦）、登場は最後に整列へブレンド。群れはボイド、IK は行ごとの FABRIK

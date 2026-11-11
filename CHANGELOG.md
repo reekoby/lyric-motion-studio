@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.16.0 — 2026-11-11
+- Compositing with people in the background image / video (optional ML pack, all on the device): lyric behind the person, circling the person (in front and behind), following the face, words leaving the mouth, following / pushed by the hands, laid along the arms, moving to the free side; whole-song movement analysis for smooth tracking / 背景の人物との合成（MLパック・端末内処理）
+- ML pack: `lms-ml-pack.lmsml` (≈5.5 MB, data only: person segmentation, BlazeFace, MoveNet Lightning), loaded once and kept in the browser; TensorFlow.js is bundled to run it / MLパック（別配布・データのみ）
+- Experimental lyric filters: solid chrome letters and letters melting into liquid metal (signed distance fields on the GPU), reaction–diffusion patterns carved into the letters, letters grown by a cellular automaton, ink dissolving in water (fluid simulation) / 実験フィルター（SDF・反応拡散・セルオートマトン・墨の流体）
+- Typeface morph entrance and "breathing" hold (distance-field interpolation between two faces) / 書体が変形する登場・保持
+- Backgrounds: a million GPU particles, generative geometry chosen and driven by the song (key, sections, intensity, kicks) / 百万粒子・音から生まれる幾何学
+- Your own GLSL shader over the whole frame, with audio uniforms; included in exports / 自作シェーダー（GLSL）
+- Auto direction reads the lyric (fire, rain, stars, light, love… and the feeling of a line) to pick the emphasised word, section backgrounds, filters and energy / 歌詞の意味を読んだおまかせ
+- "Evolve candidates and pick" in the Auto tab: six rendered candidates, pick favourites, crossover + mutation into the next generation / 候補を進化させて選ぶ
+- Preview interaction ("✋ Touch": letters step aside and ripple under the pointer) and beat vibration on phones / プレビューで歌詞に触れる・振動
+- Share looks as text (copy / paste) / ルックをテキストで共有
+
 ## 1.15.0 — 2026-11-11
 - Physics for lyrics, pre-computed so preview and export match / 歌詞の物理演算（事前計算でプレビューと書き出しが一致）:
   - Enter: animation principles in one move (wind-up, arc, stretch along the motion, squash on landing, follow-through), rigid letters dropped onto the baseline (gravity, collision, friction, tumble, settle), a flock that flies in and lines up (boids) / アニメの原則・剛体の落下・群れ

@@ -35,7 +35,12 @@ vec4 proj(vec3 p,float fov){float z=p.z+3.2;return vec4(p.x*fov/z*R.y/R.x,p.y*fo
       vec3 p=c+r*vec3(sin(ph)*cos(th),cos(ph)*.7,sin(ph)*sin(th));p=rY(T*.05)*p;vec4 o=proj(p,2.2);gl_Position=o;float z=p.z+3.2;
       vc=mix(C0,C1,a.y)*(1.+exp(-r*12.)*.8);va=.42*clamp(2./z,.4,1.3);gl_PointSize=max(1.,S*1.6*2.4/z);}`,
   };
-  const N = { lorenz: 150000, galaxy: 140000, curl: 40000, swarm: 60000 };
+  // EX-01: a million points on a slowly folding silk surface, sharpened by noise (computed per vertex on the GPU)
+  PROGS.million = `void main(){float u=a.x*6.2832,w=a.y*6.2832,t=T*.11;
+      vec3 p=vec3(sin(u*2.+t)*cos(w)+.35*sin(w*3.+t*1.7),cos(u*3.-t*.8)*.6+.25*sin(w*5.+u+t),sin(w*2.+t*1.3)*cos(u)+.3*cos(u*4.-t));
+      p+=g3(p*2.4+vec3(t*.6))*.07*(1.+B*.6);p*=.78;p=rY(T*.06)*rX(.3)*p;vec4 o=proj(p,2.2);gl_Position=o;float z=p.z+3.2;
+      vc=mix(mix(C1,C0,a.y),C2,pow(a.z,10.));va=.075*clamp(2.6/z,.4,1.6)*(1.+B*.4);gl_PointSize=max(1.,S*1.05);}`;
+  const N = { lorenz: 150000, galaxy: 140000, curl: 40000, swarm: 60000, million: 1000000 };
   let G = null;
   function gl0() {
     if (G !== null) return G;
@@ -85,6 +90,7 @@ vec4 proj(vec3 p,float fov){float z=p.z+3.2;return vec4(p.x*fov/z*R.y/R.x,p.y*fo
   gdef('galaxy', 'galaxy', '渦巻銀河（14万個の星が回る）');
   gdef('curlFlow', 'curl', '流れる粒子（カールノイズの流体）');
   gdef('attractorSwarm', 'swarm', '引き寄せられる粒子の群れ');
+  gdef('millionParticles', 'million', '百万粒子の流れる布（GPU）');
   LM.gpts = { render };
 
   /* ---------- canvas 2D particles ---------- */
@@ -126,7 +132,7 @@ vec4 proj(vec3 p,float fov){float z=p.z+3.2;return vec4(p.x*fov/z*R.y/R.x,p.y*fo
   def('leaves', 'ひらひら落ちる葉', (ctx, R) => leaf(ctx, R, 'leaf'));
 
   const D = LM.data, addTo = (id, o) => { const t = D.themeById[id]; if (t) t.bgm = Object.assign({}, t.bgm || {}, o); };
-  [['edm', { attractorSwarm: 1, curlFlow: 0.8 }], ['techno', { lorenzAttractor: 1, plexus: 1.2 }], ['vj', { lorenzAttractor: 1.2, curlFlow: 1, attractorSwarm: 1, plexus: 1 }], ['psyche', { curlFlow: 1.2, attractorSwarm: 1 }],
+  [['edm', { attractorSwarm: 1, curlFlow: 0.8 }], ['techno', { lorenzAttractor: 1, plexus: 1.2 }], ['vj', { lorenzAttractor: 1.2, curlFlow: 1, attractorSwarm: 1, plexus: 1, millionParticles: 1 }], ['psyche', { curlFlow: 1.2, attractorSwarm: 1 }],
     ['cinematic', { galaxy: 1.2, curlFlow: 0.6 }], ['ambient', { galaxy: 1, curlFlow: 1, feathers: 0.8 }], ['dream', { galaxy: 0.8, feathers: 1, curlFlow: 0.8 }], ['ballad', { feathers: 0.8, galaxy: 0.6 }],
-    ['acoustic', { leaves: 1.2 }], ['wa', { leaves: 1 }], ['classical', { feathers: 0.8, galaxy: 0.6 }], ['kids', { fountain: 1 }], ['latin', { fountain: 0.8 }], ['minimal', { plexus: 0.8 }], ['showreel', { plexus: 1, lorenzAttractor: 0.6 }], ['experimental', { lorenzAttractor: 1, attractorSwarm: 1 }]].forEach(([id, o]) => addTo(id, o));
+    ['acoustic', { leaves: 1.2 }], ['wa', { leaves: 1 }], ['classical', { feathers: 0.8, galaxy: 0.6 }], ['kids', { fountain: 1 }], ['latin', { fountain: 0.8 }], ['minimal', { plexus: 0.8 }], ['showreel', { plexus: 1, lorenzAttractor: 0.6 }], ['experimental', { lorenzAttractor: 1, attractorSwarm: 1, millionParticles: 1.2 }], ['cinematic', { millionParticles: 0.6 }], ['dream', { millionParticles: 0.6 }]].forEach(([id, o]) => addTo(id, o));
 })();

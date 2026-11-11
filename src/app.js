@@ -56,6 +56,7 @@
     S.dirty = true;
     if (!opts.quiet) refresh(opts);
     updateUndo();
+    if (LM.ml && LM.ml.state !== 'none') { LM.ml.curKey = mlKey(); if (LM.ml.state === 'loaded') mlStart(); }
   }
   const commitSoon = U.debounce(() => commit({ keep: true }), 350);
   function undo() { if (hist.idx > 0) { hist.idx--; P = JSON.parse(hist.stack[hist.idx]); afterLoad(true); } }
@@ -1728,6 +1729,123 @@
     fr.addEventListener('dblclick', (e) => { if (S.tap || e.target.closest('.prompter')) return; const c = selCue(); if (c && c.tf) { delete c.tf.x; delete c.tf.y; commit(); } });
   })();
 
+  /* ---------------- user GLSL (whole-frame shader) ---------------- */
+  function syncGlsl() { $('#glslOn').checked = !!P.glslOn; $('#glslAmt').value = P.glslAmt == null ? 100 : P.glslAmt; $('#glslAmtV').textContent = ($('#glslAmt').value) + '%'; if (document.activeElement !== $('#glslSrc')) $('#glslSrc').value = P.glsl || LM.cglsl.DEF; }
+  function glslApply() {
+    const src = $('#glslSrc').value.slice(0, 20000), err = LM.cglsl.compile(src);
+    $('#glslErr').hidden = !err; $('#glslErr').textContent = err || '';
+    if (err) return toast(T('シェーダーにエラーがあります'), true);
+    P.glsl = src; if (!P.glslOn) P.glslOn = true; syncGlsl(); commit(); toast(T('シェーダーを適用しました'));
+  }
+  $('#glslApply').onclick = glslApply;
+  $('#glslSrc').onkeydown = (e) => { if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); glslApply(); } e.stopPropagation(); };
+  $('#glslReset').onclick = () => { $('#glslSrc').value = LM.cglsl.DEF; $('#glslErr').hidden = true; };
+  $('#glslOn').onchange = (e) => { if (e.target.checked && !P.glsl) { P.glsl = $('#glslSrc').value || LM.cglsl.DEF; } P.glslOn = e.target.checked && !!P.glsl; commit(); };
+  $('#glslAmt').oninput = (e) => { P.glslAmt = +e.target.value; $('#glslAmtV').textContent = e.target.value + '%'; S.dirty = true; commitSoon(); };
+
+  /* ---------------- touch the lyric in the preview (not exported) / beat haptics ---------------- */
+  {
+    const cv = $('#view'), btn = $('#interBtn');
+    const at = (e) => { const r = cv.getBoundingClientRect(); return { x: ((e.clientX - r.left) / r.width) * view.W, y: ((e.clientY - r.top) / r.height) * view.H }; };
+    btn.onclick = () => { view.interactive = !view.interactive; btn.classList.toggle('on', view.interactive); if (!view.interactive) view.ptr = null; S.dirty = true; };
+    cv.addEventListener('pointermove', (e) => { if (!view.interactive) return; const p = at(e), o = view.ptr; view.ptr = { x: p.x, y: p.y, t: o && Math.hypot(o.x - p.x, o.y - p.y) < view.W * 0.08 ? o.t : now() }; S.dirty = true; });
+    cv.addEventListener('pointerdown', (e) => { if (!view.interactive) return; const p = at(e); view.ptr = { x: p.x, y: p.y, t: now() }; S.dirty = true; });
+    cv.addEventListener('pointerleave', () => { if (view.ptr) { view.ptr = null; S.dirty = true; } });
+    const hb = $('#hapticBtn'); let hapt = false, lastB = null;
+    if ('vibrate' in navigator && matchMedia('(pointer: coarse)').matches) hb.hidden = false;
+    hb.onclick = () => { hapt = !hapt; hb.classList.toggle('on', hapt); if (hapt) navigator.vibrate(12); };
+    const hloop = () => { if (hapt && S.playing) { const b = view.lastTrig(now(), 1); if (lastB != null && b !== lastB) navigator.vibrate(view.beatAt(b + 0.001) > 0.5 ? 16 : 0); lastB = b; } requestAnimationFrame(hloop); };
+    requestAnimationFrame(hloop);
+  }
+
+  /* ---------------- evolve the auto direction (pick favourites → crossover + mutation) ---------------- */
+  {
+    const EV = { gen: 0, list: [], sel: new Set() };
+    const genesOf = () => ({ theme: P.theme, seed: P.seed, feel: P.feel || 'auto', drive: P.drive == null ? null : P.drive, variety: P.variety == null ? null : P.variety, intensity: P.intensity || 1 });
+    const rndTheme = () => D.themes[Math.floor(Math.random() * D.themes.length)].id;
+    const FE = ['auto', 'smooth', 'bounce', 'snap', 'glitch', 'cinema', 'organic', 'kinetic'];
+    function mutate(g, rate) {
+      g = Object.assign({}, g); g.seed = Math.floor(Math.random() * 2147483647);
+      if (Math.random() < rate * 0.35) g.theme = rndTheme();
+      if (Math.random() < rate * 0.6) g.feel = FE[Math.floor(Math.random() * FE.length)];
+      if (Math.random() < rate * 0.7) g.drive = U.clamp((g.drive == null ? 0.5 : g.drive) + (Math.random() - 0.5) * 0.5, 0, 1);
+      if (Math.random() < rate * 0.5) g.variety = U.clamp((g.variety == null ? 0.5 : g.variety) + (Math.random() - 0.5) * 0.5, 0, 1);
+      if (Math.random() < rate * 0.4) g.intensity = U.clamp(+(g.intensity * (0.8 + Math.random() * 0.45)).toFixed(2), 0.5, 1.6);
+      return g;
+    }
+    const cross = (a, b) => { const o = {}; for (const k of Object.keys(a)) o[k] = Math.random() < 0.5 ? a[k] : b[k]; return o; };
+    function variant(g) {
+      const Q = MD.normalize(JSON.parse(JSON.stringify(P)));
+      if (g.theme !== Q.theme) LM.director.applyTheme(Q, g.theme);
+      Object.assign(Q, { seed: g.seed, feel: g.feel, drive: g.drive, variety: g.variety, intensity: g.intensity });
+      Q.cues = LM.director.generate(Q, { seed: g.seed }); return Q;
+    }
+    function sampleT() { const ch = (P.sections || []).find((x) => x.type === 'chorus'); const c = P.cues.find((x) => ch && x.start >= ch.t) || P.cues[Math.floor(P.cues.length * 0.4)] || P.cues[0]; return c ? c.start + Math.min(1.4, (c.end - c.start) * 0.45) : dur() * 0.4; }
+    async function render() {
+      $('#evoGen').textContent = `${T('第')}${EV.gen}${T('世代')}`; const grid = $('#evoGrid'); grid.innerHTML = ''; const t = sampleT();
+      const [AW, AH] = D.aspects[P.aspect] || [1920, 1080], k = 300 / Math.max(AW, AH), W = Math.round(AW * k / 2) * 2, H = Math.round(AH * k / 2) * 2;
+      for (let i = 0; i < EV.list.length; i++) {
+        const it = EV.list[i]; if (!it.Q) it.Q = variant(it.g);
+        await LM.fonts.ensureProject(it.Q);
+        const r = new LM.Renderer({ W, H, images: S.images, audio: LM.audio }); r.setProject(it.Q); try { r.render(t, {}); } catch (e) {}
+        const b = document.createElement('button'); b.className = 'evo' + (EV.sel.has(i) ? ' on' : ''); b.style.cssText = 'padding:0;border:2px solid ' + (EV.sel.has(i) ? 'var(--acc,#8af)' : 'transparent') + ';border-radius:8px;overflow:hidden;background:#000;cursor:pointer;text-align:left';
+        const im = document.createElement('img'); im.src = r.out.toDataURL('image/jpeg', 0.8); im.style.cssText = 'width:100%;display:block';
+        const cap = document.createElement('div'); cap.className = 'hint'; cap.style.cssText = 'padding:4px 6px;background:var(--panel,#222)'; const fe = FEELS.find((f) => f[0] === it.g.feel); cap.textContent = `${T((D.themeById[it.g.theme] || {}).n || it.g.theme)} · ${fe ? T(fe[2]) : it.g.feel}`;
+        b.append(im, cap); b.onclick = () => { EV.sel.has(i) ? EV.sel.delete(i) : EV.sel.add(i); render(); };
+        grid.append(b);
+        if (r.gl) { const ext = r.gl.getExtension('WEBGL_lose_context'); ext && ext.loseContext(); }
+      }
+      $('#evoNext').disabled = EV.sel.size < 1; $('#evoUse').disabled = EV.sel.size !== 1;
+    }
+    function nextGen(parents) {
+      const out = []; for (let i = 0; i < 6; i++) { const a = parents[i % parents.length], b = parents[Math.floor(Math.random() * parents.length)]; out.push({ g: mutate(parents.length > 1 ? cross(a, b) : a, i < 2 ? 0.35 : 0.8) }); }
+      EV.list = out; EV.sel.clear(); EV.gen++; render();
+    }
+    $('#evoOpen').onclick = () => { if (!P.cues.length) return toast(T('先に歌詞を配置してください'), true); EV.gen = 0; nextGen([genesOf()]); $('#evoModal').classList.add('open'); };
+    $('#evoNext').onclick = () => nextGen([...EV.sel].map((i) => EV.list[i].g));
+    $('#evoUse').onclick = async () => {
+      const it = EV.list[[...EV.sel][0]]; if (!it) return; await saveSnap(T('進化で選ぶ直前'), true);
+      const g = it.g; if (g.theme !== P.theme) LM.director.applyTheme(P, g.theme);
+      Object.assign(P, { seed: g.seed, feel: g.feel, drive: g.drive, variety: g.variety, intensity: g.intensity });
+      P.cues = LM.director.generate(P, { seed: P.seed }); pushPlan(); await LM.fonts.ensureProject(P); commit(); $('#evoModal').classList.remove('open'); toast(T('選んだ候補を適用しました'));
+    };
+  }
+
+  /* ---------------- people in the background (optional ML pack) ---------------- */
+  function mlKey() { return U.strHash(JSON.stringify([P.images, P.imgOn, P.imgChange, P.imgEvery, P.imgOrder, P.imgKB, P.imgLook, P.aspect, dur()])); }
+  function mlUsed() { return !!P.mlBehind || P.cues.some((c) => { const t = c.scene || {}; return ['enter', 'hold', 'exit'].some((k) => { const id = t[k] || c[k]; return id && LM.ml.USES.has(id); }) || (c.filters || []).includes('behindPerson') || (t.filters || []).includes('behindPerson'); }); }
+  function mlShow(msg) {
+    const i = LM.ml.info(), has = i.state !== 'none';
+    $('#mlInfo').textContent = msg || (i.state === 'none' ? T('MLパック未読み込み') : i.state === 'error' ? T('MLパックを使えません') + ': ' + i.err : `${T('MLパック')} ${(i.size / 1048576).toFixed(1)}MB · ${i.state === 'ready' ? T('準備完了') : T('読み込み済み')}${LM.ml.hasTracks(mlKey()) ? ' · ' + T('動き解析済み') : ''}`);
+    $('#mlAnalyze').disabled = !has; $('#mlForget').disabled = !has; $('#mlBehind').checked = !!P.mlBehind;
+  }
+  async function mlStart(force) {
+    if (LM.ml.state === 'none' || LM.ml.ready || (!force && !mlUsed())) return mlShow();
+    mlShow(T('MLモデルを準備しています…'));
+    try { await LM.ml.init(); view.invalidate && view.invalidate(); S.dirty = true; } catch (e) { toast(T('MLパックを使えません') + ': ' + e.message, true); }
+    mlShow();
+  }
+  $('#mlFile').onchange = async (e) => {
+    const f = e.target.files[0]; e.target.value = ''; if (!f) return;
+    try { const ab = await f.arrayBuffer(); LM.ml.forget(); LM.ml.setPack(ab); await idb.set('mlpack', ab); toast(T('MLパックを読み込みました')); await mlStart(true); }
+    catch (err) { toast(T('MLパックを読み込めません') + ': ' + err.message, true); mlShow(); }
+  };
+  $('#mlForget').onclick = async () => { if (!(await ask(T('保存したMLパックを削除しますか？'), { ok: T('削除') }))) return; LM.ml.forget(); await idb.del('mlpack'); mlShow(); S.dirty = true; };
+  $('#mlBehind').onchange = (e) => { P.mlBehind = e.target.checked; commit(); mlStart(); };
+  $('#mlAnalyze').onclick = async () => {
+    try {
+      await mlStart(true); if (!LM.ml.ready) return;
+      const [AW, AH] = D.aspects[P.aspect] || [1920, 1080], k = 640 / Math.max(AW, AH), W = Math.round(AW * k / 2) * 2, H = Math.round(AH * k / 2) * 2;
+      const imgs = LM.video ? await LM.video.forExport(S.images, 640) : S.images, r = new LM.Renderer({ W, H, images: imgs, audio: LM.audio }); r.setProject(MD.normalize(JSON.parse(JSON.stringify(P))));
+      $('#mlAnalyze').disabled = true;
+      try { await LM.ml.analyze(async (t) => { if (r.prepareVideos) await r.prepareVideos(t); r.render(t, { bgOnly: true }); return r.scene; }, dur(), (q) => mlShow(`${T('人物の動きを解析中…')} ${Math.round(q * 100)}%`), 10, mlKey()); }
+      finally { if (imgs && imgs.__dispose) await imgs.__dispose(); }
+      LM.ml.curKey = mlKey(); toast(T('人物の動きを解析しました')); S.dirty = true;
+    } catch (e) { toast(T('解析できませんでした') + ': ' + e.message, true); }
+    mlShow();
+  };
+  (async () => { const ab = await idb.get('mlpack'); if (ab && ab.byteLength) { try { LM.ml.setPack(ab); } catch (e) {} } LM.ml.curKey = mlKey(); mlShow(); mlStart(); })();
+
   /* ---------------- looks (saved design presets) ---------------- */
   const LOOK_KEYS = ['theme', 'palette', 'colors', 'autoColors', 'series', 'font', 'fontWeight', 'textScale', 'tracking', 'intensity', 'speed', 'tempoSync', 'filters', 'filterAmt', 'filterIntensity', 'autoFilters', 'pattern', 'camera', 'keyColor', 'autoBgm', 'bgm', 'bgmAmt', 'bgmSpeed', 'bgmDim', 'autoTrans', 'autoGfx', 'transOff', 'ruby', 'glyphMB', 'softMask', 'drive', 'feel', 'variety', 'latinTrack', 'wordSpace', 'wakanGap', 'yakuAmt', 'wakan', 'yakumono', 'bgmOpacity', 'bgmBlend', 'gapFill', 'gapBgm', 'gapVisual', 'gapVisStyle', 'gapLabel', 'gapCountdown', 'gapOpacity', 'gapBlend', 'gapAmt', 'gapSpeed', 'gapCam', 'gapEvery', 'gapFlash', 'gapVisAmt', 'gapProgress'];
   // looks come from localStorage or imported files: validate everything through the project normalizer
@@ -1764,6 +1882,18 @@
     const L = looks(); L.push({ n: String(n).slice(0, 40), v }); U.store.set('lms.looks', L); buildLooks(); toast('ルックを保存しました');
   };
   $('#lookExport').onclick = () => { const L = looks(); if (!L.length) return toast('保存されたルックがありません', true); saveFile(new Blob([JSON.stringify({ lmsLooks: 1, looks: L }, null, 1)], { type: 'application/json' }), 'lyric-motion-looks.json'); };
+  $('#lookCopy').onclick = async () => {
+    const v = {}; LOOK_KEYS.forEach((k) => { if (P[k] !== undefined) v[k] = JSON.parse(JSON.stringify(P[k])); }); v.bg = Object.assign({}, P.bg); delete v.bg.image;
+    const txt = 'LMS-LOOK:' + JSON.stringify({ n: (D.themeById[P.theme] || {}).n || 'Look', v });
+    try { await navigator.clipboard.writeText(txt); toast(T('ルックをコピーしました')); } catch (e) { await ask(T('このテキストをコピーして共有してください'), { input: txt, ok: 'OK' }); }
+  };
+  $('#lookPaste').onclick = async () => {
+    let txt = ''; try { txt = await navigator.clipboard.readText(); } catch (e) {}
+    if (!/^LMS-LOOK:/.test(txt || '')) txt = await ask(T('共有されたルックのテキストを貼り付けてください'), { input: '', ok: T('追加') });
+    if (!txt) return;
+    try { const lk = cleanLook(JSON.parse(String(txt).replace(/^\s*LMS-LOOK:/, ''))); if (!lk) throw new Error('bad'); const L = looks(); L.push(lk); U.store.set('lms.looks', L); buildLooks(); toast(T('ルックを追加しました')); }
+    catch (e) { toast(T('ルックを読み取れませんでした'), true); }
+  };
   $('#lookImport').onchange = async (e) => {
     const f = e.target.files[0]; e.target.value = ''; if (!f) return;
     try { const j = JSON.parse(await f.text()); const add = (Array.isArray(j && j.looks) ? j.looks : []).slice(0, 200).map(cleanLook).filter(Boolean); if (!add.length) throw new Error('ルックが含まれていません'); U.store.set('lms.looks', looks().concat(add)); buildLooks(); toast(`${add.length}件のルックを読み込みました`); } catch (er) { toast('読み込めませんでした：' + er.message, true); }
@@ -2227,7 +2357,7 @@
     $('#bgDim').value = Math.round(((P.bg && P.bg.dim) ?? 0.45) * 100); $('#bgDimV').textContent = $('#bgDim').value + '%';
     $('#bgBlur').value = (P.bg && P.bg.blur) || 0; $('#bgBlurV').textContent = $('#bgBlur').value;
     $('#pattern').value = P.pattern || 'none'; $('#camera').value = P.camera || '';
-    syncReact(); $('#beatSync').checked = P.beatSync !== false; $('#bpm').value = P.bpm || ''; $('#beatOffset').value = P.beatOffset || 0;
+    syncReact(); syncGlsl(); $('#beatSync').checked = P.beatSync !== false; $('#bpm').value = P.bpm || ''; $('#beatOffset').value = P.beatOffset || 0;
     pruneMulti();
     $('#rubyOn').checked = P.ruby !== false; $('#softMask').checked = P.softMask !== false;
     buildFxGlobal(); renderList(); renderInspector(); syncFine(); syncBgmUI(); renderSections(); buildLooks(); syncImgUI();

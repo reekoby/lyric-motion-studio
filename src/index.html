@@ -438,6 +438,7 @@ input[type=color]{width:30px;height:28px;padding:0;border:1px solid var(--line);
           <div class="row" style="margin-top:10px;justify-content:space-between">
             <button class="btn sm" id="planPrev">◀ 前の案</button><span class="hint" id="planInfo">案 –</span><button class="btn sm" id="planNext">次の案 ▶</button>
           </div>
+          <button class="btn sm" id="evoOpen" style="width:100%;margin-top:6px" title="6つの候補から好みを選ぶと、それを掛け合わせて次の候補を作ります">🧬 候補を進化させて選ぶ</button>
           <p class="hint">🔒 固定した行は再生成されません。同じシード・同じ歌詞なら同じ結果になります。</p>
         </div>
       </section>
@@ -446,7 +447,7 @@ input[type=color]{width:30px;height:28px;padding:0;border:1px solid var(--line);
         <div class="sec">
           <h3>ルック（見た目のプリセット） <span class="sp"></span><button class="btn sm" id="lookSave">＋ 今の見た目を保存</button></h3>
           <div class="looks" id="looks"></div>
-          <div class="row" style="margin-top:6px"><button class="btn sm" id="lookExport">書き出し</button><label class="btn sm"><input type="file" id="lookImport" accept=".json" hidden>読み込み</label><span class="sp"></span></div>
+          <div class="row" style="margin-top:6px"><button class="btn sm" id="lookExport">書き出し</button><button class="btn sm" id="lookCopy" title="今の見た目をテキストとしてコピー（チャットなどで共有）">コピー</button><button class="btn sm" id="lookPaste" title="コピーされたルックを貼り付けて追加">貼り付け</button><label class="btn sm"><input type="file" id="lookImport" accept=".json" hidden>読み込み</label><span class="sp"></span></div>
           <p class="hint">配色・書体・背景・背景モーション・フィルター・動きの強さ/速さをまとめて保存します。案件やアーティストごとのトンマナを一発で呼び出せます（このブラウザーに保存）。</p>
         </div>
         <div class="sec">
@@ -558,6 +559,11 @@ input[type=color]{width:30px;height:28px;padding:0;border:1px solid var(--line);
           <div class="row"><label title="背景モーションの濃さ。下げると背景画像・背景がよく見えます">不透明度</label><input type="range" class="bgmOp" id="bgmOpacity2" min="0" max="100" step="1"><span class="val" id="bgmOpacity2V"></span></div>
           <div class="row"><label title="背景モーションを下の画像・背景にどう重ねるか">描画モード</label><select class="bgmBl" id="bgmBlend2" style="flex:1"><option value="normal">通常</option><option value="screen">スクリーン（明るく重ねる）</option><option value="lighter">加算（光らせる）</option><option value="lighten">比較（明）</option><option value="color-dodge">覆い焼きカラー</option><option value="overlay">オーバーレイ</option><option value="soft-light">ソフトライト</option><option value="hard-light">ハードライト</option><option value="multiply">乗算（暗く重ねる）</option><option value="darken">比較（暗）</option><option value="difference">差の絶対値</option><option value="exclusion">除外</option><option value="luminosity">輝度（明度だけ重ねる）</option><option value="color">カラー（色だけ重ねる）</option></select></div>
           <label class="tg"><input type="checkbox" id="imgBgmFull"><i></i>全面の背景モーション（シェーダー等）を画像の上に重ねる</label>
+          <div class="subh">人物との合成（AI） <span class="hint">（端末内で処理・送信なし）</span></div>
+          <div class="row"><span class="hint" id="mlInfo" style="flex:1">MLパック未読み込み</span><label class="btn sm"><input type="file" id="mlFile" accept=".lmsml" hidden>MLパックを読み込む</label></div>
+          <div class="row"><a class="btn sm" id="mlGet" href="__REPO_URL__lms-ml-pack.lmsml" target="_blank" rel="noopener" title="約5.5MB。一度読み込めばこのブラウザーに保存されます">MLパックを入手</a><button class="btn sm" id="mlAnalyze" disabled title="背景の人物の顔と体の動きを曲全体で解析し、なめらかに追従させます">人物の動きを解析</button><button class="btn sm" id="mlForget" disabled>削除</button></div>
+          <label class="tg"><input type="checkbox" id="mlBehind"><i></i>歌詞を人物の後ろに回す（すべての行）</label>
+          <p class="hint">背景の画像・動画に写っている人物を見分けて、歌詞を人物の後ろに回したり、人物の周りを回らせたり、顔・口元・手・腕に合わせて動かせます（保持・登場の「実写合成」グループ、フィルター「歌詞を人物の後ろに回す」）。MLパック（人物の切り抜き・顔・骨格の学習済みモデル）は一度読み込めばこのブラウザーに保存されます。</p>
           <p class="hint">サムネイルをクリックでオン／オフ、◀ ▶ で並べ替え、ダブルクリックで表示位置（中心）を調整。行ごとに画像を指定するには右の詳細パネル「背景画像」から。画像はこのブラウザーに保存され、.lmz（音源込み保存）にも含まれます。動画（MP4 / WebM）も同じように並べて使え、書き出しではフレーム単位で正確に合成します（音声は使いません）。</p>
         </div>
         <div class="sec">
@@ -591,6 +597,15 @@ input[type=color]{width:30px;height:28px;padding:0;border:1px solid var(--line);
           <div class="row"><label>なめらかさ</label><input type="range" id="reactSmooth" min="0" max="100" step="1"><span class="val" id="reactSmoothV"></span></div>
           <p class="hint" id="auInfo">音源を読み込むと、キック・スネア・ハイハット・歌声・音程・左右の定位・曲の構成を解析し、文字・背景・フィルターが音に反応します。</p>
           <p class="hint">歌詞全体がキックで脈打ち、音量で明るくなります。行ごとの「保持」や背景・フィルターの「音に反応」グループでより強い連動を選べます。強調の「きっかけ」をキック・スネアにすると、拍ではなく実際の音に合わせて弾みます。</p>
+        </div>
+        <div class="sec">
+          <h3>自作シェーダー（GLSL）</h3>
+          <label class="tg"><input type="checkbox" id="glslOn"><i></i>画面全体にかける</label>
+          <div class="row"><label>かかり具合</label><input type="range" id="glslAmt" min="0" max="100" step="1"><span class="val" id="glslAmtV"></span></div>
+          <textarea id="glslSrc" spellcheck="false" rows="9" style="width:100%;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11px;line-height:1.45;white-space:pre;tab-size:2" data-noi18n></textarea>
+          <div class="row"><button class="btn sm" id="glslApply">適用</button><button class="btn sm" id="glslReset">例に戻す</button><span class="sp"></span></div>
+          <p class="hint" id="glslErr" style="color:var(--bad,#e55);white-space:pre-wrap;margin:2px 0" hidden></p>
+          <p class="hint"><code>vec4 effect(vec2 uv)</code> を書くと毎フレームの画面全体に適用されます。使えるもの：<code>tex</code>（画面）、<code>res</code>、<code>time</code>、<code>beat</code>、<code>bass</code> <code>mid</code> <code>high</code> <code>kick</code> <code>rms</code>（音の強さ 0〜1）。書き出しにも反映されます。</p>
         </div>
         <div class="sec">
           <h3>トランジション</h3>
@@ -656,6 +671,8 @@ input[type=color]{width:30px;height:28px;padding:0;border:1px solid var(--line);
         <div class="sp"></div>
         <select id="aspectQuick" title="画面比率"></select>
         <select id="pvQ" title="プレビュー画質"><option value="auto">プレビュー：自動（滑らかさ優先）</option><option value="0.35">プレビュー：軽量</option><option value="0.5">プレビュー：標準</option><option value="1">プレビュー：高精細</option></select>
+        <button class="btn sm" id="interBtn" title="プレビューでマウス・タッチに歌詞が反応します（書き出しには入りません）">✋ 触れる</button>
+        <button class="btn sm" id="hapticBtn" title="スマートフォンでの再生中、ビートに合わせて振動します" hidden>📳 振動</button>
         <button class="btn sm" id="guidesBtn" title="セーフエリア">セーフエリア</button>
         <button class="btn sm" id="inspToggle" title="詳細パネル">詳細</button>
       </div>
@@ -742,6 +759,10 @@ input[type=color]{width:30px;height:28px;padding:0;border:1px solid var(--line);
 <div class="modal" id="snapModal"><div class="mbox" style="width:min(620px,100%)">
   <div class="mhead"><b>スナップショット（版の保存と復元）</b><div class="sp"></div><button class="btn sm" id="snapNew">＋ 今の状態を保存</button><button class="btn sm" data-close>閉じる</button></div>
   <div class="mbody"><p class="hint" style="margin-top:0">演出・タイミング・デザインをまるごと保存します（音源は含みません・このブラウザー内）。自動配置や演出の再生成の直前にも自動で保存されます。最大40件。</p><div id="snapList" class="snaps"></div></div>
+</div></div>
+<div class="modal" id="evoModal"><div class="mbox" style="width:min(980px,100%)">
+  <div class="mhead"><b>候補を進化させて選ぶ</b> <span class="hint" id="evoGen"></span><div class="sp"></div><button class="btn sm" id="evoNext" disabled>選んだ候補から次の世代へ</button><button class="btn sm pri" id="evoUse" disabled>これを使う</button><button class="btn sm" data-close>閉じる</button></div>
+  <div class="mbody"><p class="hint" style="margin-top:0">気に入った候補をクリックで選び（複数可）、「次の世代へ」で掛け合わせと突然変異から新しい6案を作ります。1つ選んで「これを使う」で適用します。</p><div id="evoGrid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px"></div></div>
 </div></div>
 <div class="modal" id="helpModal"><div class="mbox" style="width:min(560px,100%)">
   <div class="mhead"><b>ショートカット</b><div class="sp"></div><button class="btn sm" data-close>閉じる</button></div>

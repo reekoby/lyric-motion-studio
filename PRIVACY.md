@@ -1,6 +1,6 @@
 # プライバシーポリシー / Privacy Policy
 
-最終更新日 / Last updated: 2026-09-27
+最終更新日 / Last updated: 2026-11-11
 
 [日本語](#日本語) ・ [English](#english)
 
@@ -13,7 +13,7 @@ Lyric Motion Studio（以下「本ツール」）は、ブラウザーの中だ�
 ### 1. 収集しない情報
 - アカウント登録・ログインはありません。
 - 利用状況の解析（アクセス解析、広告、トラッキング）、Cookie は使用していません。
-- 読み込んだ音源・歌詞・画像・動画・フォント・プロジェクトは、**どこにも送信されません**。解析（ビート検出、歌声からのタイミング推定など）と動画の書き出しは、すべてお使いの端末のブラウザー内で処理されます。
+- 読み込んだ音源・歌詞・画像・動画・フォント・プロジェクトは、**どこにも送信されません**。解析（ビート検出、歌声からのタイミング推定、背景に写る人物の切り抜き・顔・骨格の認識など）と動画の書き出しは、すべてお使いの端末のブラウザー内で処理されます。
 
 ### 2. 端末内に保存される情報
 作業を続けられるよう、次のデータを**お使いのブラウザーの中だけ**に保存します（作者を含め、第三者は参照できません）。
@@ -21,7 +21,7 @@ Lyric Motion Studio（以下「本ツール」）は、ブラウザーの中だ�
 | 保存先 | 内容 |
 |---|---|
 | localStorage | 自動保存のプロジェクト（歌詞・タイミング・演出設定）、保存したルック、表示言語などの設定、スタイルのコピー |
-| IndexedDB | 読み込んだ音源、背景画像・動画、スナップショット |
+| IndexedDB | 読み込んだ音源、背景画像・動画、スナップショット、読み込んだMLパック（人物認識の学習済みモデル） |
 
 削除方法：メニュー「ファイル」→「このブラウザーの保存データを削除…」、またはブラウザーのサイトデータ削除。
 
@@ -57,7 +57,7 @@ So that you can continue your work, the Tool stores the following **only in your
 | Storage | Contents |
 |---|---|
 | localStorage | Autosaved project (lyrics, timing, styling), saved looks, settings such as UI language, copied style |
-| IndexedDB | Loaded audio, background images and videos, snapshots |
+| IndexedDB | Loaded audio, background images and videos, snapshots, a loaded ML pack (trained models for recognising people) |
 
 To delete it: menu "File" → "Delete data stored in this browser…", or clear the site data in your browser settings.
 

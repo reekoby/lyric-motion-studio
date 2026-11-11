@@ -90,7 +90,7 @@ LM.typo = (() => {
       segments.forEach((toks) => toks.forEach((tk) => {
         const t = tk.gs.map((g) => g.ch).join('');
         const content = t.replace(/[぀-ゟ\s、。！？!?,.「」]/g, '');
-        const l = Array.from(content).length + (reKanjiKata.test(t) ? 0.5 : 0);
+        const l = Array.from(content).length + (reKanjiKata.test(t) ? 0.5 : 0) + (LM.sem ? LM.sem.score(t) : 0);
         if (l > bl) (bl = l), (best = tk);
       }));
       if (best) best.gs.forEach((g) => (g.key = true));

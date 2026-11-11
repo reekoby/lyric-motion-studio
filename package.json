@@ -1,6 +1,6 @@
 {
   "name": "lyric-motion-studio",
-  "version": "1.15.0",
+  "version": "1.16.0",
   "description": "Browser-only kinetic-typography lyric video maker / ブラウザーだけで作る歌詞動画ツール",
   "license": "MIT",
   "author": "ΛNTRΞC",
@@ -10,6 +10,9 @@
     "build": "node build.mjs"
   },
   "dependencies": {
+    "@tensorflow/tfjs-backend-webgl": "4.22.0",
+    "@tensorflow/tfjs-converter": "4.22.0",
+    "@tensorflow/tfjs-core": "4.22.0",
     "gifenc": "1.0.3",
     "mediabunny": "1.60.0"
   },

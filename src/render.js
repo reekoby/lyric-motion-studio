@@ -584,6 +584,49 @@ void main(){
       const z = u < 0.5 ? lerp(from.z, zm, u * 2) : lerp(zm, to.z, (u - 0.5) * 2);
       return { x: lerp(from.x, to.x, u), y: lerp(from.y, to.y, u), rot: from.rot + dr * u, z: z * (1 + 0.02 * (lt - this.seqStart(L, k, dur))) };
     }
+    /* ---------- ML helpers (people in the background) ---------- */
+    mlSeg() {
+      const m = this._ml; if (!m) return null; if (m.seg) return m.seg;
+      try {
+        const r = LM.ml.segment(m.bg, Math.round(this.W / 2), Math.round(this.H / 2)), d = r.d, w = r.w, h = r.h;
+        // short temporal smoothing while frames are sequential (playback / export)
+        const pv = this._mlPrev; if (pv && pv.w === w && pv.h === h && m.t > pv.t && m.t - pv.t < 0.12) for (let i = 0; i < d.length; i++) d[i] = d[i] * 0.7 + pv.d[i] * 0.3;
+        this._mlPrev = { t: m.t, d, w, h };
+        const cv = this._mlMaskC || (this._mlMaskC = document.createElement('canvas')); if (cv.width !== w || cv.height !== h) { cv.width = w; cv.height = h; }
+        const cx = cv.getContext('2d'), img = cx.createImageData(w, h), D = img.data; let x0 = w, x1 = -1, y0 = h, y1 = -1, cov = 0, sx = 0;
+        for (let y = 0, i = 0; y < h; y++) for (let x = 0; x < w; x++, i++) { const a = d[i]; D[i * 4] = D[i * 4 + 1] = D[i * 4 + 2] = 255; D[i * 4 + 3] = a * 255; if (a > 0.5) { cov++; sx += x; if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; } }
+        cx.putImageData(img, 0, 0);
+        const k = this.W / w, person = cov > 0 ? { x0: x0 * k, x1: (x1 + 1) * k, y0: y0 * k, y1: (y1 + 1) * k, cx: (sx / cov) * k, cov: cov / (w * h) } : null;
+        m.seg = { mask: cv, person };
+      } catch (e) { m.seg = { mask: null, person: null }; }
+      return m.seg;
+    }
+    mlInfo(t) {
+      const m = this._ml; if (!m) return null; if (m.info) return m.info;
+      const W = this.W, H = this.H, o = { face: null, pose: null, person: null };
+      let tr = LM.ml.hasTracks(LM.ml.curKey) ? LM.ml.trackAt(t) : null;
+      if (!tr && m.need.det) {
+        try { const r = LM.ml.detect(m.bg), pv = this._mlLive, seq = pv && t > pv.t && t - pv.t < 0.2, k = 0.45;
+          const F = r.face ? { x: r.face.x, y: r.face.y, w: r.face.w, h: r.face.h, mouth: r.face.mouth, s: r.face.s } : seq && pv.face ? pv.face : null;
+          if (F && seq && pv.face) ['x', 'y', 'w', 'h'].forEach((q) => (F[q] = lerp(pv.face[q], F[q], k))), (F.mouth = [lerp(pv.face.mouth[0], F.mouth[0], k), lerp(pv.face.mouth[1], F.mouth[1], k)]);
+          let P = r.pose; if (P && seq && pv.pose) P = P.map((q, i) => (q.s > 0.25 && pv.pose[i].s > 0.25 ? { x: lerp(pv.pose[i].x, q.x, k), y: lerp(pv.pose[i].y, q.y, k), s: q.s } : q)); else if (!P && seq) P = pv.pose;
+          this._mlLive = { t, face: F, pose: P }; tr = { face: F, pose: P }; } catch (e) { tr = null; }
+      }
+      if (tr && tr.face) o.face = { x: tr.face.x * W, y: tr.face.y * H, w: tr.face.w * W, h: tr.face.h * H, mouth: [tr.face.mouth[0] * W, tr.face.mouth[1] * H], s: tr.face.s };
+      if (tr && tr.pose) o.pose = tr.pose.map((q) => ({ x: q.x * W, y: q.y * H, s: q.s }));
+      if (m.need.seg) o.person = (this.mlSeg() || {}).person || null;
+      return (m.info = o);
+    }
+    // the person cut out of the background, drawn over the lyric (feathered edge)
+    mlCutout() {
+      const m = this._ml; if (!m) return null; if (m.cut) return m.cut;
+      const sg = this.mlSeg(); if (!sg || !sg.mask) return null;
+      const c = this.scratch(6), x = c.getContext('2d'); x.setTransform(1, 0, 0, 1, 0, 0); x.globalAlpha = 1; x.filter = 'none';
+      x.globalCompositeOperation = 'copy'; x.drawImage(m.bg, 0, 0);
+      x.globalCompositeOperation = 'destination-in'; x.imageSmoothingEnabled = true; x.filter = `blur(${Math.max(0.6, this.S * 1.4).toFixed(1)}px)`; x.drawImage(sg.mask, 0, 0, this.W, this.H);
+      x.filter = 'none'; x.globalCompositeOperation = 'source-over';
+      return (m.cut = c);
+    }
     bgMove(ctx, o) {
       const W = this.W, H = this.H, sc = this.scratch(4), sx = sc.getContext('2d');
       sx.setTransform(1, 0, 0, 1, 0, 0); sx.globalAlpha = 1; sx.filter = 'none'; sx.globalCompositeOperation = 'copy'; sx.drawImage(ctx.canvas, 0, 0, W, H); sx.globalCompositeOperation = 'source-over';
@@ -702,9 +745,12 @@ void main(){
     render(t, mode = {}) {
       this.mode = mode; this._rs = (this._rs || 0) + 1;
       const p = this.p; if (!p) return;
+      if (mode.bgOnly) { this.paint(this.sctx, t, mode); return null; }
       const info = this.paint(this.sctx, t, mode);
       const tr = this.p.transOff ? null : this.transAt(t);
       if (tr) this.applyTrans(tr, info, mode);
+      // user GLSL over the whole frame (runs before the built-in post filters)
+      if (p.glslOn && p.glsl && LM.cglsl && !mode.noGLSL) { const a = this.auf(t) || {}; LM.cglsl.run(p.glsl, this.scene, this.W, this.H, { time: t, beat: this.beatAt(t), bass: a.bass, mid: a.mid, high: a.high, kick: a.kick, rms: a.rms }, p.glslAmt == null ? 1 : p.glslAmt / 100); }
       if (info.post.trgb > 0) {
         this.paint(this.prev[0].getContext('2d'), t - 2 / 30, Object.assign({}, mode, { noOverlay: true }));
         this.paint(this.prev[1].getContext('2d'), t - 4 / 30, Object.assign({}, mode, { noOverlay: true }));
@@ -788,6 +834,14 @@ void main(){
       }
       // 3D cameras move / defocus everything behind the lyric (parallax, dolly zoom, rack focus, lyric space)
       if (!transparent && cur && LM.cam3d) { const bc = LM.cam3d.bgFor(this, cur, t); if (bc) this.bgMove(ctx, bc); }
+      if (mode.bgOnly) return null;
+      // people in the background (ML pack): keep a copy of what is behind the lyric for segmentation / detection
+      this._ml = null;
+      if (!transparent && LM.ml && LM.ml.ready && !mode.noML) {
+        let need = null;
+        for (const v of vis) { const o = LM.ml.needs(v.c, v.ph, filtersOf(p, v.c), p); if (o.seg || o.det) { need = need || { seg: false, det: false }; need.seg = need.seg || o.seg; need.det = need.det || o.det; } }
+        if (need) { const bg = this.scratch(5), bx = bg.getContext('2d'); bx.setTransform(1, 0, 0, 1, 0, 0); bx.globalAlpha = 1; bx.filter = 'none'; bx.globalCompositeOperation = 'copy'; bx.drawImage(ctx.canvas, 0, 0, W, H); bx.globalCompositeOperation = 'source-over'; this._ml = { t, bg, need, seg: null, info: null }; }
+      }
       if (gap && !mode.noOverlay) this.drawGapFx(ctx, t, beat, bgPal, gap);
       const lt = cur ? t - cur.c.start : 0;
       const bbox = cur ? cur.L.bbox : { x: W * 0.3, y: H * 0.4, w: W * 0.4, h: H * 0.2, cx: W / 2, cy: H / 2 };
@@ -915,7 +969,7 @@ void main(){
       const pal = palOf(p, c);
       const two = fl.has('twoFrame');
       let tt = two ? Math.floor(t * 15) / 15 : t;
-      this._c3 = null;
+      this._c3 = null; this._occ = null;
       const cam0 = (c.scene && c.scene.camera) || p.camera;
       if (cam0 === 'bulletTime' && LM.cam3d) tt = LM.cam3d.freezeT(tt, c, ph);
       const lt = tt - c.start;
@@ -1048,10 +1102,14 @@ void main(){
       if (!knock && (st.marker || st.underline)) { this.drawTextBands(lx, L.glyphs, Ts, st, colorOf); stG = Object.assign({}, st, { marker: false, underline: false }); }
       const mbA = knock || two ? 0 : this.mbAmt();
       const Tp = mbA > 0.01 ? this.glyphTransforms(L, c, ph, tt - mbA / (this.fps || 30), beat, amp, v.i) : null;
+      // lyric behind / around a person in the background: glyphs marked "front" go to a separate layer drawn over the cut-out
+      const occ = this._ml && !knock && LM.ml.needs(c, ph, fl, p).occl ? { front: null } : null;
+      if (occ && Ts.some((T0) => T0 && T0.front)) { const fc = this.scratch(7), fx = fc.getContext('2d'); fx.setTransform(1, 0, 0, 1, 0, 0); fx.clearRect(0, 0, fc.width, fc.height); fx.setTransform(lx.getTransform()); fx.globalAlpha = 1; fx.globalCompositeOperation = 'source-over'; fx.filter = 'none'; occ.front = fc; occ.fx = fx; }
       L.glyphs.forEach((g, gi) => {
-        const cc = colorOf(g), stx = knock ? { plain: true } : stG, fill = g.style === 'outline' && !knock ? null : cc.fill;
-        if (Tp) this.drawGlyphMB(lx, g, Ts[gi], Tp[gi], stx, L.font.tmpl, fill, cc, pal); else this.drawGlyph(lx, g, Ts[gi], stx, L.font.tmpl, fill, cc, pal);
+        const cc = colorOf(g), stx = knock ? { plain: true } : stG, fill = g.style === 'outline' && !knock ? null : cc.fill, gx = occ && occ.fx && Ts[gi] && Ts[gi].front ? occ.fx : lx;
+        if (Tp) this.drawGlyphMB(gx, g, Ts[gi], Tp[gi], stx, L.font.tmpl, fill, cc, pal); else this.drawGlyph(gx, g, Ts[gi], stx, L.font.tmpl, fill, cc, pal);
       });
+      this._occ = occ;
       lx.globalCompositeOperation = 'source-over';
       // light-scan beam: one continuous hot line across the phrase at the scan position
       const scT = !knock && Ts.find((T0) => T0 && T0.scanX != null);
@@ -1081,6 +1139,7 @@ void main(){
       L.ghosts.forEach((gh) => { if (gh.mirrorY != null) this.drawGhost(lx, L, gh, c, ph, tt, pal, colorOf, st); });
       lx.restore();
       // composite layer with transitions
+      this._lb = L.bbox; this._lsz = L.glyphs.length ? L.glyphs[0].size : this.minD * 0.08;
       this.compositeLayer(ctx, fl, c, ph, t, lt, beat, pal);
     }
 
@@ -1089,7 +1148,7 @@ void main(){
       const lt = t - c.start;
       const N = L.glyphs.length;
       const cx = L.bbox.cx, cy = L.bbox.cy;
-      const C = { W: this.W, H: this.H, S: this.S, amp, cx, cy, N, gl: L.glyphs, beat, seed: idx, W_: Math.max(1, L.words), tempo: this.tempo(), bb: L.bbox, lt: t - c.start, dur: ph.dur, ct: L._ct || this.charTimes(c), tAbs: t, mb: this.mbAmt(), au: this.auf(t), scope: ph.tr.hold === 'auWave' ? this.scopeAt(t) : null, bpm: this.bpm() || 120, ed: ph.ed, xd: ph.xd };
+      const C = { W: this.W, H: this.H, S: this.S, amp, cx, cy, N, gl: L.glyphs, beat, seed: idx, W_: Math.max(1, L.words), tempo: this.tempo(), bb: L.bbox, lt: t - c.start, dur: ph.dur, ct: L._ct || this.charTimes(c), tAbs: t, mb: this.mbAmt(), au: this.auf(t), scope: ph.tr.hold === 'auWave' ? this.scopeAt(t) : null, bpm: this.bpm() || 120, ed: ph.ed, xd: ph.xd, ml: this._ml ? this.mlInfo(t) : null };
       // Motion System parameters (intensity / variation / seed / easing / stagger / delay) per track
       const MS = LM.MS, pE = MS && MS.par(c, 'enter'), pH = MS && MS.par(c, 'hold'), pM = MS && MS.par(c, 'emph'), pX = MS && MS.par(c, 'exit');
       const seedV = (U.strHash(c.id) ^ (((c.mp && c.mp.seed) || 0) * 7919) ^ ((this.p.seed || 0) * 31)) >>> 0;
@@ -1151,6 +1210,7 @@ void main(){
           if (A.scanX != null) { T.scanX = A.scanX; T.scanW = A.scanW; }
           if (A.dust != null) T.dust = Math.max(T.dust || 0, A.dust); if (A.burn != null) T.burn = Math.max(T.burn || 0, A.burn);
           if (A.paint) { T.paint = A.paint; T.pd = A.pd; }
+          if (A.front != null) T.front = A.front;
           if (A.strike != null) T.strike = A.strike; if (A.uline != null) T.uline = A.uline; if (A.drain != null) T.drain = Math.max(T.drain || 0, A.drain);
         };
         // enter
@@ -1171,6 +1231,10 @@ void main(){
         if (mh && ph.tr.hold !== 'none') { const hs = vH ? U.hash(seedV, g.wordIdx || 0, 9) * vH * 3 : 0; add(MS && kH ? MS.scaleT(mh.f(Math.max(0, lt) + hs, g, C, hp), kH) : mh.f(Math.max(0, lt) + hs, g, C, hp)); }
         // song-wide audio link (AU-01/02): the line pumps on the kick and brightens with loudness
         if (reK > 0) { const s = 1 + (C.au.kick * 0.05 + C.au.bass * 0.012) * reK; T.x += (g.x - cx) * (s - 1); T.y += (g.y - cy) * (s - 1); T.sx *= s; T.sy *= s; const br = Math.max(0, C.au.rms - 0.5) * 0.35 * reK + C.au.kick * 0.12 * reK; if (br > 0.01) T.bright = Math.max(T.bright || 0, br); }
+        // pointer interaction (preview only): letters step aside from the cursor and ripple behind it
+        const pt = this.ptr; if (pt && this.interactive) { const gx0 = g.x + T.x, gy0 = g.y + T.y, dx = gx0 - pt.x, dy = gy0 - pt.y, d = Math.hypot(dx, dy) + 1, Rr = g.size * 3.5, age = Math.max(0, t - pt.t);
+          if (d < Rr) { const f = Math.pow(1 - d / Rr, 2) * g.size * 1.1; T.x += (dx / d) * f; T.y += (dy / d) * f; T.rot = (T.rot || 0) + (dx > 0 ? 1 : -1) * (1 - d / Rr) * 0.35; }
+          const rw = age * this.minD * 0.9; if (age < 1.2) { const k = Math.exp(-Math.pow((d - rw) / (g.size * 0.8), 2)) * (1 - age / 1.2); T.y -= k * g.size * 0.25; T.sx *= 1 + k * 0.12; T.sy *= 1 + k * 0.12; } }
         // emphasis (accent on beats / word onsets), faded in after the entrance and out before the exit
         if (emOn && (emTgt === 'all' || emTgt === 'word' || (emTgt === 'emph' ? g.emph : anyEmph ? g.emph : true))) {
           const em = M.emph[emId]; let t0 = emT0;
@@ -1656,7 +1720,14 @@ void main(){
       if (fl.has('warp')) { const w = (1 - e) * 0.6 + x * 0.6 + Math.sin(t * 2) * 0.02; ctx.translate(W / 2, H / 2); ctx.transform(1, 0, w * 0.4, 1 + w * 0.4, 0, 0); ctx.translate(-W / 2, -H / 2); }
       ctx.translate(tx, ty);
       const c3 = this._c3; this._c3 = null;
-      const drawL = () => (c3 ? LM.cam3d.draw(ctx, L, c3, this) : ctx.drawImage(L, 0, 0));
+      const occ = this._occ; this._occ = null;
+      // experimental layer filters re-render the finished lyric layer (SDF chrome, reaction–diffusion, cells, ink)
+      let LS = L; const lfId = LM.lfx && [...fl.keys()].find((id) => LM.lfx.has(id));
+      if (lfId) LS = LM.lfx.apply(lfId, L, { W, H, S, t, lt, beat, pal, key: c.id + '|' + lfId + '|' + W, bbox: this._lb, size: this._lsz, xp: ph.xd > 0 ? clamp((t - ph.exitStart) / ph.xd) : 0, exitAt: ph.exitStart, xd: ph.xd, start: c.start }) || L;
+      const drawL = () => {
+        if (c3) LM.cam3d.draw(ctx, LS, c3, this); else ctx.drawImage(LS, 0, 0);
+        if (occ) { const cut = this.mlCutout(); if (cut) { ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; ctx.drawImage(cut, 0, 0); ctx.restore(); } if (occ.front) ctx.drawImage(occ.front, 0, 0); }
+      };
       const clipDraw = (fn) => { ctx.save(); ctx.beginPath(); fn(); ctx.clip(); drawL(); ctx.restore(); };
       const tr = ['wipe', 'splitHorizontal', 'splitVertical', 'blinds', 'checker', 'clockWipe', 'irisWipe', 'diagonalWipe', 'mosaic', 'glass', 'shred'].find((k) => fl.has(k));
       const inT = ep < 1, outT = xp > 0;

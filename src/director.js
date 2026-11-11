@@ -113,7 +113,7 @@ LM.director = (() => {
     // energy per cue (0..1 ranked)
     const FA = LM.audio.feat, aroAt = (a, b) => { let s = 0, k = 0; for (let i = Math.max(0, Math.floor(a * FA.fps)); i < Math.min(FA.NF, Math.ceil(b * FA.fps)); i += 4) { s += FA.aro[i]; k++; } return k ? s / k : 0.5; };
     // energy per cue: loudness, blended with the song's arousal curve (loudness + onset density + brightness) when analysed
-    const en = cues.map((c) => (FA ? LM.audio.energyAt(c.start, c.end) * 0.5 + aroAt(c.start, c.end) * 0.5 : LM.audio.energyAt(c.start, c.end)));
+    const en = cues.map((c) => (FA ? LM.audio.energyAt(c.start, c.end) * 0.5 + aroAt(c.start, c.end) * 0.5 : LM.audio.energyAt(c.start, c.end)) + (LM.sem ? (() => { const a = LM.sem.analyze(c.text); return a.n ? (a.arousal - 0.5) * 0.12 : 0; })() : 0));
     const sorted = en.slice().sort((a, b) => a - b);
     const rank = en.map((e) => (n > 1 ? sorted.indexOf(e) / (n - 1) : 0.5));
     const energy = an ? rank : cues.map((c, i) => 0.35 + 0.3 * Math.sin((i / Math.max(1, n - 1)) * Math.PI * 2.2 - 0.6) + 0.1);
@@ -175,6 +175,8 @@ LM.director = (() => {
         secBgm.push(a);
         if (secE > 0.6 && rng() < 0.35) { const b2 = rng.weighted(th.bgm, [a]); const B = LM.bgm.lib; if (b2 !== a && !(B[a] && B[a].full && B[b2] && B[b2].full)) secBgm.push(b2); }
       }
+      // what the lines of this section talk about (fire, rain, stars, …) can pick its background (EX-06)
+      if (LM.sem && !remembered && p.autoBgm !== false) { const mo = LM.sem.motifOf(sec.map((i) => cues[i].text)); if (mo && mo.n >= 2 && rng() < 0.65) { const id = LM.sem.bgmFor(mo.k, rng), B = LM.bgm.lib; if (id && !secBgm.includes(id) && !(B[id].full && secBgm.slice(1).some((b) => B[b] && B[b].full))) secBgm[0] = id; } }
       if (remembered) secBgm = remembered.bgm.slice();
       else if (isChorus && th.bgm && secBgm.length < 2) {
         // an analysed song gets a sound-reactive visualiser on the chorus more often
@@ -272,7 +274,8 @@ LM.director = (() => {
           const prob = th.fx * (ST.drive == null ? 1 : 0.5 + ST.drive) * (0.55 + energy[ci] * 0.7);
           const fs = [];
           if (rng() < prob) {
-            fs.push(rng.weighted(th.filters));
+            const sm = LM.sem && LM.sem.analyze(c.text), mk = sm && sm.n ? Object.keys(sm.motifs).sort((a, b) => sm.motifs[b] - sm.motifs[a])[0] : null, mf = mk && rng() < 0.4 ? LM.sem.fxFor(mk, rng) : null;
+            fs.push(mf || rng.weighted(th.filters));
             if (th.maxFx > 1 && rng() < 0.3 + energy[ci] * 0.25) {
               const f2 = rng.weighted(th.filters, fs);
               if (!fs.includes(f2)) fs.push(f2);

@@ -7,6 +7,10 @@ Lyric Motion Studio は、以下のオープンソースソフトウェアを**�
 |---|---|---|---|
 | Mediabunny | 1.60.0 | Mozilla Public License 2.0 | https://github.com/Vanilagy/mediabunny ・ https://www.npmjs.com/package/mediabunny |
 | gifenc | 1.0.3 | MIT | https://github.com/mattdesl/gifenc |
+| TensorFlow.js (tfjs-core, tfjs-backend-webgl, tfjs-converter) | 4.22.0 | Apache License 2.0 | https://github.com/tensorflow/tfjs |
+
+The optional ML pack `lms-ml-pack.lmsml` (distributed separately, data only) contains TensorFlow.js graph models taken from the npm package `@vladmandic/human-models` 3.0.4 (MIT, © Vladimir Mandic): selfie segmentation (MediaPipe / PINTO model zoo, Apache-2.0), BlazeFace (MediaPipe, Apache-2.0) and MoveNet Lightning (Google, Apache-2.0). It is built with `tools/build-mlpack.mjs`; the models are unmodified.
+任意の ML パック `lms-ml-pack.lmsml`（別配布・データのみ）には、npm パッケージ `@vladmandic/human-models` 3.0.4（MIT）の TensorFlow.js グラフモデル（人物セグメンテーション・BlazeFace・MoveNet Lightning、いずれも Apache-2.0）を未改変で収めています。
 
 ## Mediabunny — MPL-2.0
 
@@ -53,3 +57,14 @@ Fonts are **not bundled**. When the app runs, typefaces are loaded from Google F
 ## Build-time tools (not distributed)
 
 `playwright-core` (Apache-2.0) is used only for local testing and is not part of the published app.
+
+
+## TensorFlow.js — Apache-2.0
+
+Copyright 2018 Google LLC. Licensed under the Apache License, Version 2.0; see `licenses/Apache-2.0.txt`.
+The bundled files are the unmodified `dist/tf-core.min.js`, `dist/tf-backend-webgl.min.js` and `dist/tf-converter.min.js` from the npm packages `@tensorflow/tfjs-core@4.22.0`, `@tensorflow/tfjs-backend-webgl@4.22.0` and `@tensorflow/tfjs-converter@4.22.0`.
+
+## ML pack models
+
+- Model conversions: `@vladmandic/human-models` — MIT License, see `licenses/human-models-MIT.txt`.
+- Selfie segmentation, BlazeFace, MoveNet Lightning — Apache License 2.0 (Google LLC / MediaPipe authors), see `licenses/Apache-2.0.txt`.
