@@ -37,6 +37,9 @@ LM.Renderer = (() => {
     let [bg, text, accent, sub] = c;
     if (!sub) sub = mix(text, accent, 0.45);
     if (sc.invert) [bg, text] = [text, bg];
+    // colour variations of the same palette (色の変化): the roles are re-dealt, readability is re-checked
+    if (sc.pv === 'swap') [accent, sub] = [sub, accent];
+    else if (sc.pv === 'field' || sc.pv === 'sub') { const nb = sc.pv === 'field' ? accent : sub, rest = sc.pv === 'field' ? sub : accent, ob = bg; bg = nb; text = readable(nb, [text, ob, '#ffffff', '#111111'], 4.5); accent = contrast(rest, nb) >= 2 ? rest : readable(nb, [ob, text], 2); sub = ob; }
     if (contrast(accent, bg) < 1.6) accent = readable(bg, [sub, text], 2);
     return { bg, text, accent, sub };
   }
@@ -977,6 +980,7 @@ void main(){
       return this._sf;
     }
     drawCue(ctx, v, t, beat, mode) {
+      this._lfills = null; // colours the letters of this line are painted in (the layer looks pick their outline against them)
       const p = this.p, { c, L, ph } = v;
       const W = this.W, H = this.H, S = this.S;
       const fl = filtersOf(p, c);
@@ -1059,6 +1063,8 @@ void main(){
         const wantAccent = isAcc(g);
         let want = wantAccent ? (g.on === 'accent' ? pal.bg : pal.accent) : g.on === 'accent' ? pal.bg : pal.text;
         if (D0 && (wantAccent ? D0.fillA : D0.fillN)) want = wantAccent ? D0.fillA : D0.fillN;
+        // on a plate the surface is known exactly: hold letters to a real reading contrast, and take the strongest candidate when the first choice misses it
+        else if (g.on && contrast(want, surf) < 4) { let bc = want, bv = contrast(want, surf); for (const c0 of [pal.text, pal.bg, '#ffffff', '#111111']) { const v = contrast(c0, surf); if (v > bv) { bv = v; bc = c0; } } want = bc; }
         else if (contrast(want, surf) < 2.3) want = readable(surf, [g.on === 'accent' ? pal.bg : pal.text, pal.text, pal.bg, pal.sub]);
         const acc = D0 && D0.accS ? D0.accS : contrast(pal.accent, surf) >= 2.3 ? pal.accent : readable(surf, [pal.sub, pal.text, pal.bg]);
         return { fill: want, acc, surf };
@@ -1121,7 +1127,7 @@ void main(){
       const occ = this._ml && !knock && LM.ml.needs(c, ph, fl, p).occl ? { front: null } : null;
       if (occ && Ts.some((T0) => T0 && T0.front)) { const fc = this.scratch(7), fx = fc.getContext('2d'); fx.setTransform(1, 0, 0, 1, 0, 0); fx.clearRect(0, 0, fc.width, fc.height); fx.setTransform(lx.getTransform()); fx.globalAlpha = 1; fx.globalCompositeOperation = 'source-over'; fx.filter = 'none'; occ.front = fc; occ.fx = fx; }
       L.glyphs.forEach((g, gi) => {
-        const cc = colorOf(g), stx = knock ? { plain: true } : stG, fill = g.style === 'outline' && !knock ? null : cc.fill, gx = occ && occ.fx && Ts[gi] && Ts[gi].front ? occ.fx : lx;
+        const cc = colorOf(g); if (cc.fill) (this._lfills || (this._lfills = new Set())).add(cc.fill); const stx = knock ? { plain: true } : stG, fill = g.style === 'outline' && !knock ? null : cc.fill, gx = occ && occ.fx && Ts[gi] && Ts[gi].front ? occ.fx : lx;
         if (Tp) this.drawGlyphMB(gx, g, Ts[gi], Tp[gi], stx, L.font.tmpl, fill, cc, pal); else this.drawGlyph(gx, g, Ts[gi], stx, L.font.tmpl, fill, cc, pal);
       });
       this._occ = occ;
@@ -1739,7 +1745,7 @@ void main(){
       const occ = this._occ; this._occ = null;
       // experimental layer filters re-render the finished lyric layer (SDF chrome, reaction–diffusion, cells, ink)
       let LS = L; const lfId = LM.lfx && [...fl.keys()].reverse().find((id) => LM.lfx.has(id)); // the line's own look wins over the project-wide one
-      if (lfId) LS = LM.lfx.apply(lfId, L, { W, H, S, t, lt, beat, pal, key: c.id + '|' + lfId + '|' + W, bbox: this._lb, size: this._lsz, deco: this._ldeco, xp: ph.xd > 0 ? clamp((t - ph.exitStart) / ph.xd) : 0, exitAt: ph.exitStart, xd: ph.xd, start: c.start }) || L;
+      if (lfId) LS = LM.lfx.apply(lfId, L, { W, H, S, t, lt, beat, pal, key: c.id + '|' + lfId + '|' + W, bbox: this._lb, size: this._lsz, deco: this._ldeco, fills: this._lfills ? [...this._lfills] : [], xp: ph.xd > 0 ? clamp((t - ph.exitStart) / ph.xd) : 0, exitAt: ph.exitStart, xd: ph.xd, start: c.start }) || L;
       const drawL = () => {
         if (c3) LM.cam3d.draw(ctx, LS, c3, this); else ctx.drawImage(LS, 0, 0);
         if (occ) { const cut = this.mlCutout(); if (cut) { ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; ctx.drawImage(cut, 0, 0); ctx.restore(); } if (occ.front) ctx.drawImage(occ.front, 0, 0); }

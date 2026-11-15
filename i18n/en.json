@@ -1807,5 +1807,9 @@
  "コマ打ちの切れ、ビビッドな色面、巨大な文字。拍ごとに画が変わる": "Held poses that snap, vivid colour fields, giant type. The picture changes on every beat",
  "タイトルバック / グラフィック": "Title sequence / graphic",
  "マス目の色面、文字のテクスチャ、切り紙の帯、枠囲みのクレジット。静と動の切り替え": "Tiled colour fields, type as texture, cut-paper bars, boxed credits. Stillness and motion in alternation",
- "画像と両方見えるように、背景モーションを「オーバーレイ・85%」で重ねました（上の不透明度と描画モードで調整できます）": "To keep both visible, the background motion is now blended as “Overlay, 85%” (adjust with the opacity and blend mode above)"
+ "画像と両方見えるように、背景モーションを「オーバーレイ・85%」で重ねました（上の不透明度と描画モードで調整できます）": "To keep both visible, the background motion is now blended as “Overlay, 85%” (adjust with the opacity and blend mode above)",
+ "色の変化": "Colour changes",
+ "1配色で通す": "One palette throughout",
+ "行ごとに変える": "Change with every line",
+ "セクションごとに配色が変わる標準の動作に戻す": "Back to the standard behaviour: one palette per section"
 }

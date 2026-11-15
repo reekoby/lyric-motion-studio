@@ -1807,5 +1807,9 @@
  "コマ打ちの切れ、ビビッドな色面、巨大な文字。拍ごとに画が変わる": "Poses mantenidas y secas, campos de color vivos, letras gigantes. La imagen cambia en cada pulso",
  "タイトルバック / グラフィック": "Secuencia de títulos / gráfica",
  "マス目の色面、文字のテクスチャ、切り紙の帯、枠囲みのクレジット。静と動の切り替え": "Campos de color en retícula, texto como textura, barras de papel recortado, créditos en recuadros. Quietud y movimiento alternados",
- "画像と両方見えるように、背景モーションを「オーバーレイ・85%」で重ねました（上の不透明度と描画モードで調整できます）": "Para que se vean ambos, el movimiento de fondo se mezcla ahora como «Superponer, 85 %» (ajústalo con la opacidad y el modo de fusión de arriba)"
+ "画像と両方見えるように、背景モーションを「オーバーレイ・85%」で重ねました（上の不透明度と描画モードで調整できます）": "Para que se vean ambos, el movimiento de fondo se mezcla ahora como «Superponer, 85 %» (ajústalo con la opacidad y el modo de fusión de arriba)",
+ "色の変化": "Cambios de color",
+ "1配色で通す": "Una sola paleta",
+ "行ごとに変える": "Cambia en cada línea",
+ "セクションごとに配色が変わる標準の動作に戻す": "Volver al comportamiento estándar: una paleta por sección"
 }

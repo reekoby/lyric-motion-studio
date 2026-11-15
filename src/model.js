@@ -97,7 +97,7 @@ LM.model = (() => {
     if (p.gapOv && typeof p.gapOv === 'object' && !Array.isArray(p.gapOv)) for (const k of Object.keys(p.gapOv).slice(0, 200)) if (/^(n:[\w-]{1,40}|end)$/.test(k)) { const o = sanitizeGap(p.gapOv[k], true); if (Object.keys(o).length) ov[k] = o; }
     p.gapOv = ov;
     p.latinTrack = num(p.latinTrack, 0, -0.2, 0.5); p.wordSpace = num(p.wordSpace, 1, 0.3, 3); p.wakanGap = num(p.wakanGap, 25, 0, 80); p.yakuAmt = num(p.yakuAmt, 1, 0, 1);
-    p.drive = p.drive == null ? null : num(p.drive, null, 0, 1); p.variety = p.variety == null ? null : num(p.variety, null, 0, 1);
+    p.drive = p.drive == null ? null : num(p.drive, null, 0, 1); p.variety = p.variety == null ? null : num(p.variety, null, 0, 1); p.colorVar = p.colorVar == null ? null : num(p.colorVar, null, 0, 1);
     p.cues = (p.cues || []).map((c, i) => normalizeCue(c, i)).sort((a, b) => a.start - b.start);
     const ids = new Set();
     p.cues.forEach((c) => { while (ids.has(c.id)) c.id = U.uid(); ids.add(c.id); });
@@ -157,7 +157,7 @@ LM.model = (() => {
     if (c.trackAdj != null) { c.trackAdj = num(c.trackAdj, 0, -0.2, 0.5); if (!c.trackAdj) delete c.trackAdj; }
     if (c.wordSpaceAdj != null) { c.wordSpaceAdj = num(c.wordSpaceAdj, 1, 0.3, 3); if (c.wordSpaceAdj === 1) delete c.wordSpaceAdj; }
     const sc = c.scene && typeof c.scene === 'object' ? c.scene : {};
-    c.scene = { layout: sc.layout, decoration: typeof sc.decoration === 'string' && D.patterns[sc.decoration] ? sc.decoration : undefined, camera: typeof sc.camera === 'string' && D.cameras && D.cameras[sc.camera] ? sc.camera : undefined, font: typeof sc.font === 'string' && D.fontById[sc.font] ? sc.font : undefined, invert: sc.invert === true, variant: num(sc.variant, 0, 0, 1e9), pal: typeof sc.pal === 'string' && D.palById[sc.pal] ? sc.pal : undefined, bgm: Array.isArray(sc.bgm) ? strArr(sc.bgm, (x) => !!(LM.bgm && LM.bgm.lib[x]), 4) : undefined };
+    c.scene = { layout: sc.layout, decoration: typeof sc.decoration === 'string' && D.patterns[sc.decoration] ? sc.decoration : undefined, camera: typeof sc.camera === 'string' && D.cameras && D.cameras[sc.camera] ? sc.camera : undefined, font: typeof sc.font === 'string' && D.fontById[sc.font] ? sc.font : undefined, invert: sc.invert === true, pv: sc.pv === 'swap' || sc.pv === 'field' || sc.pv === 'sub' ? sc.pv : undefined, variant: num(sc.variant, 0, 0, 1e9), pal: typeof sc.pal === 'string' && D.palById[sc.pal] ? sc.pal : undefined, bgm: Array.isArray(sc.bgm) ? strArr(sc.bgm, (x) => !!(LM.bgm && LM.bgm.lib[x]), 4) : undefined };
     if (!LM.layout.lib[c.scene.layout]) c.scene.layout = 'center';
     return c;
   }

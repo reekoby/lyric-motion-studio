@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.17.1 — 2026-11-15
+- 色の変化 (colour changes) slider under 生成: from one palette for the whole song to a new palette and re-dealt colour roles on every line; the standard (one palette per section) is unchanged / 「色の変化」スライダーを追加。1配色で通す〜行ごとに配色と色の役割を変える、まで選べます
+- Fix: single large letters of the lyric could show through the colour-grid background and read as stray characters; the grid now prints small type only, and the giant type wall is no longer picked by the auto direction / カラーグリッド背景から歌詞の大きな一文字だけが覗いて、余計な文字に見える不具合を修正
+- Fix: backgrounds and graphics no longer print placeholder words ("LYRIC MOTION", "LYRIC VIDEO") in passages without lyrics / 歌詞のない区間に「LYRIC MOTION」などの仮の文字が出ないようにしました
+- Fix: sticker / misregister outlines are chosen against the colour the letters are actually painted in, and letters on colour plates are held to a reading contrast, so text no longer merges with its outline or plate / 文字がフチや色帯と同じ色になって読めなくなる組み合わせを修正
+
 ## 1.17.0 — 2026-11-15
 - Anime-opening / title-sequence pack (techniques only, no artwork from any title): two tones, 「アニメOP / ハイスピード・ポップ」 and 「タイトルバック / グラフィック」, with 14 palettes / アニメのオープニングやタイトルバックの語彙（技法のみ。作品の絵は使っていません）。テーマ2種とパレット14種
 - Limited animation for text: poses held and changed on twos or on the beat, smear frames and 1–2 frame overshoots — 7 enters, 5 holds, 5 exits, 4 snap cameras; held poses are excluded from motion blur / コマ打ちの文字モーション（登場7・表示中5・退場5）とスナップカメラ4種

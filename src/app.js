@@ -611,6 +611,12 @@
   $('#seed').onchange = (e) => { P.seed = U.clamp(Math.floor(+e.target.value || 0), 0, 2147483647); commit(); };
   $('#dice').onclick = () => { P.seed = Math.floor(Math.random() * 2147483647); $('#seed').value = P.seed; $('#generate').click(); };
   $('#autoColors').onchange = (e) => { P.autoColors = e.target.checked; commit(); };
+  // 色の変化: how often the palette (and the roles of its colours) changes — applied when the direction is generated
+  const syncColorVar = () => { const v = P.colorVar == null ? 0.35 : P.colorVar; $('#colorVar').value = Math.round(v * 100); $('#colorVarV').textContent = P.colorVar == null ? T('標準') : Math.round(v * 100) + '%'; $('#colorVarReset').disabled = P.colorVar == null; };
+  LM._syncColorVar = syncColorVar;
+  $('#colorVar').addEventListener('input', (e) => { P.colorVar = +e.target.value / 100; syncColorVar(); });
+  $('#colorVar').addEventListener('change', () => { if (P.colorVar > 0.12 && !P.autoColors && !P.colors) { P.autoColors = true; $('#autoColors').checked = true; } motionChanged(); });
+  $('#colorVarReset').onclick = () => { P.colorVar = null; syncColorVar(); motionChanged(); };
   $('#autoFilters').onchange = (e) => { P.autoFilters = e.target.checked; commit(); };
   $('#autoTrans').onchange = (e) => { P.autoTrans = e.target.checked; commit(); };
   $('#autoGfx').onchange = (e) => { P.autoGfx = e.target.checked; commit(); };
@@ -636,7 +642,7 @@
     $('#drive').value = Math.round(d * 100); $('#driveV').textContent = P.drive == null ? T('標準') : Math.round(d * 100) + '%';
     $('#driveTh').textContent = `${T('テーマ標準')} ${Math.round(d0 * 100)}%`;
     const v = P.variety == null ? 0.5 : P.variety; $('#variety').value = Math.round(v * 100); $('#varietyV').textContent = P.variety == null ? T('標準') : Math.round(v * 100) + '%';
-    $$('#feels button').forEach((b) => b.classList.toggle('on', (P.feel || 'auto') === b.dataset.f));
+    $$('#feels button').forEach((b) => b.classList.toggle('on', (P.feel || 'auto') === b.dataset.f)); if (LM._syncColorVar) LM._syncColorVar();
     $('#motionReset').disabled = P.drive == null && P.variety == null && (P.feel || 'auto') === 'auto';
   }
   $('#drive').addEventListener('input', (e) => { P.drive = +e.target.value / 100; LM.director.applyDrive(P); syncMotionUI(); S.dirty = true; });

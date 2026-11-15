@@ -431,6 +431,8 @@ input[type=color]{width:30px;height:28px;padding:0;border:1px solid var(--line);
           <h3>生成</h3>
           <div class="row"><label>シード</label><input type="number" id="seed" class="num" style="width:110px" min="0" max="2147483647"><button class="btn ic sm" id="dice" title="別のシード">🎲</button></div>
           <div class="row"><label class="tg"><input type="checkbox" id="autoColors"><i></i>配色もおまかせ（テーマ内で循環）</label></div>
+          <div class="row"><label>色の変化</label><input type="range" id="colorVar" min="0" max="100" step="1"><span class="val" id="colorVarV"></span><button class="btn sm" id="colorVarReset" title="セクションごとに配色が変わる標準の動作に戻す">標準</button></div>
+          <div class="drvscale"><span>1配色で通す</span><span></span><span>行ごとに変える</span></div>
           <div class="row"><label class="tg"><input type="checkbox" id="autoFilters"><i></i>エフェクトもおまかせ（0〜2個/行）</label></div>
           <div class="row"><label class="tg"><input type="checkbox" id="autoTrans"><i></i>フレーズ間のトランジションもおまかせ</label></div>
           <div class="row"><label class="tg"><input type="checkbox" id="autoGfx"><i></i>アクセントグラフィックもおまかせ</label></div>

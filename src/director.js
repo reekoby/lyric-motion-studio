@@ -141,7 +141,11 @@ LM.director = (() => {
     const typeLook = {};
     const pals = th.pals.filter((id) => D.palById[id]);
     const series = p.series && D.palCats[p.series] ? D.palettes.filter((x) => x.cat === p.series).map((x) => x.id) : null;
-    const palPool = series && series.length ? series : pals;
+    let palPool = series && series.length ? series : pals;
+    // 色の変化 (colorVar): null = one palette per section (as before); low = one palette; high = palettes and role swaps change inside a section too
+    const CV = p.colorVar == null ? null : U.clamp(+p.colorVar, 0, 1);
+    if (CV != null && CV > 0.7 && !(series && series.length)) { const cats = new Set(pals.map((id) => D.palById[id].cat)); const more = D.palettes.filter((x) => cats.has(x.cat) && !pals.includes(x.id)).map((x) => x.id); palPool = pals.concat(more.slice(0, Math.round(more.length * (CV - 0.7) / 0.3))); }
+    const cvEvery = CV == null || CV < 0.45 ? 0 : Math.max(1, Math.round(U.lerp(6, 1, (CV - 0.45) / 0.55)));
     let prevLayout = null, prevPrimary = null, prevBgm = null;
     sections.forEach((sec, si) => {
       const secE = sec.reduce((a, i) => a + energy[i], 0) / sec.length;
@@ -165,7 +169,8 @@ LM.director = (() => {
       const mPrim = remembered && remembered.m ? remembered.m : rng.weighted(emPool);
       // the section's motion grammar: one timing curve / stagger order shared by its phrases
       const gram = remembered ? remembered.g : LM.MS && LM.MS.grammar ? LM.MS.grammar(th.id, rng, secE) : null;
-      const palId = remembered ? remembered.pal : palPool[(si + (seed % palPool.length)) % palPool.length];
+      let palId = remembered ? remembered.pal : palPool[(si + (seed % palPool.length)) % palPool.length];
+      if (CV != null && CV < 0.12) palId = palPool[seed % palPool.length]; // one palette for the whole song
       const cam = rng.weighted(tune(th.camera, 'cam', ST, tgt));
       const trPool = th.tr ? tune(th.tr, 'tr', ST, tgt) : null;
       // background motion for this section (tone-matched, 0-2 layers)
@@ -262,9 +267,10 @@ LM.director = (() => {
           decoration: 'none',
           camera: cam,
           font: secFont,
-          invert: invertSec && k % 2 === 1,
+          invert: CV != null && CV < 0.12 ? false : invertSec && k % 2 === 1,
           variant: rng.int(1000000),
-          pal: p.autoColors ? palId : prevScene.pal,
+          pal: p.autoColors ? (cvEvery ? palPool[(palPool.indexOf(palId) + Math.floor(k / cvEvery) + palPool.length) % palPool.length] : palId) : prevScene.pal,
+          pv: p.autoColors && CV != null && CV >= 0.3 && rng() < (CV - 0.2) * 0.75 ? ['swap', 'field', 'sub', 'swap'][rng.int(4)] : undefined,
           bgm: p.autoBgm ? secBgm.filter((id) => LM.bgm.lib[id]) : prevScene.bgm,
         };
         const fh = M.enter[c.enter] && M.enter[c.enter].font;

@@ -59,7 +59,7 @@
   def('circleBadge', '回転する円形バッジ', 'エッジ', (ctx, R) => {
     const b = R.bb, r = R.minD * 0.1, q = E.outBack(clamp(R.e * 1.5)); if (q <= 0) return;
     const cx = Math.min(R.W - r * 1.4, b.x + b.w + r * 0.6), cy = Math.max(r * 1.4, b.y - r * 0.2);
-    const txt = ('LYRIC MOTION ● ' + (R.title || 'MUSIC VIDEO') + ' ● ').toUpperCase();
+    const txt = ((R.title || 'MUSIC VIDEO') + ' ● ' + (R.title ? 'MUSIC VIDEO ● ' : '')).toUpperCase();
     ctx.save(); ctx.translate(cx, cy); ctx.scale(q, q); ctx.rotate(R.lt * 0.8); ctx.globalAlpha = fadeX(R);
     ctx.fillStyle = R.pal.accent; ctx.beginPath(); ctx.arc(0, 0, r * 0.42, 0, TAU); ctx.fill();
     const fs = r * 0.2; ctx.font = FONT(fs, 800); ctx.fillStyle = R.pal.text; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
@@ -76,7 +76,7 @@
     ctx.fillRect(m, m + fs * 1.5, (R.W - m * 2) * q, Math.max(1, R.S * 1.5));
     const bx = R.W - m - R.minD * 0.16, by = R.H - m - R.minD * 0.045;
     for (let i = 0; i < 24; i++) ctx.fillRect(bx + i * R.minD * 0.0066, by, R.S * (1 + hash(i, 4) * 3.2), R.minD * 0.045 * q);
-    ctx.textAlign = 'left'; ctx.textBaseline = 'bottom'; ctx.fillText('↗ ' + (R.title || 'LYRIC VIDEO').toUpperCase(), m, R.H - m);
+    ctx.textAlign = 'left'; ctx.textBaseline = 'bottom'; if (R.title) ctx.fillText('↗ ' + R.title.toUpperCase(), m, R.H - m);
     ctx.strokeStyle = R.pal.text; ctx.lineWidth = Math.max(1, R.S * 1.4);
     [[m, R.H / 2], [R.W - m, R.H / 2]].forEach(([x, y]) => { ctx.beginPath(); ctx.moveTo(x - fs * 0.7, y); ctx.lineTo(x + fs * 0.7, y); ctx.moveTo(x, y - fs * 0.7); ctx.lineTo(x, y + fs * 0.7); ctx.stroke(); });
   });

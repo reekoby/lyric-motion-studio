@@ -119,16 +119,16 @@
     const cR = Math.min(md * 0.2, b.h * 0.9), ccx = Math.min(L.safe.x + L.safe.w - cR, b.x + b.w + cR * 0.35), ccy = b.y + cR * 0.3;
     return { glyphs: r.glyphs, lines: r.lines, decos: [{ t: 'fn', f(ctx, D) {
       const q = E.outExpo(clamp(D.pe * 1.2)), S = D.S, pal = D.pal, sm = md * 0.022;
-      const title = ((D.r && D.r.p && D.r.p.title) || 'LYRIC MOTION').toUpperCase();
+      const title = ((D.r && D.r.p && D.r.p.title) || '').toUpperCase();
       // red disc behind
       ctx.fillStyle = pal.accent; ctx.beginPath(); ctx.arc(ccx, ccy, cR * E.outBack(clamp(D.pe * 1.4)), 0, TAU); ctx.fill();
       // rotating circular badge
-      ctx.fillStyle = pal.text; ctx.globalAlpha *= q; ringText(ctx, ccx, ccy, cR * 1.28, '● ' + title + ' ● ' + num, font, sm * 0.8, D.t * 0.5, 1);
+      ctx.fillStyle = pal.text; ctx.globalAlpha *= q; ringText(ctx, ccx, ccy, cR * 1.28, '● ' + (title ? title + ' ● ' : '') + 'NO.' + num + ' ● ', font, sm * 0.8, D.t * 0.5, 1);
       // meta text
       ctx.font = fontAt(font, sm); ctx.textBaseline = 'top'; ctx.fillStyle = pal.text;
       ctx.textAlign = 'left'; ctx.fillText('NO.' + num, L.safe.x, L.safe.y);
       ctx.textAlign = 'right'; const tc = D.t; ctx.fillText(`${String(Math.floor(tc / 60)).padStart(2, '0')}:${String(Math.floor(tc % 60)).padStart(2, '0')}:${String(Math.floor((tc % 1) * 30)).padStart(2, '0')}`, L.safe.x + L.safe.w, L.safe.y);
-      ctx.textAlign = 'left'; ctx.textBaseline = 'bottom'; ctx.fillText(title + '  —  LYRIC VIDEO', L.safe.x, L.safe.y + L.safe.h);
+      ctx.textAlign = 'left'; ctx.textBaseline = 'bottom'; if (title) ctx.fillText(title, L.safe.x, L.safe.y + L.safe.h);
       // rules
       ctx.fillRect(L.safe.x, L.safe.y + sm * 1.6, L.safe.w * q, Math.max(1, S * 1.5));
       ctx.fillRect(b.x, b.y + b.h + md * 0.03, b.w * q, Math.max(2, S * 4));

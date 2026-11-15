@@ -334,10 +334,13 @@
     const n = r > 6 ? 20 : 12; for (let i = 0; i < n; i++) { const a = (i / n) * TAU; x.drawImage(s, Math.cos(a) * r, Math.sin(a) * r); if (r > 5) x.drawImage(s, Math.cos(a) * r * 0.55, Math.sin(a) * r * 0.55); }
     return c;
   }
+  // outline colour for a look: chosen against the colours the letters are actually painted in (a line on a plate is not painted in pal.text)
+  const inkFor = (o) => { const fl = o.fills && o.fills.length ? o.fills : [o.pal.text]; const worst = (c) => Math.min(...fl.map((f) => Math.abs(lum(c) - lum(f)))); return worst('#0c0c0e') >= worst('#ffffff') ? '#0c0c0e' : '#ffffff'; };
   const LF = {
     opSticker: { n: 'ステッカー文字（太フチ＋ベタ影）', f(L, o) {
-      const { W, H, pal } = o, sz = o.size || 60, r = Math.max(2, sz * 0.065), dark = lum(pal.text) > 0.45, oc = dark ? '#0c0c0e' : '#ffffff';
-      const sc = Math.abs(lum(pal.accent) - lum(oc)) > 0.18 ? pal.accent : pal.sub, d = Math.max(3, sz * 0.1), n = Math.max(2, Math.ceil(d / 1.5));
+      const { W, H, pal } = o, sz = o.size || 60, r = Math.max(2, sz * 0.065), oc = inkFor(o);
+      const same = (a, b) => String(a).toLowerCase() === String(b).toLowerCase(), fl = o.fills && o.fills.length ? o.fills : [pal.text];
+      const sc = [pal.accent, pal.sub, pal.text, pal.bg, '#0c0c0e', '#ffffff'].find((c) => Math.abs(lum(c) - lum(oc)) > 0.18 && !fl.some((f) => same(f, c))) || pal.accent, d = Math.max(3, sz * 0.1), n = Math.max(2, Math.ceil(d / 1.5));
       const g1 = grow(L, W, H, r, oc, 'g1'), g2 = sil(g1, W, H, sc, 'g2'), out = cv('out', W, H), x = out.getContext('2d'); x.setTransform(1, 0, 0, 1, 0, 0); x.clearRect(0, 0, W, H);
       for (let i = n; i >= 1; i--) x.drawImage(g2, (d * i) / n, (d * i) / n);
       x.drawImage(g1, 0, 0); x.drawImage(L, 0, 0); return out;
@@ -360,7 +363,7 @@
       const { W, H, pal } = o, sz = o.size || 60, d = Math.max(2, sz * 0.06), k = Math.floor(o.t * 6), jx = (hash(k, 1) - 0.5) * d * 0.6, jy = (hash(k, 2) - 0.5) * d * 0.6;
       const out = cv('out', W, H), x = out.getContext('2d'); x.setTransform(1, 0, 0, 1, 0, 0); x.clearRect(0, 0, W, H);
       // a thin keyline in the paper colour keeps the word readable when a plane of its own colour passes behind it
-      const kc = lum(pal.text) > 0.45 ? '#0c0c0e' : '#ffffff';
+      const kc = inkFor(o);
       x.drawImage(sil(L, W, H, pal.sub, 'g2'), -d + jx, d * 0.6 + jy); x.drawImage(sil(L, W, H, pal.accent, 'g3'), d - jx, -d * 0.5 - jy); x.drawImage(grow(L, W, H, Math.max(1.5, sz * 0.03), kc, 'g1'), 0, 0); x.drawImage(L, 0, 0); return out;
     } },
   };

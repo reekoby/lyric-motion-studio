@@ -1807,5 +1807,9 @@
  "コマ打ちの切れ、ビビッドな色面、巨大な文字。拍ごとに画が変わる": "Pose tenute e scatti secchi, campi di colore vividi, lettere giganti. Il quadro cambia a ogni battito",
  "タイトルバック / グラフィック": "Titoli di testa / grafica",
  "マス目の色面、文字のテクスチャ、切り紙の帯、枠囲みのクレジット。静と動の切り替え": "Campi di colore a griglia, testo come texture, barre di carta ritagliata, titoli riquadrati. Quiete e movimento alternati",
- "画像と両方見えるように、背景モーションを「オーバーレイ・85%」で重ねました（上の不透明度と描画モードで調整できます）": "Per vedere entrambi, il movimento di sfondo ora è fuso come «Sovrapponi, 85%» (regola con opacità e metodo di fusione qui sopra)"
+ "画像と両方見えるように、背景モーションを「オーバーレイ・85%」で重ねました（上の不透明度と描画モードで調整できます）": "Per vedere entrambi, il movimento di sfondo ora è fuso come «Sovrapponi, 85%» (regola con opacità e metodo di fusione qui sopra)",
+ "色の変化": "Cambi di colore",
+ "1配色で通す": "Una sola palette",
+ "行ごとに変える": "Cambia a ogni riga",
+ "セクションごとに配色が変わる標準の動作に戻す": "Torna al comportamento standard: una palette per sezione"
 }

@@ -19,7 +19,8 @@
   const snap = (age, d = 0.16, n = 3) => stp(E.outExpo(clamp(age / d)), n);
   const poly = (ctx, pts) => { ctx.beginPath(); pts.forEach((p, i) => (i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1]))); ctx.closePath(); ctx.fill(); };
   const HEAVY = '"Anton","Archivo Black","Dela Gothic One","Noto Sans JP",sans-serif', SLAB = '"Alfa Slab One","Abril Fatface","Noto Serif JP",serif';
-  const txtOf = (R) => (R.text || R.title || 'LYRIC MOTION').replace(/\s+/g, ' ').trim() || 'LYRIC';
+  // the running line (or the song title); nothing is printed when there is neither — no placeholder words in instrumental passages
+  const txtOf = (R) => (R.text || R.title || '').replace(/\s+/g, ' ').trim();
 
   /* ================= backgrounds ================= */
   def('opPlanes', '色面カット（2拍ごとに構図が切り替わる）', (ctx, R) => {
@@ -85,7 +86,7 @@
   });
 
   def('opKanji', '巨大文字ウォール（歌詞が背景を横切る）', (ctx, R) => {
-    const { W, H, pal } = R, txt = txtOf(R), rows = W >= H ? 1 : 2, h = H / rows;
+    const { W, H, pal } = R, txt = txtOf(R), rows = W >= H ? 1 : 2, h = H / rows; if (!txt) return;
     ctx.textBaseline = 'middle'; ctx.textAlign = 'left';
     for (let i = 0; i < rows; i++) {
       ctx.font = `900 ${(h * 0.98).toFixed(1)}px ${HEAVY}`; const unit = txt + '　', uw = Math.max(1, ctx.measureText(unit).width), off = wrap(t12(R.t, 12) * W * 0.55 * (i % 2 ? -1 : 1), uw);
@@ -109,8 +110,9 @@
     // type as texture: rows of slanted slab type printed across the grid, one giant line through the middle
     ctx.save(); ctx.beginPath(); for (let j = 0; j < nr; j++) for (let i = 0; i < nc; i++) ctx.rect(i * cw + g / 2, j * ch + g / 2, cw - g, ch - g); ctx.clip();
     ctx.fillStyle = mix(pal.accent, '#000000', 0.72); ctx.textBaseline = 'middle'; ctx.textAlign = 'left'; const fs = ch * 0.2;
-    for (let r = 0, y = fs * 0.8; y < H; r++, y += fs * 1.25) {
-      const big = r === Math.floor(H / (fs * 1.25) * 0.55); ctx.font = big ? `900 ${(ch * 0.62).toFixed(1)}px ${SLAB}` : `italic 800 ${fs.toFixed(1)}px ${SLAB}`; if (big) y += ch * 0.3;
+    // small rows only: a giant line here showed up as single stray letters wherever one tile was uncovered
+    for (let r = 0, y = fs * 0.8; txt && y < H; r++, y += fs * 1.25) {
+      const big = false; ctx.font = big ? `900 ${(ch * 0.62).toFixed(1)}px ${SLAB}` : `italic 800 ${fs.toFixed(1)}px ${SLAB}`; if (big) y += ch * 0.3;
       const unit = txt + (big ? '  ' : '   ') , uw = Math.max(1, ctx.measureText(unit).width), off = wrap(hash(r, 31) * uw + t12(R.t, 12) * R.minD * (big ? 0.12 : 0.05) * (r % 2 ? 1 : -1), uw);
       ctx.globalAlpha = big ? 0.9 : 0.5; for (let x = -off; x < W; x += uw) ctx.fillText(unit, x, y); if (big) y += ch * 0.3;
     }
@@ -167,7 +169,7 @@
     const { W, H, pal } = R, { k, age } = blk(R, 8), q = snap(age, 0.2, 4), top = k % 2 === 0, bh = H * 0.36 * q, y0 = top ? 0 : H - bh, txt = txtOf(R), fs = R.minD * 0.05;
     ctx.fillStyle = pal.sub; ctx.fillRect(0, y0, W, bh); ctx.save(); ctx.beginPath(); ctx.rect(0, y0, W, bh); ctx.clip();
     ctx.fillStyle = mix(pal.sub, lum(pal.sub) > 0.5 ? '#000000' : '#ffffff', 0.8); ctx.textBaseline = 'middle'; ctx.textAlign = 'left';
-    for (let r = 0, y = (top ? 0 : H - H * 0.36) + fs * 0.7; y < (top ? H * 0.36 : H) + fs; r++, y += fs * 1.2) { ctx.font = `italic ${r % 3 === 1 ? 900 : 700} ${fs.toFixed(1)}px ${SLAB}`; const unit = txt + '  /  ', uw = Math.max(1, ctx.measureText(unit).width), off = wrap(hash(r, 3) * uw + t12(R.t, 12) * R.minD * 0.09 * (r % 2 ? 1 : -1), uw); for (let x = -off; x < W; x += uw) ctx.fillText(unit, x, y); }
+    for (let r = 0, y = (top ? 0 : H - H * 0.36) + fs * 0.7; txt && y < (top ? H * 0.36 : H) + fs; r++, y += fs * 1.2) { ctx.font = `italic ${r % 3 === 1 ? 900 : 700} ${fs.toFixed(1)}px ${SLAB}`; const unit = txt + '  /  ', uw = Math.max(1, ctx.measureText(unit).width), off = wrap(hash(r, 3) * uw + t12(R.t, 12) * R.minD * 0.09 * (r % 2 ? 1 : -1), uw); for (let x = -off; x < W; x += uw) ctx.fillText(unit, x, y); }
     ctx.restore(); ctx.fillStyle = pal.text; ctx.fillRect(0, top ? bh : y0 - R.minD * 0.008, W, R.minD * 0.008);
   });
 
@@ -248,7 +250,7 @@
       camera: { opSnap: 3, opWhip: 2, opDutch: 1.5, punch: 1 }, fx: 0.9, maxFx: 3, speed: 1.35, amp: 1.3, react: 35,
       tr: { opSlash: 3, opPanelCut: 2, opRays: 2, opIrisStar: 1.5, opImpactCut: 2.5, opWhipSmear: 2, colorBlocks: 1 }, trRate: 0.9,
       gx: { opFlashBurst: 2, opUnderSlash: 2, opPopShapes: 2, opArrows: 1.5, opTicks: 0.8, lineBurst: 1 }, gxRate: 0.6,
-      bgm: { opPlanes: 3, opBurst: 2, opStripes: 2, opShapes: 2, opSunray: 1.5, opHalftone: 1.5, opKanji: 1.5, opGrid: 1 } }),
+      bgm: { opPlanes: 3, opBurst: 2, opStripes: 2, opShapes: 2, opSunray: 1.5, opHalftone: 1.5, opGrid: 1 } }),
     Object.assign({}, common, { id: 'titleseq', n: 'タイトルバック / グラフィック', d: 'マス目の色面、文字のテクスチャ、切り紙の帯、枠囲みのクレジット。静と動の切り替え', emoji: '▚',
       pals: ['op_noir', 'op_bluenote', 'op_paper', 'op_room', 'op_signal', 'op_black', 'op_red'], fonts: ['bebas', 'gothic', 'mincho', 'alfaslab'],
       layouts: { opCredit: 3, opBoxLabel: 2.5, opPanels: 2, opSideKey: 2, opGiant: 1.5, opSlant: 1, bigCrop: 1, editorial: 1 },

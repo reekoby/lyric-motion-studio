@@ -93,7 +93,7 @@
     }
   }, true);
   def('typoMarquee', 'タイポ・マーキー（巨大文字が流れる）', '模様', (ctx, R) => {
-    const txt = (R.text || R.title || 'LYRIC MOTION').replace(/\s+/g, ' ').trim() || 'LYRIC';
+    const txt = (R.text || R.title || '').replace(/\s+/g, ' ').trim(); if (!txt) return;
     const rows = 4, h = R.H / rows;
     ctx.textBaseline = 'middle'; ctx.textAlign = 'left'; ctx.lineWidth = Math.max(1, h * 0.012);
     for (let i = 0; i < rows; i++) {
