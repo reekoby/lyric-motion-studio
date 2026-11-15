@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.17.0 — 2026-11-15
+- Anime-opening / title-sequence pack (techniques only, no artwork from any title): two tones, 「アニメOP / ハイスピード・ポップ」 and 「タイトルバック / グラフィック」, with 14 palettes / アニメのオープニングやタイトルバックの語彙（技法のみ。作品の絵は使っていません）。テーマ2種とパレット14種
+- Limited animation for text: poses held and changed on twos or on the beat, smear frames and 1–2 frame overshoots — 7 enters, 5 holds, 5 exits, 4 snap cameras; held poses are excluded from motion blur / コマ打ちの文字モーション（登場7・表示中5・退場5）とスナップカメラ4種
+- Bold type layouts: giant cropped key word with small lines on plates, slanted colour bands, slanted panels, key word up the edge, credit setting, boxed words on a band, staircase / 大胆な文字組みレイアウト7種
+- Flat backgrounds that re-compose on the beat number: colour-plane cuts, focus-line burst, racing stripes, shape pop, halftone sweep, giant type wall, sunburst, colour grid, cut-paper bars, floor plan, letter parts, type-texture bands / 拍の番号で構図が切り替わるベタ塗りの背景
+- Lyric looks: sticker text (thick outline + block shadow), patterned text, two-colour misregister. Screen effects: impact frames, cel look, stepped shake, cut flash, speed streaks, corner mattes. Cuts: slanted slashes, star iris, panel cut, focus lines, impact cut, smear whip. Accent graphics: flat burst, slash underline, arrow rush, register marks, popping shapes
+- Background image + full-frame background motion: turning on 「全面の背景モーションを画像の上に重ねる」 now starts from Overlay 85% so both stay visible / 背景画像と全面の背景モーションの両立：重ねるをオンにすると、両方見える「オーバーレイ・85%」から始まります
+- Fix: per-character enters (typewriter family) could stall forever when the intensity parameter pushed the stagger past 100% / 一文字ずつの登場が、強さの設定によって最後まで出ないことがある不具合を修正
+
 ## 1.16.0 — 2026-11-11
 - Compositing with people in the background image / video (optional ML pack, all on the device): lyric behind the person, circling the person (in front and behind), following the face, words leaving the mouth, following / pushed by the hands, laid along the arms, moving to the free side; whole-song movement analysis for smooth tracking / 背景の人物との合成（MLパック・端末内処理）
 - ML pack: `lms-ml-pack.lmsml` (≈5.5 MB, data only: person segmentation, BlazeFace, MoveNet Lightning), loaded once and kept in the browser; TensorFlow.js is bundled to run it / MLパック（別配布・データのみ）

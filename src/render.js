@@ -266,7 +266,7 @@ void main(){
       const dsx = (T.sx ?? 1) - (T0.sx ?? 1), dsy = (T.sy ?? 1) - (T0.sy ?? 1), dr = (T.rot || 0) - (T0.rot || 0);
       const m = lx.getTransform(), ks = Math.hypot(m.a, m.b) || 1;
       const d = (Math.hypot(dx, dy) + Math.abs(dsx) * Math.max(g.w, sz) * 0.5 + Math.abs(dsy) * sz * 0.5 + Math.abs(dr) * sz * 0.6) * ks;
-      if (d < 2.2 * S || T.vis === false || T.ch !== T0.ch || T.erode || st.erode || T.shard != null || T.flap || T.dust || T.burn || T.pen || T.caret || T.dot || T.boxB > T.boxA || T.liq != null || T.paint) return this.drawGlyph(lx, g, T, st, tmpl, fill, cc, pal);
+      if (d < 2.2 * S || T.vis === false || T.ch !== T0.ch || T.erode || st.erode || T.shard != null || T.flap || T.dust || T.burn || T.pen || T.caret || T.dot || T.boxB > T.boxA || T.liq != null || T.paint || T.nomb || T0.nomb) return this.drawGlyph(lx, g, T, st, tmpl, fill, cc, pal);
       const N = Math.max(3, Math.min(32, Math.ceil(d / (2.4 * S))));
       const sc = this.scratch(0), sx = sc.getContext('2d');
       // screen-space bounds of the smear
@@ -358,7 +358,7 @@ void main(){
       const needSpec = list.concat(prevList).some((id) => id === 'eqBars' || id === 'circleSpectrum' || (LM.bgm.lib[id] && LM.bgm.lib[id].spec));
       const needWave = list.concat(prevList).some((id) => LM.bgm.lib[id] && LM.bgm.lib[id].wave);
       const au = this.bands(t);
-      const R = { W: this.W, H: this.H, S: this.S, minD: this.minD, t, pal, beat: p.beatSync === false ? 0 : beat, bass: au.bass, mid: au.mid, high: au.high, spec: needSpec && this.audio && this.audio.spectrum ? this.audio.spectrum(t) : null, wave: needWave && this.audio && this.audio.waveAt ? this.audio.waveAt(t, 160) : null, bpm: this.bpm() || 120, au: this.auf(t), title: p.title || '', text: cur ? String(cur.c.text).replace(/[|｜]([^《|｜]+)《[^》]*》/g, '$1').replace(/《[^》]*》/g, '').replace(/[*^]/g, '').replace(/\s*\/\s*/g, ' ') : '' };
+      const R = { W: this.W, H: this.H, S: this.S, minD: this.minD, t, pal, beat: p.beatSync === false ? 0 : beat, bass: au.bass, mid: au.mid, high: au.high, spec: needSpec && this.audio && this.audio.spectrum ? this.audio.spectrum(t) : null, wave: needWave && this.audio && this.audio.waveAt ? this.audio.waveAt(t, 160) : null, bpm: this.bpm() || 120, au: this.auf(t), tr: t, bn: this.beatNo(t), tb: this.lastTrig(t, 1), title: p.title || '', text: cur ? String(cur.c.text).replace(/[|｜]([^《|｜]+)《[^》]*》/g, '$1').replace(/《[^》]*》/g, '').replace(/[*^]/g, '').replace(/\s*\/\s*/g, ' ') : '' };
       const cfg = { amt: p.bgmAmt == null ? 1 : p.bgmAmt, speed: (p.bgmSpeed || 1) * this.tempo() };
       const run = (ids, a) => { if (a <= 0.01) return; ids.forEach((id) => {
         const b = LM.bgm.lib[id]; if (!b || ((transparent || this.imgActive) && b.full)) return;
@@ -454,7 +454,7 @@ void main(){
       const au = this.bands(t);
       const needSpec = ids.some((id) => id === 'eqBars' || id === 'circleSpectrum' || (LM.bgm.lib[id] && LM.bgm.lib[id].spec));
       const needWave = ids.some((id) => LM.bgm.lib[id] && LM.bgm.lib[id].wave);
-      const R = { W: this.W, H: this.H, S: this.S, minD: this.minD, t, pal, beat: p.beatSync === false ? 0 : beat, bass: au.bass, mid: au.mid, high: au.high, spec: needSpec && this.audio && this.audio.spectrum ? this.audio.spectrum(t) : null, wave: needWave && this.audio && this.audio.waveAt ? this.audio.waveAt(t, 160) : null, bpm: this.bpm() || 120, au: this.auf(t), title: p.title || '', text: boost.text || p.title || '' };
+      const R = { W: this.W, H: this.H, S: this.S, minD: this.minD, t, pal, beat: p.beatSync === false ? 0 : beat, bass: au.bass, mid: au.mid, high: au.high, spec: needSpec && this.audio && this.audio.spectrum ? this.audio.spectrum(t) : null, wave: needWave && this.audio && this.audio.waveAt ? this.audio.waveAt(t, 160) : null, bpm: this.bpm() || 120, au: this.auf(t), tr: t, bn: this.beatNo(t), tb: this.lastTrig(t, 1), title: p.title || '', text: boost.text || p.title || '' };
       const cfg = { amt: (p.bgmAmt == null ? 1 : p.bgmAmt) * (boost.amt || 1), speed: (p.bgmSpeed || 1) * this.tempo() * (boost.speed || 1) };
       ids.forEach((id) => {
         const b = LM.bgm.lib[id]; if (!b || ((transparent || this.imgActive) && b.full)) return;
@@ -723,6 +723,15 @@ void main(){
       if (div >= 1) { const per = (bs[lo + 1] != null ? bs[lo + 1] : bs[lo] + 0.5) - bs[lo], sub = per / div; return bs[lo] + Math.floor((t - bs[lo]) / sub) * sub; }
       const n = Math.max(1, Math.round(1 / div)); return bs[lo - (lo % n)];
     }
+    // index of the beat running at t (cut-on-the-beat effects pick a new composition per beat)
+    beatNo(t) {
+      const p = this.p;
+      if (p.bpm > 0) return Math.floor((t - (p.beatOffset || 0)) / (60 / p.bpm));
+      const an = this.audio && this.audio.analysis, bs = an && an.beats;
+      if (!bs || !bs.length || t < bs[0]) return Math.floor(t / (60 / (this.bpm() || 120)));
+      let lo = 0, hi = bs.length - 1; while (lo < hi) { const m = (lo + hi + 1) >> 1; if (bs[m] <= t) lo = m; else hi = m - 1; }
+      return lo;
+    }
     beatAt(t) {
       const p = this.p;
       if (p.beatSync === false) return 0;
@@ -845,7 +854,7 @@ void main(){
       if (gap && !mode.noOverlay) this.drawGapFx(ctx, t, beat, bgPal, gap);
       const lt = cur ? t - cur.c.start : 0;
       const bbox = cur ? cur.L.bbox : { x: W * 0.3, y: H * 0.4, w: W * 0.4, h: H * 0.2, cx: W / 2, cy: H / 2 };
-      const R = { W, H, S, minD: this.minD, t, lt, pal, beat, bbox, amt: 1, xp: 0, au: this.auf(t), bpm: this.bpm() || 120, beatFlash: p.beatSync !== false && (fl.has('flash')) };
+      const R = { W, H, S, minD: this.minD, t, lt, pal, beat, bbox, amt: 1, xp: 0, au: this.auf(t), bpm: this.bpm() || 120, bn: this.beatNo(t), tb: this.lastTrig(t, 1), beatFlash: p.beatSync !== false && (fl.has('flash')) };
       if (cur) R.xp = clamp((t - cur.ph.exitStart) / Math.max(0.05, cur.ph.xd));
       const audioFx = fl.has('audioBars') || fl.has('audioWave');
       if (audioFx && this.audio) { R.spec = this.audio.spectrum && this.audio.spectrum(t); R.wave = this.audio.waveAt && this.audio.waveAt(t, 160); }
@@ -853,10 +862,15 @@ void main(){
       // under overlays
       if (overlayOK) for (const [id, a] of fl) { const f = FX.list[id]; if (f.k === 'under' && FX.O[id]) { ctx.save(); R.amt = a; FX.O[id](ctx, R); ctx.restore(); } }
       // readability scrim behind the lyric when a busy full-frame background is running
-      if (cur && !transparent && p.scrim !== false && this.bgmOf(cur.c).some((id) => LM.bgm.lib[id] && LM.bgm.lib[id].full) && !cur.L.track && !cur.L.seq) {
+      if (cur && !transparent && p.scrim !== false && this.bgmOf(cur.c).some((id) => LM.bgm.lib[id] && LM.bgm.lib[id].full && !LM.bgm.lib[id].flat) && !cur.L.track && !cur.L.seq) {
         const b = cur.L.bbox, r = Math.max(b.w, b.h) * 0.75 + this.minD * 0.08;
         const g = ctx.createRadialGradient(b.cx, b.cy, 0, b.cx, b.cy, r); g.addColorStop(0, rgba(pal.bg, 0.55)); g.addColorStop(1, rgba(pal.bg, 0));
         ctx.save(); ctx.fillStyle = g; ctx.translate(b.cx, b.cy); ctx.scale(1, Math.min(1, (b.h + this.minD * 0.2) / (b.w + this.minD * 0.2)) + 0.25); ctx.translate(-b.cx, -b.cy); ctx.fillRect(b.cx - r, b.cy - r, r * 2, r * 2); ctx.restore();
+      }
+      // busy graphic backgrounds (colour grid, floor plan) get a hard-edged plate behind the lyric instead of a soft scrim
+      if (cur && !transparent && p.scrim !== false && !cur.L.track && !cur.L.seq && this.bgmOf(cur.c).some((id) => LM.bgm.lib[id] && LM.bgm.lib[id].plate)) {
+        const b = cur.L.bbox, pd = this.minD * 0.045, q = Math.min(1, Math.floor(clamp(lt / 0.12) * 3) / 3 + (lt >= 0.12 ? 1 : 0)) * (R.xp >= 0.92 ? 0 : 1);
+        if (q > 0 && b.w > 1) { ctx.save(); ctx.fillStyle = pal.bg; ctx.fillRect(b.x - pd * 1.4, b.cy - (b.h / 2 + pd) * q, b.w + pd * 2.8, (b.h + pd * 2) * q); ctx.fillStyle = pal.accent; ctx.fillRect(b.x - pd * 1.4, b.cy - (b.h / 2 + pd) * q, pd * 0.28, (b.h + pd * 2) * q); ctx.restore(); }
       }
       // cues
       for (const v of vis) this.drawCue(ctx, v, t, beat, mode);
@@ -996,7 +1010,7 @@ void main(){
       else if (cam === 'groove') { const w = Math.sin(t * PI * (this.bpm() || 100) / 60 / 2); lx.translate(w * S * 16 * camAmp, Math.abs(w) * S * 5 * camAmp); lx.rotate(w * 0.008 * camAmp); }
       else if (cam === 'punch') { const b = Math.max(beat, Math.max(0, 1 - lt / 0.3)); const k = 1 + 0.045 * b * camAmp; lx.scale(k, k); }
       else if (LM.cam3d && LM.cam3d.has(cam)) this._c3 = LM.cam3d.params(cam, this, v, t, beat);
-      else if (LM.cam2 && LM.cam2[cam]) LM.cam2[cam](lx, { t, lt, hp, dur: ph.dur, S, W, H, amp: camAmp, beat, bpm: this.bpm() || 120, seed: U.strHash(c.id), au: this.auf(t) });
+      else if (LM.cam2 && LM.cam2[cam]) LM.cam2[cam](lx, { t, lt, hp, dur: ph.dur, S, W, H, amp: camAmp, beat, bpm: this.bpm() || 120, seed: U.strHash(c.id), au: this.auf(t), bn: this.beatNo(t), tb: this.lastTrig(t, 1), minD: this.minD });
       if (L.drift) lx.translate(-hp * W * L.drift * 3, 0);
       L._k = L.seq ? this.seqIndex(L, lt, ph.dur) : -1;
       if (L.track) { const ct = this.trackCam(L, lt, ph.dur); lx.scale(ct.z, ct.z); lx.rotate(-ct.rot); lx.translate(-ct.x, -ct.y); }
@@ -1061,9 +1075,10 @@ void main(){
         const bb = L.bbox, sAround = SFb(bb.cx, bb.cy, Math.max(bb.w, bb.h) * 0.75);
         if (sAround) { dPal = Object.assign({}, pal); ['accent', 'sub', 'text'].forEach((k) => { if (contrast(pal[k], sAround) < 1.9) dPal[k] = readable(sAround, [k === 'text' ? pal.bg : pal.text, pal.sub, pal.accent, pal.bg, mix(pal[k], '#ffffff', 0.7), mix(pal[k], '#000000', 0.6)].filter((c0) => c0 !== pal[k]), 2.2); }); }
       }
+      if (dPal !== pal) dPal.raw = pal; // plates that carry their own text need the true palette
       this.drawDecos(lx, L, dPal, pe, px, t, ph.tr.exit === 'cut' ? 0 : 1);
       const gfxIds = (c.gfx || []).filter((id) => LM.gfx.lib[id]);
-      const GR = gfxIds.length ? { W, H, S, minD: this.minD, pal, bb: L.seq && L._k >= 0 ? L.seqBB[L._k] : L.bbox, kb: L.keyBB, e: clamp(lt / 0.65), lt, hp, beat, x: ph.tr.exit === 'cut' ? 0 : px, seed: U.strHash(c.id) & 1023, title: p.title || '', tAbs: t } : null;
+      const GR = gfxIds.length ? { W, H, S, minD: this.minD, pal, bb: L.seq && L._k >= 0 ? L.seqBB[L._k] : L.bbox, kb: L.keyBB, e: clamp(lt / 0.65), lt, hp, beat, x: ph.tr.exit === 'cut' ? 0 : px, seed: U.strHash(c.id) & 1023, title: p.title || '', tAbs: t, bn: this.beatNo(t), tb: this.lastTrig(t, 1) } : null;
       if (GR) LM.gfx.draw(gfxIds.filter((id) => !LM.gfx.lib[id].top), lx, GR);
       // ghosts behind
       L.ghosts.forEach((gh) => { if (gh.behind || gh.mirrorY == null) this.drawGhost(lx, L, gh, c, ph, tt, pal, colorOf, st); });
@@ -1139,7 +1154,7 @@ void main(){
       L.ghosts.forEach((gh) => { if (gh.mirrorY != null) this.drawGhost(lx, L, gh, c, ph, tt, pal, colorOf, st); });
       lx.restore();
       // composite layer with transitions
-      this._lb = L.bbox; this._lsz = L.glyphs.length ? L.glyphs[0].size : this.minD * 0.08;
+      this._lb = L.bbox; this._ldeco = !!(L.decos && L.decos.some((d) => d.t === 'fn' || d.t === 'rect' || d.t === 'band')); this._lsz = L.glyphs.length ? L.glyphs[0].size : this.minD * 0.08;
       this.compositeLayer(ctx, fl, c, ph, t, lt, beat, pal);
     }
 
@@ -1148,14 +1163,14 @@ void main(){
       const lt = t - c.start;
       const N = L.glyphs.length;
       const cx = L.bbox.cx, cy = L.bbox.cy;
-      const C = { W: this.W, H: this.H, S: this.S, amp, cx, cy, N, gl: L.glyphs, beat, seed: idx, W_: Math.max(1, L.words), tempo: this.tempo(), bb: L.bbox, lt: t - c.start, dur: ph.dur, ct: L._ct || this.charTimes(c), tAbs: t, mb: this.mbAmt(), au: this.auf(t), scope: ph.tr.hold === 'auWave' ? this.scopeAt(t) : null, bpm: this.bpm() || 120, ed: ph.ed, xd: ph.xd, ml: this._ml ? this.mlInfo(t) : null };
+      const C = { W: this.W, H: this.H, S: this.S, amp, cx, cy, N, gl: L.glyphs, beat, seed: idx, W_: Math.max(1, L.words), tempo: this.tempo(), bb: L.bbox, lt: t - c.start, dur: ph.dur, ct: L._ct || this.charTimes(c), tAbs: t, mb: this.mbAmt(), au: this.auf(t), scope: ph.tr.hold === 'auWave' ? this.scopeAt(t) : null, bpm: this.bpm() || 120, bn: this.beatNo(t), tb: this.lastTrig(t, 1), ed: ph.ed, xd: ph.xd, ml: this._ml ? this.mlInfo(t) : null };
       // Motion System parameters (intensity / variation / seed / easing / stagger / delay) per track
       const MS = LM.MS, pE = MS && MS.par(c, 'enter'), pH = MS && MS.par(c, 'hold'), pM = MS && MS.par(c, 'emph'), pX = MS && MS.par(c, 'exit');
       const seedV = (U.strHash(c.id) ^ (((c.mp && c.mp.seed) || 0) * 7919) ^ ((this.p.seed || 0) * 31)) >>> 0;
       const kE = pE && MS.ik(pE.i), kH = pH && MS.ik(pH.i), kM = MS ? MS.ik(pM && pM.i != null ? pM.i : 50) : null, kX = pX && MS.ik(pX.i);
       const vE = pE && pE.v ? pE.v / 100 : 0, vH = pH && pH.v ? pH.v / 100 : 0, vM = pM && pM.v ? pM.v / 100 : 0, vX = pX && pX.v ? pX.v / 100 : 0;
-      const stE = pE && pE.st != null ? clamp(pE.st / 100 * 0.92, 0, 0.95) : me.st * (kE ? kE.st : 1);
-      const stX = pX && pX.st != null ? clamp(pX.st / 100 * 0.92, 0, 0.95) : mx.st * (kX ? kX.st : 1);
+      const stE = pE && pE.st != null ? clamp(pE.st / 100 * 0.92, 0, 0.95) : Math.min(me.st * (kE ? kE.st : 1), Math.max(me.st, 0.95));
+      const stX = pX && pX.st != null ? clamp(pX.st / 100 * 0.92, 0, 0.95) : Math.min(mx.st * (kX ? kX.st : 1), Math.max(mx.st, 0.95));
       const wrap = (pp, o) => { if (!o || !o.ease || o.ease === 'auto') return pp; if (MS.WARP[o.ease]) return MS.WARP[o.ease](pp); return clamp(MS.ease(o.ease, o)(pp), 0, 1.25); };
       const delayE = pE && pE.delay > 0 ? pE.delay : 0;
       if (me.morph) { const cs = this.cues, k0 = cs.indexOf(c); if (k0 > 0) C.prevL = this.getLayout(cs[k0 - 1], k0 - 1); }
@@ -1186,6 +1201,7 @@ void main(){
           if (A.sx != null) T.sx *= A.sx; if (A.sy != null) T.sy *= A.sy;
           if (A.a != null) T.a *= A.a; if (A.blur) T.blur += A.blur;
           if (A.skx) T.skx = (T.skx || 0) + A.skx;
+          if (A.nomb) T.nomb = true; // held poses (limited animation) must not be blurred into each other
           if (A.vis === false) T.vis = false;
           if (A.ch) T.ch = A.ch;
           if (A.lineMask) T.lineMask = true;
@@ -1642,7 +1658,7 @@ void main(){
         const anim = d.anim || 'none';
         if (anim === 'fade') { ctx.globalAlpha *= q; q = 1; }
         switch (d.t) {
-          case 'fn': { d.f(ctx, { t, q, pe, px, pal, S, W: this.W, H: this.H, minD: this.minD, L, r: this, beat: this.curBeat || 0 }); break; }
+          case 'fn': { d.f(ctx, { t, q, pe, px, pal, raw: pal.raw || pal, S, W: this.W, H: this.H, minD: this.minD, L, r: this, beat: this.curBeat || 0 }); break; }
           case 'rect': {
             let { x, y, w, h } = d;
             if (anim === 'grow-x') w *= q; else if (anim === 'grow-y') h *= q;
@@ -1722,8 +1738,8 @@ void main(){
       const c3 = this._c3; this._c3 = null;
       const occ = this._occ; this._occ = null;
       // experimental layer filters re-render the finished lyric layer (SDF chrome, reaction–diffusion, cells, ink)
-      let LS = L; const lfId = LM.lfx && [...fl.keys()].find((id) => LM.lfx.has(id));
-      if (lfId) LS = LM.lfx.apply(lfId, L, { W, H, S, t, lt, beat, pal, key: c.id + '|' + lfId + '|' + W, bbox: this._lb, size: this._lsz, xp: ph.xd > 0 ? clamp((t - ph.exitStart) / ph.xd) : 0, exitAt: ph.exitStart, xd: ph.xd, start: c.start }) || L;
+      let LS = L; const lfId = LM.lfx && [...fl.keys()].reverse().find((id) => LM.lfx.has(id)); // the line's own look wins over the project-wide one
+      if (lfId) LS = LM.lfx.apply(lfId, L, { W, H, S, t, lt, beat, pal, key: c.id + '|' + lfId + '|' + W, bbox: this._lb, size: this._lsz, deco: this._ldeco, xp: ph.xd > 0 ? clamp((t - ph.exitStart) / ph.xd) : 0, exitAt: ph.exitStart, xd: ph.xd, start: c.start }) || L;
       const drawL = () => {
         if (c3) LM.cam3d.draw(ctx, LS, c3, this); else ctx.drawImage(LS, 0, 0);
         if (occ) { const cut = this.mlCutout(); if (cut) { ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; ctx.drawImage(cut, 0, 0); ctx.restore(); } if (occ.front) ctx.drawImage(occ.front, 0, 0); }
@@ -1842,7 +1858,7 @@ void main(){
       if (fl.has('contrastPop')) gr = [1 + 0.3 * g('contrastPop'), 1 + 0.35 * g('contrastPop'), 0];
       if (fl.has('bleach')) gr = [gr[0] * (1 + 0.25 * g('bleach')), gr[1] * (1 - 0.5 * clamp(g('bleach'))), 0.02];
       u.grade = gr;
-      if (PX) PX.params(g, u, { S, t, beat, burst, pal, au: this.auf(t), has: (id) => fl.has(id), hex3: (h) => U.hex2rgb(h).map((v) => v / 255) });
+      if (PX) PX.params(g, u, { S, t, lt, beat, burst, pal, bn: this.beatNo(t), tb: this.lastTrig(t, 1), au: this.auf(t), has: (id) => fl.has(id), hex3: (h) => U.hex2rgb(h).map((v) => v / 255) });
       return u;
     }
 

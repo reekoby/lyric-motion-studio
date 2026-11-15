@@ -86,3 +86,12 @@
 - 辞書: `i18n/{en,es,it,ko}.json`、説明書: `i18n/manual_{lang}.json`（`build.mjs` が `LM.I18N_DATA` として埋め込み）。`i18n/check.py <lang>` で欠落・プレースホルダ不一致を検査。
 - 文言を追加したら: 4言語の JSON にキーを足す（少数なら `i18n.js` の EXTRA2 でも可）。ユーザー入力（歌詞など）を表示する要素には `data-noi18n` を付ける。
 - 歌詞組版: `typo.js` の文字クラス J/L/P/JP/K/S。ハングル(K)は `fontOf().korean`（ハングル書体・`KOR_PAIR` でおまかせ）で組む。`¿ ¡ «` は次語、`» ? !` は前語と分離しない。`parse().units` は欧文を読む長さで重み付け（自動配置・演出の長さ判定に使用）。
+
+## Anime-opening / title-sequence pack (1.17.0)
+- `src/animeop.js` (palettes, layouts, motions, cameras, accent graphics, lyric-layer looks) and `src/animeop2.js` (backgrounds, screen effects, cuts, the two tones). Helpers in `LM.animeop`: `stp(p, n)` holds n poses across 0..1, `t12(t, fps)` quantises time.
+- Beat-number hooks: `Renderer.beatNo(t)`; backgrounds, overlays, cameras, glyph motions, graphics and the post shader receive `bn` (beat index) and `tb` (time of the last beat). Backgrounds also get `tr` (unscaled time). Compositions are chosen from `bn`, so scrubbing and export are deterministic.
+- Background flags: `flat` (opaque but no soft scrim behind the lyric) and `plate` (a hard-edged plate is drawn behind the lyric instead).
+- A motion transform may set `nomb: true` so held poses are not smeared by motion blur.
+- Lyric-layer looks hook into `LM.lfx.has/apply`; `o.deco` tells a look that the layout carries plates in the same layer. The line's own look wins over the project-wide one.
+- Director extension lists: `LM.director_LONG` (layouts that take long lines), `LM.director_INTENSE`, theme flag `ownLook` (lyric-meaning backgrounds / filters are not mixed in).
+

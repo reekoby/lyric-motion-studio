@@ -2,9 +2,9 @@
 'use strict';
 LM.director = (() => {
   const U = LM.U, D = LM.data, M = LM.motion, FX = LM.fx;
-  const LONG_OK = ['center', 'poster', 'subtitle', 'editorial', 'stack', 'labels', 'columns', 'split', 'echo', 'mirror', 'spotlight', 'frame', 'ribbon', 'wordwall', 'depth', 'diagonal', 'burst', 'outline', 'ladder', 'stairs', 'vertical'];
+  const LONG_OK = ['center', 'poster', 'subtitle', 'editorial', 'stack', 'labels', 'columns', 'split', 'echo', 'mirror', 'spotlight', 'frame', 'ribbon', 'wordwall', 'depth', 'diagonal', 'burst', 'outline', 'ladder', 'stairs', 'vertical', ...(LM.director_LONG || [])];
   const SHORT_GOOD = { poster: 1.5, grid: 1.6, orbit: 1.5, bigsmall: 1.3, stack: 1.2, outline: 1.2 };
-  const INTENSE = new Set(['slam', 'stamp', 'whip', 'glitch', 'zoomOut', 'smear', 'tunnel', 'scatter', 'spin', 'magnet', 'splitJoin', 'wordPop', 'pop', 'bounce', 'scramble', 'crtOn', 'slot']);
+  const INTENSE = new Set([...(LM.director_INTENSE || []), 'slam', 'stamp', 'whip', 'glitch', 'zoomOut', 'smear', 'tunnel', 'scatter', 'spin', 'magnet', 'splitJoin', 'wordPop', 'pop', 'bounce', 'scramble', 'crtOn', 'slot']);
   const SLOW_ENTER = new Set(['charMask', 'blurChars', 'pathIn', 'springIn', 'typewriter', 'strokeDraw', 'cascade', 'rainIn', 'domino', 'pendulumChars', 'scramble', 'slot', 'stagger', 'charFlip', 'focusPull', 'spiral']);
 
   /* ---- motion character: 激しさ (drive) / 動きの付け方 (feel) / 変化の多さ (variety) ---- */
@@ -176,7 +176,7 @@ LM.director = (() => {
         if (secE > 0.6 && rng() < 0.35) { const b2 = rng.weighted(th.bgm, [a]); const B = LM.bgm.lib; if (b2 !== a && !(B[a] && B[a].full && B[b2] && B[b2].full)) secBgm.push(b2); }
       }
       // what the lines of this section talk about (fire, rain, stars, …) can pick its background (EX-06)
-      if (LM.sem && !remembered && p.autoBgm !== false) { const mo = LM.sem.motifOf(sec.map((i) => cues[i].text)); if (mo && mo.n >= 2 && rng() < 0.65) { const id = LM.sem.bgmFor(mo.k, rng), B = LM.bgm.lib; if (id && !secBgm.includes(id) && !(B[id].full && secBgm.slice(1).some((b) => B[b] && B[b].full))) secBgm[0] = id; } }
+      if (LM.sem && !th.ownLook && !remembered && p.autoBgm !== false) { const mo = LM.sem.motifOf(sec.map((i) => cues[i].text)); if (mo && mo.n >= 2 && rng() < 0.65) { const id = LM.sem.bgmFor(mo.k, rng), B = LM.bgm.lib; if (id && !secBgm.includes(id) && !(B[id].full && secBgm.slice(1).some((b) => B[b] && B[b].full))) secBgm[0] = id; } }
       if (remembered) secBgm = remembered.bgm.slice();
       else if (isChorus && th.bgm && secBgm.length < 2) {
         // an analysed song gets a sound-reactive visualiser on the chorus more often
@@ -274,7 +274,7 @@ LM.director = (() => {
           const prob = th.fx * (ST.drive == null ? 1 : 0.5 + ST.drive) * (0.55 + energy[ci] * 0.7);
           const fs = [];
           if (rng() < prob) {
-            const sm = LM.sem && LM.sem.analyze(c.text), mk = sm && sm.n ? Object.keys(sm.motifs).sort((a, b) => sm.motifs[b] - sm.motifs[a])[0] : null, mf = mk && rng() < 0.4 ? LM.sem.fxFor(mk, rng) : null;
+            const sm = LM.sem && !th.ownLook && LM.sem.analyze(c.text), mk = sm && sm.n ? Object.keys(sm.motifs).sort((a, b) => sm.motifs[b] - sm.motifs[a])[0] : null, mf = mk && rng() < 0.4 ? LM.sem.fxFor(mk, rng) : null;
             fs.push(mf || rng.weighted(th.filters));
             if (th.maxFx > 1 && rng() < 0.3 + energy[ci] * 0.25) {
               const f2 = rng.weighted(th.filters, fs);

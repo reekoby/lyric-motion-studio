@@ -938,7 +938,12 @@
   $('#imgBlur').addEventListener('input', (e) => { P.imgBlur = +e.target.value; $('#imgBlurV').textContent = e.target.value; S.dirty = true; commitSoon(); });
   $('#imgKB').onchange = (e) => { P.imgKB = e.target.checked; commit(); };
   $('#imgBeat').onchange = (e) => { P.imgBeat = e.target.checked; commit(); };
-  $('#imgBgmFull').onchange = (e) => { P.imgBgmFull = e.target.checked; commit(); };
+  $('#imgBgmFull').onchange = (e) => {
+    P.imgBgmFull = e.target.checked;
+    // an opaque full-frame motion would simply hide the picture: start from a blend that shows both
+    if (P.imgBgmFull && (P.bgmBlend || 'normal') === 'normal' && (P.bgmOpacity == null || P.bgmOpacity > 0.95)) { P.bgmBlend = 'overlay'; P.bgmOpacity = 0.85; toast('画像と両方見えるように、背景モーションを「オーバーレイ・85%」で重ねました（上の不透明度と描画モードで調整できます）'); }
+    commit(); refresh();
+  };
   function imgFirstApply(quiet) {
     LM.imgFirst.applyLook(P); const n = LM.imgFirst.fitCues(P);
     if (P.imgMode === 'off' && (P.images || []).length) P.imgMode = 'auto';
