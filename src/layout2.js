@@ -87,6 +87,9 @@
   lib.bigCrop = { n: '巨大文字（はみ出し）', c: '時間演出', f(L, P) {
     // intentionally oversized type bleeding off-frame, slowly panning (fashion MV look)
     const r = L0.block(L, P, { cx: L.W / 2, cy: L.cy, w: L.W * 1.9, h: L.H * 1.25 }, { maxLines: 2, lh: 0.95, noGrow: true });
-    return { glyphs: r.glyphs, lines: r.lines, drift: 0.06, bleed: true };
+    // start with the head of the line in frame and pan until its tail is: nothing stays cut off for the whole line
+    const bb = L0.bbox(r.glyphs), m = L.W * 0.05, over = Math.max(0, bb.w - (L.W - m * 2));
+    r.glyphs.forEach((g) => (g.x += m - bb.x)); r.lines.forEach((l) => { if (l.x != null) l.x += m - bb.x; if (l.cx != null) l.cx += m - bb.x; });
+    return { glyphs: r.glyphs, lines: r.lines, drift: Math.max(0.02, over / (L.W * 3)), bleed: true };
   } };
 })();

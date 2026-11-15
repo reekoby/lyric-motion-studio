@@ -875,13 +875,13 @@ void main(){
         const b = cur.L.bbox, pd = this.minD * 0.045, q = Math.min(1, Math.floor(clamp(lt / 0.12) * 3) / 3 + (lt >= 0.12 ? 1 : 0)) * (R.xp >= 0.92 ? 0 : 1);
         if (q > 0 && b.w > 1) { ctx.save(); ctx.fillStyle = pal.bg; ctx.fillRect(b.x - pd * 1.4, b.cy - (b.h / 2 + pd) * q, b.w + pd * 2.8, (b.h + pd * 2) * q); ctx.fillStyle = pal.accent; ctx.fillRect(b.x - pd * 1.4, b.cy - (b.h / 2 + pd) * q, pd * 0.28, (b.h + pd * 2) * q); ctx.restore(); }
       }
+      if (overlayOK && fl.has('letterbox') && !transparent) { ctx.save(); FX.O.letterbox(ctx, R); ctx.restore(); }
       // cues
       for (const v of vis) this.drawCue(ctx, v, t, beat, mode);
       // over overlays
       if (overlayOK) for (const [id, a] of fl) { const f = FX.list[id]; if ((f.k === 'over') && FX.O[id]) { ctx.save(); R.amt = a; FX.O[id](ctx, R); ctx.restore(); } }
       // credits
       if (p.showCredits && (p.title || p.artist)) this.drawCredits(ctx, pal, t);
-      if (overlayOK && fl.has('letterbox') && !transparent) { ctx.save(); FX.O.letterbox(ctx, R); ctx.restore(); }
       ctx.globalAlpha = 1;
       // post uniforms
       const post = this.postParams(fl, t, lt, cur, beat, pal);
@@ -1056,10 +1056,12 @@ void main(){
         let surfAvg = null; if (all.length) { const rgb = all.map(U.hex2rgb); surfAvg = U.rgb2hex(...[0, 1, 2].map((k) => rgb.reduce((m, c0) => m + c0[k], 0) / rgb.length)); }
         return (dec = { fillA, fillN, accS, surfAvg });
       };
+      // plates may be re-coloured to stand out from the background (dPal below); the letters on them must follow that colour, not the palette's
+      let platePal = pal;
       const colorOf = (g0) => {
         const g = onAcc && !g0.on ? Object.assign({}, g0, { on: 'accent' }) : g0;
         const D0 = g.on ? null : decide();
-        const surf = g.on === 'accent' ? pal.accent : g.on === 'sub' ? pal.sub : (D0 && D0.surfAvg) || pal.bg;
+        const surf = g.on === 'accent' ? platePal.accent : g.on === 'sub' ? platePal.sub : (D0 && D0.surfAvg) || pal.bg;
         const wantAccent = isAcc(g);
         let want = wantAccent ? (g.on === 'accent' ? pal.bg : pal.accent) : g.on === 'accent' ? pal.bg : pal.text;
         if (D0 && (wantAccent ? D0.fillA : D0.fillN)) want = wantAccent ? D0.fillA : D0.fillN;
@@ -1082,6 +1084,7 @@ void main(){
         if (sAround) { dPal = Object.assign({}, pal); ['accent', 'sub', 'text'].forEach((k) => { if (contrast(pal[k], sAround) < 1.9) dPal[k] = readable(sAround, [k === 'text' ? pal.bg : pal.text, pal.sub, pal.accent, pal.bg, mix(pal[k], '#ffffff', 0.7), mix(pal[k], '#000000', 0.6)].filter((c0) => c0 !== pal[k]), 2.2); }); }
       }
       if (dPal !== pal) dPal.raw = pal; // plates that carry their own text need the true palette
+      if (dPal !== pal && !/^op[A-Z]/.test(L.lay || '')) platePal = dPal; // (the anime-opening layouts paint their plates from the true palette)
       this.drawDecos(lx, L, dPal, pe, px, t, ph.tr.exit === 'cut' ? 0 : 1);
       const gfxIds = (c.gfx || []).filter((id) => LM.gfx.lib[id]);
       const GR = gfxIds.length ? { W, H, S, minD: this.minD, pal, bb: L.seq && L._k >= 0 ? L.seqBB[L._k] : L.bbox, kb: L.keyBB, e: clamp(lt / 0.65), lt, hp, beat, x: ph.tr.exit === 'cut' ? 0 : px, seed: U.strHash(c.id) & 1023, title: p.title || '', tAbs: t, bn: this.beatNo(t), tb: this.lastTrig(t, 1) } : null;

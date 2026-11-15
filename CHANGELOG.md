@@ -4,6 +4,11 @@
 - 色の変化 (colour changes) slider under 生成: from one palette for the whole song to a new palette and re-dealt colour roles on every line; the standard (one palette per section) is unchanged / 「色の変化」スライダーを追加。1配色で通す〜行ごとに配色と色の役割を変える、まで選べます
 - Fix: single large letters of the lyric could show through the colour-grid background and read as stray characters; the grid now prints small type only, and the giant type wall is no longer picked by the auto direction / カラーグリッド背景から歌詞の大きな一文字だけが覗いて、余計な文字に見える不具合を修正
 - Fix: backgrounds and graphics no longer print placeholder words ("LYRIC MOTION", "LYRIC VIDEO") in passages without lyrics / 歌詞のない区間に「LYRIC MOTION」などの仮の文字が出ないようにしました
+- Text display audit (every layout × 9 sample lines × 3 aspect ratios for off-frame, overlapping and tiny text; every tone rendered and checked for letters that do not show) / 文字表示の全面点検で見つかった不具合を修正:
+  - 巨大文字（はみ出し）: the line now starts with its head in frame and pans until its tail is, so no part stays cut off for the whole line / 行の頭から末尾まで画面を通過するようにしました（これまでは一部しか見えないまま終わっていました）
+  - Letters on plates (帯テロップ, 二分割, 斜め帯 …) follow the colour the plate is actually drawn in; they could vanish when a plate was re-coloured to stand out from the background / 帯の上の文字が帯と同色になって消える組み合わせを修正
+  - シネスコ帯 is drawn under the lyric, so a subtitle line is no longer hidden behind the bar; 字幕（下部） sits higher on tall frames / シネスコ帯が字幕を隠さないようにし、縦画面の字幕位置を少し上げました
+  - カレイドスコープ folds the frame on the beat and releases between beats, so the line stays readable / カレイドスコープは拍で畳み、拍の間は読めるようにしました
 - Fix: sticker / misregister outlines are chosen against the colour the letters are actually painted in, and letters on colour plates are held to a reading contrast, so text no longer merges with its outline or plate / 文字がフチや色帯と同じ色になって読めなくなる組み合わせを修正
 
 ## 1.17.0 — 2026-11-15

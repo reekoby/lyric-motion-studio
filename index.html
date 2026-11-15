@@ -9,7 +9,7 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-eAkmWXvQRYrGD+QKdl/xfBji5JTGd6+JE2fcyWl6pRw=' 'sha256-KObWzwW/3KYEn/kneRDldpoeTuRMYhQVqN71+aP4mi0=' 'sha256-ksarh9EgyDjXwM8s7QvDXIsSZT8r0TPkXwYTtmHmjzg=' 'sha256-n9Q1I1UdGZnQLsfnfEoUP47LN9bqCnFKNJB23BkE3kY='; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com data: blob:; img-src data: blob:; media-src blob: data:; worker-src blob:; connect-src blob: data:; base-uri 'none'; form-action 'none'; object-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-eAkmWXvQRYrGD+QKdl/xfBji5JTGd6+JE2fcyWl6pRw=' 'sha256-KObWzwW/3KYEn/kneRDldpoeTuRMYhQVqN71+aP4mi0=' 'sha256-ksarh9EgyDjXwM8s7QvDXIsSZT8r0TPkXwYTtmHmjzg=' 'sha256-a4WziGlpEIAvZP74GMvirJv9xrTi9XGCHnPOi2j+CjY='; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com data: blob:; img-src data: blob:; media-src blob: data:; worker-src blob:; connect-src blob: data:; base-uri 'none'; form-action 'none'; object-src 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Lyric Motion Studio</title>
@@ -2940,7 +2940,8 @@ LM.layout = (() => {
       return { glyphs: r.glyphs, lines: r.lines };
     } },
     subtitle: { n: '字幕（下部）', c: '中央', f(L, P) {
-      const h = L.minD * 0.2, cy = L.safe.y + L.safe.h - h / 2;
+      // on tall frames the line sits a little higher: the very bottom is where phone players put their own controls, and a drifting hold could push it off the edge
+      const h = L.minD * 0.2, cy = L.safe.y + L.safe.h - h / 2 - (L.H > L.W ? L.H * 0.07 : L.H * 0.015);
       const r = block(L, P, { cx: L.W / 2, cy, w: L.safe.w * 0.92, h }, { maxLines: 2, maxSize: L.minD * 0.075, noGrow: true });
       return { glyphs: r.glyphs, lines: r.lines };
     } },
@@ -3303,7 +3304,10 @@ LM.layout = (() => {
   lib.bigCrop = { n: '巨大文字（はみ出し）', c: '時間演出', f(L, P) {
     // intentionally oversized type bleeding off-frame, slowly panning (fashion MV look)
     const r = L0.block(L, P, { cx: L.W / 2, cy: L.cy, w: L.W * 1.9, h: L.H * 1.25 }, { maxLines: 2, lh: 0.95, noGrow: true });
-    return { glyphs: r.glyphs, lines: r.lines, drift: 0.06, bleed: true };
+    // start with the head of the line in frame and pan until its tail is: nothing stays cut off for the whole line
+    const bb = L0.bbox(r.glyphs), m = L.W * 0.05, over = Math.max(0, bb.w - (L.W - m * 2));
+    r.glyphs.forEach((g) => (g.x += m - bb.x)); r.lines.forEach((l) => { if (l.x != null) l.x += m - bb.x; if (l.cx != null) l.cx += m - bb.x; });
+    return { glyphs: r.glyphs, lines: r.lines, drift: Math.max(0.02, over / (L.W * 3)), bleed: true };
   } };
 })();
 
@@ -8815,7 +8819,7 @@ vec2 ledF=vec2(0.); vec2 hexC=vec2(0.);
       u.halo = g('halation') * 0.9 + (has('filmLook') ? 0.35 * g('filmLook') : 0); u.ana = g('anamorphic') * (0.8 + beat * 0.3); u.lensD = clamp(g('lensDistort'), 0, 2); u.dirt = g('dirtyLens');
       u.spin = g('spinBlur') * (0.6 + beat * 0.5 + burst * 0.8); u.rshut = g('rollingShutter') * (0.6 + beat * 0.6);
       u.fb = clamp(g('feedback'), 0, 1.5); u.mosh = clamp(g('datamosh'), 0, 1.5); u.moshK = has('datamosh') ? (burst > 0.6 || beat > 0.92 ? 0 : 0.9) : 0;
-      u.kal = c01(g('kaleido')); u.vor = c01(g('voronoi')); u.hexp = c01(g('hexPixel')); u.edgeG = c01(g('edgeGlow')); u.jam = g('signalJam') * (0.5 + burst + beat * 0.4);
+      u.kal = c01(g('kaleido') * (0.06 + burst * 0.9 + beat * 0.55)); u.vor = c01(g('voronoi')); u.hexp = c01(g('hexPixel')); u.edgeG = c01(g('edgeGlow')); u.jam = g('signalJam') * (0.5 + burst + beat * 0.4);
       u.grainS = u.noise > 0 ? u.noise * 0.42 : 0; if (has('filmLook')) u.grainS = Math.max(u.grainS, 0.06 * g('filmLook'));
       u.pA = hex3(pal.accent); u.pB = hex3(pal.sub || pal.accent); u.pC = hex3(pal.text); u.pD = hex3(pal.bg);
       u.needBlur = u.halo > 0 || u.dirt > 0 || u.water > 0 || u.crt > 0;
@@ -12874,13 +12878,13 @@ void main(){
         const b = cur.L.bbox, pd = this.minD * 0.045, q = Math.min(1, Math.floor(clamp(lt / 0.12) * 3) / 3 + (lt >= 0.12 ? 1 : 0)) * (R.xp >= 0.92 ? 0 : 1);
         if (q > 0 && b.w > 1) { ctx.save(); ctx.fillStyle = pal.bg; ctx.fillRect(b.x - pd * 1.4, b.cy - (b.h / 2 + pd) * q, b.w + pd * 2.8, (b.h + pd * 2) * q); ctx.fillStyle = pal.accent; ctx.fillRect(b.x - pd * 1.4, b.cy - (b.h / 2 + pd) * q, pd * 0.28, (b.h + pd * 2) * q); ctx.restore(); }
       }
+      if (overlayOK && fl.has('letterbox') && !transparent) { ctx.save(); FX.O.letterbox(ctx, R); ctx.restore(); }
       // cues
       for (const v of vis) this.drawCue(ctx, v, t, beat, mode);
       // over overlays
       if (overlayOK) for (const [id, a] of fl) { const f = FX.list[id]; if ((f.k === 'over') && FX.O[id]) { ctx.save(); R.amt = a; FX.O[id](ctx, R); ctx.restore(); } }
       // credits
       if (p.showCredits && (p.title || p.artist)) this.drawCredits(ctx, pal, t);
-      if (overlayOK && fl.has('letterbox') && !transparent) { ctx.save(); FX.O.letterbox(ctx, R); ctx.restore(); }
       ctx.globalAlpha = 1;
       // post uniforms
       const post = this.postParams(fl, t, lt, cur, beat, pal);
@@ -13055,10 +13059,12 @@ void main(){
         let surfAvg = null; if (all.length) { const rgb = all.map(U.hex2rgb); surfAvg = U.rgb2hex(...[0, 1, 2].map((k) => rgb.reduce((m, c0) => m + c0[k], 0) / rgb.length)); }
         return (dec = { fillA, fillN, accS, surfAvg });
       };
+      // plates may be re-coloured to stand out from the background (dPal below); the letters on them must follow that colour, not the palette's
+      let platePal = pal;
       const colorOf = (g0) => {
         const g = onAcc && !g0.on ? Object.assign({}, g0, { on: 'accent' }) : g0;
         const D0 = g.on ? null : decide();
-        const surf = g.on === 'accent' ? pal.accent : g.on === 'sub' ? pal.sub : (D0 && D0.surfAvg) || pal.bg;
+        const surf = g.on === 'accent' ? platePal.accent : g.on === 'sub' ? platePal.sub : (D0 && D0.surfAvg) || pal.bg;
         const wantAccent = isAcc(g);
         let want = wantAccent ? (g.on === 'accent' ? pal.bg : pal.accent) : g.on === 'accent' ? pal.bg : pal.text;
         if (D0 && (wantAccent ? D0.fillA : D0.fillN)) want = wantAccent ? D0.fillA : D0.fillN;
@@ -13081,6 +13087,7 @@ void main(){
         if (sAround) { dPal = Object.assign({}, pal); ['accent', 'sub', 'text'].forEach((k) => { if (contrast(pal[k], sAround) < 1.9) dPal[k] = readable(sAround, [k === 'text' ? pal.bg : pal.text, pal.sub, pal.accent, pal.bg, mix(pal[k], '#ffffff', 0.7), mix(pal[k], '#000000', 0.6)].filter((c0) => c0 !== pal[k]), 2.2); }); }
       }
       if (dPal !== pal) dPal.raw = pal; // plates that carry their own text need the true palette
+      if (dPal !== pal && !/^op[A-Z]/.test(L.lay || '')) platePal = dPal; // (the anime-opening layouts paint their plates from the true palette)
       this.drawDecos(lx, L, dPal, pe, px, t, ph.tr.exit === 'cut' ? 0 : 1);
       const gfxIds = (c.gfx || []).filter((id) => LM.gfx.lib[id]);
       const GR = gfxIds.length ? { W, H, S, minD: this.minD, pal, bb: L.seq && L._k >= 0 ? L.seqBB[L._k] : L.bbox, kb: L.keyBB, e: clamp(lt / 0.65), lt, hp, beat, x: ph.tr.exit === 'cut' ? 0 : px, seed: U.strHash(c.id) & 1023, title: p.title || '', tAbs: t, bn: this.beatNo(t), tb: this.lastTrig(t, 1) } : null;

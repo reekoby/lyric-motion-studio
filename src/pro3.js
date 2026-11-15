@@ -160,7 +160,7 @@ vec2 ledF=vec2(0.); vec2 hexC=vec2(0.);
       u.halo = g('halation') * 0.9 + (has('filmLook') ? 0.35 * g('filmLook') : 0); u.ana = g('anamorphic') * (0.8 + beat * 0.3); u.lensD = clamp(g('lensDistort'), 0, 2); u.dirt = g('dirtyLens');
       u.spin = g('spinBlur') * (0.6 + beat * 0.5 + burst * 0.8); u.rshut = g('rollingShutter') * (0.6 + beat * 0.6);
       u.fb = clamp(g('feedback'), 0, 1.5); u.mosh = clamp(g('datamosh'), 0, 1.5); u.moshK = has('datamosh') ? (burst > 0.6 || beat > 0.92 ? 0 : 0.9) : 0;
-      u.kal = c01(g('kaleido')); u.vor = c01(g('voronoi')); u.hexp = c01(g('hexPixel')); u.edgeG = c01(g('edgeGlow')); u.jam = g('signalJam') * (0.5 + burst + beat * 0.4);
+      u.kal = c01(g('kaleido') * (0.06 + burst * 0.9 + beat * 0.55)); u.vor = c01(g('voronoi')); u.hexp = c01(g('hexPixel')); u.edgeG = c01(g('edgeGlow')); u.jam = g('signalJam') * (0.5 + burst + beat * 0.4);
       u.grainS = u.noise > 0 ? u.noise * 0.42 : 0; if (has('filmLook')) u.grainS = Math.max(u.grainS, 0.06 * g('filmLook'));
       u.pA = hex3(pal.accent); u.pB = hex3(pal.sub || pal.accent); u.pC = hex3(pal.text); u.pD = hex3(pal.bg);
       u.needBlur = u.halo > 0 || u.dirt > 0 || u.water > 0 || u.crt > 0;

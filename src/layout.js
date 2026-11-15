@@ -67,7 +67,8 @@ LM.layout = (() => {
       return { glyphs: r.glyphs, lines: r.lines };
     } },
     subtitle: { n: '字幕（下部）', c: '中央', f(L, P) {
-      const h = L.minD * 0.2, cy = L.safe.y + L.safe.h - h / 2;
+      // on tall frames the line sits a little higher: the very bottom is where phone players put their own controls, and a drifting hold could push it off the edge
+      const h = L.minD * 0.2, cy = L.safe.y + L.safe.h - h / 2 - (L.H > L.W ? L.H * 0.07 : L.H * 0.015);
       const r = block(L, P, { cx: L.W / 2, cy, w: L.safe.w * 0.92, h }, { maxLines: 2, maxSize: L.minD * 0.075, noGrow: true });
       return { glyphs: r.glyphs, lines: r.lines };
     } },
